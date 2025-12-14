@@ -12,7 +12,7 @@ import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 import { CountryDistribution } from '@/components/dashboard/CountryDistribution';
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
-import { GoalProgressCard } from '@/components/dashboard/GoalProgressCard';
+import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
@@ -24,7 +24,8 @@ import {
   Target,
   Loader2,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -89,8 +90,11 @@ export default function Dashboard() {
     return Object.keys(stats.totalByCurrency);
   }, [stats]);
 
-
   const topCustomer = topCustomers?.[0];
+  
+  // Get the first active goal for the summary section
+  const primaryGoal = activeGoals[0];
+  const primaryGoalSales = primaryGoal ? (stats?.totalByCurrency?.[primaryGoal.currency] || 0) : 0;
 
   if (isLoading) {
     return (
@@ -114,42 +118,56 @@ export default function Dashboard() {
           className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
         >
           <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <h1 className="text-3xl font-bold">Projeção de Faturamento</h1>
             <p className="text-muted-foreground">
-              Visão geral das suas vendas
+              Acompanhe suas metas e desempenho financeiro
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
-              <SelectTrigger className="w-[160px]">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Últimos 7 dias</SelectItem>
-                <SelectItem value="30d">Últimos 30 dias</SelectItem>
-                <SelectItem value="90d">Últimos 90 dias</SelectItem>
-                <SelectItem value="365d">Último ano</SelectItem>
-                <SelectItem value="all">Tudo</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-            {period === 'custom' && (
-              <DateRangePicker
-                dateRange={customDateRange}
-                onDateRangeChange={setCustomDateRange}
-                className="w-[260px]"
-              />
-            )}
+            <Button variant="outline" onClick={() => navigate('/transactions')}>
+              <History className="h-4 w-4 mr-2" />
+              Histórico
+            </Button>
             <Button variant="outline" onClick={() => navigate('/goals')}>
               <Target className="h-4 w-4 mr-2" />
               Metas
             </Button>
             <Button onClick={() => navigate('/upload')}>
               <Upload className="h-4 w-4 mr-2" />
-              Importar
+              Importar Vendas
             </Button>
           </div>
+        </motion.div>
+
+        {/* Period Selector */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-wrap items-center gap-3"
+        >
+          <span className="text-sm font-medium text-muted-foreground">Período de Análise:</span>
+          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
+            <SelectTrigger className="w-[160px]">
+              <Calendar className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="90d">Últimos 90 dias</SelectItem>
+              <SelectItem value="365d">Último ano</SelectItem>
+              <SelectItem value="all">Tudo</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          {period === 'custom' && (
+            <DateRangePicker
+              dateRange={customDateRange}
+              onDateRangeChange={setCustomDateRange}
+              className="w-[260px]"
+            />
+          )}
         </motion.div>
 
         {/* Warning for transactions without date */}
@@ -190,53 +208,73 @@ export default function Dashboard() {
           </motion.div>
         ) : (
           <>
-            {/* KPI Cards - Sales by Currency (BRL and USD) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Cards by Currency */}
-              {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
-                .sort(([, a], [, b]) => b - a)
-                .map(([currency, total], index) => (
-                  <KPICard
-                    key={currency}
-                    title={currency === 'BRL' ? 'Vendas em Reais' : 'Vendas em Dólares'}
-                    value={formatCurrency(total, currency)}
-                    icon={DollarSign}
-                    delay={index}
-                  />
-                ))
-              }
-
-              {/* Total Transactions */}
-              <KPICard
-                title="Total Transações"
-                value={formatNumber(stats.totalTransactions)}
-                icon={ShoppingCart}
-                delay={Object.keys(stats.totalByCurrency || {}).length}
+            {/* Goal Summary Section (when goal is active) */}
+            {primaryGoal ? (
+              <GoalSummarySection 
+                goal={primaryGoal} 
+                totalSold={primaryGoalSales}
               />
+            ) : (
+              /* No active goal - show traditional KPI cards */
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Cards by Currency */}
+                  {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([currency, total], index) => (
+                      <KPICard
+                        key={currency}
+                        title={currency === 'BRL' ? 'Vendas em Reais' : 'Vendas em Dólares'}
+                        value={formatCurrency(total, currency)}
+                        icon={DollarSign}
+                        delay={index}
+                      />
+                    ))
+                  }
 
-              {/* Top Customer */}
-              {topCustomer && (
-                <KPICard
-                  title="Top Cliente"
-                  value={topCustomer.name}
-                  subtitle={`${formatCurrency(topCustomer.totalValue, topCustomer.currency)} • ${topCustomer.totalPurchases} compras`}
-                  icon={Users}
-                  delay={Object.keys(stats.totalByCurrency || {}).length + 1}
-                />
-              )}
-            </div>
-
-            {/* Active Goals */}
-            {activeGoals.length > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {activeGoals.slice(0, 2).map((goal) => (
-                  <GoalProgressCard
-                    key={goal.id}
-                    goal={goal}
-                    totalSold={stats.totalByCurrency[goal.currency] || 0}
+                  {/* Total Transactions */}
+                  <KPICard
+                    title="Total Transações"
+                    value={formatNumber(stats.totalTransactions)}
+                    icon={ShoppingCart}
+                    delay={Object.keys(stats.totalByCurrency || {}).length}
                   />
-                ))}
-              </div>
+
+                  {/* Top Customer */}
+                  {topCustomer && (
+                    <KPICard
+                      title="Top Cliente"
+                      value={topCustomer.name}
+                      subtitle={`${formatCurrency(topCustomer.totalValue, topCustomer.currency)} • ${topCustomer.totalPurchases} compras`}
+                      icon={Users}
+                      delay={Object.keys(stats.totalByCurrency || {}).length + 1}
+                    />
+                  )}
+                </div>
+
+                {/* Call to action for creating a goal */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-full">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Crie uma meta de faturamento</p>
+                      <p className="text-sm text-muted-foreground">
+                        Acompanhe seu progresso com cards coloridos e projeções automáticas
+                      </p>
+                    </div>
+                  </div>
+                  <Button onClick={() => navigate('/goals')}>
+                    <Target className="h-4 w-4 mr-2" />
+                    Criar Meta
+                  </Button>
+                </motion.div>
+              </>
             )}
 
             {/* Charts Row */}
