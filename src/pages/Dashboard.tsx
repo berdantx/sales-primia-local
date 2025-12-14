@@ -13,21 +13,38 @@ import {
   DollarSign, 
   Users, 
   ShoppingCart, 
-  TrendingUp,
   Upload,
   Target,
-  Loader2
+  Loader2,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { subDays } from 'date-fns';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [dateRange] = useState({
-    startDate: subDays(new Date(), 30),
-    endDate: new Date(),
-  });
+  const [period, setPeriod] = useState<PeriodFilter>('all');
+
+  const dateRange = useMemo(() => {
+    if (period === 'all') {
+      return { startDate: undefined, endDate: undefined };
+    }
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
+    return {
+      startDate: subDays(new Date(), days),
+      endDate: new Date(),
+    };
+  }, [period]);
 
   const { stats, isLoading } = useTransactionStats({
     startDate: dateRange.startDate,
@@ -62,7 +79,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
         >
           <div>
             <h1 className="text-3xl font-bold">Dashboard</h1>
@@ -70,7 +87,20 @@ export default function Dashboard() {
               Visão geral das suas vendas
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
+              <SelectTrigger className="w-[160px]">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="90d">Últimos 90 dias</SelectItem>
+                <SelectItem value="365d">Último ano</SelectItem>
+                <SelectItem value="all">Tudo</SelectItem>
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={() => navigate('/goals')}>
               <Target className="h-4 w-4 mr-2" />
               Metas

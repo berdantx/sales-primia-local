@@ -44,7 +44,11 @@ const HOTMART_COLUMNS = {
   billingType: ['tipo de cobrança', 'tipo de cobranca', 'billing_type', 'tipo cobrança'],
   buyerName: ['comprador', 'buyer_name', 'nome do comprador', 'cliente'],
   buyerEmail: ['e-mail', 'email', 'buyer_email', 'email do comprador'],
-  purchaseDate: ['data da compra', 'data compra', 'purchase_date', 'data'],
+  purchaseDate: [
+    'data da compra', 'data compra', 'purchase_date', 'data', 
+    'data de compra', 'data da venda', 'data venda', 'created_at',
+    'data pedido', 'data do pedido', 'order_date', 'purchase date'
+  ],
 };
 
 function normalizeHeader(header: string): string {
@@ -83,35 +87,56 @@ function parseNumber(value: string | number | undefined): number {
   return isNaN(num) ? 0 : num;
 }
 
-function parseDate(value: string | undefined): Date | null {
-  if (!value) return null;
+function parseDate(value: string | number | undefined): Date | null {
+  if (value === undefined || value === null || value === '') return null;
   
-  // Try various date formats
-  const formats = [
-    // DD/MM/YYYY
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
-    // YYYY-MM-DD
-    /^(\d{4})-(\d{1,2})-(\d{1,2})$/,
-    // DD-MM-YYYY
-    /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
-  ];
+  const strValue = String(value).trim();
+  if (!strValue) return null;
   
-  for (const format of formats) {
-    const match = value.match(format);
-    if (match) {
-      const [, a, b, c] = match;
-      if (format === formats[1]) {
-        // YYYY-MM-DD
-        return new Date(parseInt(c), parseInt(b) - 1, parseInt(a));
-      } else {
-        // DD/MM/YYYY or DD-MM-YYYY
-        return new Date(parseInt(c), parseInt(b) - 1, parseInt(a));
-      }
+  // Handle Excel serial date numbers
+  if (typeof value === 'number' || /^\d+(\.\d+)?$/.test(strValue)) {
+    const numValue = typeof value === 'number' ? value : parseFloat(strValue);
+    // Excel dates are days since 1899-12-30 (with a bug for 1900)
+    if (numValue > 1 && numValue < 100000) {
+      const date = new Date((numValue - 25569) * 86400 * 1000);
+      if (!isNaN(date.getTime())) return date;
     }
   }
   
-  // Try native parsing
-  const parsed = new Date(value);
+  // DD/MM/YYYY HH:MM:SS or DD/MM/YYYY HH:MM
+  const brDateTimeMatch = strValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+  if (brDateTimeMatch) {
+    const [, day, month, year, hours, minutes, seconds = '0'] = brDateTimeMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // DD/MM/YYYY
+  const brDateMatch = strValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (brDateMatch) {
+    const [, day, month, year] = brDateMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // DD-MM-YYYY
+  const brDateDashMatch = strValue.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (brDateDashMatch) {
+    const [, day, month, year] = brDateDashMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS
+  const isoMatch = strValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (isoMatch) {
+    const [, year, month, day, hours = '0', minutes = '0', seconds = '0'] = isoMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // Try native parsing as last resort
+  const parsed = new Date(strValue);
   return isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -219,7 +244,7 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
         buyer_name: columnMap.buyerName ? String(row[columnMap.buyerName] || '').trim() : '',
         buyer_email: columnMap.buyerEmail ? String(row[columnMap.buyerEmail] || '').trim() : '',
         purchase_date: parseDate(
-          columnMap.purchaseDate ? String(row[columnMap.purchaseDate] || '') : undefined
+          columnMap.purchaseDate ? (row[columnMap.purchaseDate] as string | number | undefined) : undefined
         ),
       };
       

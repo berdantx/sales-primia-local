@@ -37,12 +37,11 @@ export function useTransactions(filters?: TransactionFilters) {
       let query = supabase
         .from('transactions')
         .select('*')
-        .order('purchase_date', { ascending: false });
+        .order('purchase_date', { ascending: false, nullsFirst: false });
 
-      if (filters?.startDate) {
+      // Only apply date filters if both dates are provided
+      if (filters?.startDate && filters?.endDate) {
         query = query.gte('purchase_date', filters.startDate.toISOString());
-      }
-      if (filters?.endDate) {
         query = query.lte('purchase_date', filters.endDate.toISOString());
       }
       if (filters?.currency) {
