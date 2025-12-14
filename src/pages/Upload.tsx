@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { parseFile, HotmartTransaction, ParseError } from '@/lib/parsers/hotmartParser';
 import { ArrowLeft, ArrowRight, Upload, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import { DataManagement } from '@/components/upload/DataManagement';
 
 type UploadStep = 'upload' | 'preview' | 'importing' | 'complete';
 
@@ -211,6 +212,9 @@ export default function UploadPage() {
             </div>
           ))}
         </div>
+
+        {/* Data Management */}
+        {step === 'upload' && <DataManagement />}
 
         {/* Content */}
         <Card>
