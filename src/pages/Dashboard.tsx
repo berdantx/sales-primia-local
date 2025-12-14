@@ -189,17 +189,16 @@ export default function Dashboard() {
           </motion.div>
         ) : (
           <>
-            {/* KPI Cards - Sales by Country/Currency */}
+            {/* KPI Cards - Sales by Currency (BRL and USD) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Cards by Country with their Currency */}
-              {stats.totalByCountryCurrency && Object.entries(stats.totalByCountryCurrency)
-                .sort(([, a], [, b]) => b.total - a.total)
-                .map(([country, data], index) => (
+              {/* Cards by Currency */}
+              {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
+                .sort(([, a], [, b]) => b - a)
+                .map(([currency, total], index) => (
                   <KPICard
-                    key={country}
-                    title={country === 'Brasil' ? 'Vendas Brasil' : `Vendas ${country}`}
-                    value={formatCurrency(data.total, data.currency)}
-                    subtitle={`${formatNumber(data.count)} transações`}
+                    key={currency}
+                    title={currency === 'BRL' ? 'Vendas em Reais' : 'Vendas em Dólares'}
+                    value={formatCurrency(total, currency)}
                     icon={DollarSign}
                     delay={index}
                   />
@@ -211,7 +210,7 @@ export default function Dashboard() {
                 title="Total Transações"
                 value={formatNumber(stats.totalTransactions)}
                 icon={ShoppingCart}
-                delay={Object.keys(stats.totalByCountryCurrency || {}).length}
+                delay={Object.keys(stats.totalByCurrency || {}).length}
               />
 
               {/* Top Customer */}
@@ -221,7 +220,7 @@ export default function Dashboard() {
                   value={topCustomer.name}
                   subtitle={`${formatCurrency(topCustomer.totalValue, topCustomer.currency)} • ${topCustomer.totalPurchases} compras`}
                   icon={Users}
-                  delay={Object.keys(stats.totalByCountryCurrency || {}).length + 1}
+                  delay={Object.keys(stats.totalByCurrency || {}).length + 1}
                 />
               )}
             </div>
