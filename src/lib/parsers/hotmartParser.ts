@@ -53,66 +53,15 @@ const HOTMART_COLUMNS = {
   ],
 };
 
-// Map country to currency
+// Map country to currency - Hotmart uses USD for all international sales
 function getCurrencyFromCountry(country: string): string {
   const countryLower = country.toLowerCase().trim();
   
-  const currencyMap: Record<string, string> = {
-    // Americas
-    'brasil': 'BRL',
-    'brazil': 'BRL',
-    'estados unidos': 'USD',
-    'united states': 'USD',
-    'usa': 'USD',
-    'eua': 'USD',
-    'canadá': 'CAD',
-    'canada': 'CAD',
-    'méxico': 'MXN',
-    'mexico': 'MXN',
-    'argentina': 'ARS',
-    'chile': 'CLP',
-    'colômbia': 'COP',
-    'colombia': 'COP',
-    'peru': 'PEN',
-    'paraguai': 'PYG',
-    'paraguay': 'PYG',
-    'uruguai': 'UYU',
-    'uruguay': 'UYU',
-    
-    // Europe
-    'portugal': 'EUR',
-    'espanha': 'EUR',
-    'spain': 'EUR',
-    'frança': 'EUR',
-    'france': 'EUR',
-    'alemanha': 'EUR',
-    'germany': 'EUR',
-    'itália': 'EUR',
-    'italy': 'EUR',
-    'holanda': 'EUR',
-    'netherlands': 'EUR',
-    'bélgica': 'EUR',
-    'belgium': 'EUR',
-    'áustria': 'EUR',
-    'austria': 'EUR',
-    'irlanda': 'EUR',
-    'ireland': 'EUR',
-    'reino unido': 'GBP',
-    'united kingdom': 'GBP',
-    'uk': 'GBP',
-    'suíça': 'CHF',
-    'switzerland': 'CHF',
-    
-    // Asia/Oceania
-    'japão': 'JPY',
-    'japan': 'JPY',
-    'austrália': 'AUD',
-    'australia': 'AUD',
-    'nova zelândia': 'NZD',
-    'new zealand': 'NZD',
-  };
-  
-  return currencyMap[countryLower] || 'USD'; // Default to USD for unknown countries
+  // Brasil = BRL, todos os outros países = USD (padrão Hotmart)
+  if (countryLower === 'brasil' || countryLower === 'brazil') {
+    return 'BRL';
+  }
+  return 'USD';
 }
 
 function normalizeHeader(header: string): string {
@@ -133,22 +82,22 @@ function findColumn(headers: string[], possibleNames: string[]): string | null {
 
 function parseNumber(value: string | number | undefined): number {
   if (value === undefined || value === null || value === '') return 0;
-  if (typeof value === 'number') return value;
   
-  // Handle Brazilian number format (1.234,56 -> 1234.56)
-  let cleaned = value.toString().trim();
+  // SEMPRE converter para string para garantir parsing correto de XLSX
+  const strValue = String(value).trim();
   
-  // Check if it uses comma as decimal separator
-  if (cleaned.includes(',') && cleaned.includes('.')) {
-    // Format: 1.234,56
-    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-  } else if (cleaned.includes(',')) {
-    // Format: 1234,56
-    cleaned = cleaned.replace(',', '.');
+  // Se tem vírgula E ponto, é formato BR: 1.234,56
+  if (strValue.includes(',') && strValue.includes('.')) {
+    return parseFloat(strValue.replace(/\./g, '').replace(',', '.')) || 0;
   }
   
-  const num = parseFloat(cleaned);
-  return isNaN(num) ? 0 : num;
+  // Se tem apenas vírgula, vírgula é decimal: 1234,56
+  if (strValue.includes(',')) {
+    return parseFloat(strValue.replace(',', '.')) || 0;
+  }
+  
+  // Se tem apenas ponto, ponto é decimal: 379.29
+  return parseFloat(strValue) || 0;
 }
 
 function parseDate(value: string | number | undefined): Date | null {
@@ -410,7 +359,8 @@ export async function parseXLSX(file: File): Promise<{ data: Record<string, unkn
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet) as Record<string, unknown>[];
+        // raw: false força strings formatadas ao invés de números raw
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { raw: false }) as Record<string, unknown>[];
         
         const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
         
