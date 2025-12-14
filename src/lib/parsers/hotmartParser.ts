@@ -1,0 +1,294 @@
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+
+export interface HotmartTransaction {
+  transaction_code: string;
+  product: string;
+  currency: string;
+  country: string;
+  gross_value_with_taxes: number;
+  sck_code: string;
+  payment_method: string;
+  total_installments: number;
+  billing_type: string;
+  computed_value: number;
+  buyer_name: string;
+  buyer_email: string;
+  purchase_date: Date | null;
+}
+
+export interface ParseResult {
+  transactions: HotmartTransaction[];
+  errors: ParseError[];
+  totalRows: number;
+  duplicates: string[];
+}
+
+export interface ParseError {
+  row: number;
+  type: 'missing_field' | 'invalid_value' | 'parse_error';
+  message: string;
+  rawData?: Record<string, unknown>;
+}
+
+// Hotmart column mappings (Portuguese headers)
+const HOTMART_COLUMNS = {
+  transactionCode: ['código da transação', 'codigo da transacao', 'transaction_code', 'código transação'],
+  product: ['produto', 'product', 'nome do produto'],
+  currency: ['moeda', 'currency', 'moeda da transação'],
+  country: ['país', 'pais', 'country', 'país do comprador'],
+  grossValue: ['valor de compra com impostos', 'valor com impostos', 'gross_value', 'valor'],
+  sckCode: ['código sck', 'codigo sck', 'sck_code', 'sck'],
+  paymentMethod: ['método de pagamento', 'metodo de pagamento', 'payment_method', 'forma de pagamento'],
+  totalInstallments: ['quantidade total de parcelas', 'total de parcelas', 'parcelas', 'installments'],
+  billingType: ['tipo de cobrança', 'tipo de cobranca', 'billing_type', 'tipo cobrança'],
+  buyerName: ['comprador', 'buyer_name', 'nome do comprador', 'cliente'],
+  buyerEmail: ['e-mail', 'email', 'buyer_email', 'email do comprador'],
+  purchaseDate: ['data da compra', 'data compra', 'purchase_date', 'data'],
+};
+
+function normalizeHeader(header: string): string {
+  return header.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function findColumn(headers: string[], possibleNames: string[]): string | null {
+  const normalizedHeaders = headers.map(normalizeHeader);
+  for (const name of possibleNames) {
+    const normalizedName = normalizeHeader(name);
+    const index = normalizedHeaders.findIndex(h => h.includes(normalizedName) || normalizedName.includes(h));
+    if (index !== -1) {
+      return headers[index];
+    }
+  }
+  return null;
+}
+
+function parseNumber(value: string | number | undefined): number {
+  if (value === undefined || value === null || value === '') return 0;
+  if (typeof value === 'number') return value;
+  
+  // Handle Brazilian number format (1.234,56 -> 1234.56)
+  let cleaned = value.toString().trim();
+  
+  // Check if it uses comma as decimal separator
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    // Format: 1.234,56
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (cleaned.includes(',')) {
+    // Format: 1234,56
+    cleaned = cleaned.replace(',', '.');
+  }
+  
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? 0 : num;
+}
+
+function parseDate(value: string | undefined): Date | null {
+  if (!value) return null;
+  
+  // Try various date formats
+  const formats = [
+    // DD/MM/YYYY
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+    // YYYY-MM-DD
+    /^(\d{4})-(\d{1,2})-(\d{1,2})$/,
+    // DD-MM-YYYY
+    /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
+  ];
+  
+  for (const format of formats) {
+    const match = value.match(format);
+    if (match) {
+      const [, a, b, c] = match;
+      if (format === formats[1]) {
+        // YYYY-MM-DD
+        return new Date(parseInt(c), parseInt(b) - 1, parseInt(a));
+      } else {
+        // DD/MM/YYYY or DD-MM-YYYY
+        return new Date(parseInt(c), parseInt(b) - 1, parseInt(a));
+      }
+    }
+  }
+  
+  // Try native parsing
+  const parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseInteger(value: string | number | undefined): number {
+  if (value === undefined || value === null || value === '') return 1;
+  if (typeof value === 'number') return Math.round(value);
+  
+  const num = parseInt(value.toString().trim(), 10);
+  return isNaN(num) ? 1 : num;
+}
+
+export function parseHotmartData(data: Record<string, unknown>[], headers: string[]): ParseResult {
+  const transactions: HotmartTransaction[] = [];
+  const errors: ParseError[] = [];
+  const seenCodes = new Set<string>();
+  const duplicates: string[] = [];
+  
+  // Find column mappings
+  const columnMap = {
+    transactionCode: findColumn(headers, HOTMART_COLUMNS.transactionCode),
+    product: findColumn(headers, HOTMART_COLUMNS.product),
+    currency: findColumn(headers, HOTMART_COLUMNS.currency),
+    country: findColumn(headers, HOTMART_COLUMNS.country),
+    grossValue: findColumn(headers, HOTMART_COLUMNS.grossValue),
+    sckCode: findColumn(headers, HOTMART_COLUMNS.sckCode),
+    paymentMethod: findColumn(headers, HOTMART_COLUMNS.paymentMethod),
+    totalInstallments: findColumn(headers, HOTMART_COLUMNS.totalInstallments),
+    billingType: findColumn(headers, HOTMART_COLUMNS.billingType),
+    buyerName: findColumn(headers, HOTMART_COLUMNS.buyerName),
+    buyerEmail: findColumn(headers, HOTMART_COLUMNS.buyerEmail),
+    purchaseDate: findColumn(headers, HOTMART_COLUMNS.purchaseDate),
+  };
+  
+  // Check required columns
+  if (!columnMap.transactionCode) {
+    errors.push({
+      row: 0,
+      type: 'missing_field',
+      message: 'Coluna "Código da transação" não encontrada',
+    });
+  }
+  
+  data.forEach((row, index) => {
+    const rowNum = index + 2; // Account for header row
+    
+    try {
+      const transactionCode = columnMap.transactionCode 
+        ? String(row[columnMap.transactionCode] || '').trim()
+        : '';
+      
+      if (!transactionCode) {
+        errors.push({
+          row: rowNum,
+          type: 'missing_field',
+          message: 'Código da transação não encontrado',
+          rawData: row,
+        });
+        return;
+      }
+      
+      // Check for duplicates
+      if (seenCodes.has(transactionCode)) {
+        duplicates.push(transactionCode);
+        return;
+      }
+      seenCodes.add(transactionCode);
+      
+      const grossValue = parseNumber(
+        columnMap.grossValue ? row[columnMap.grossValue] as string : undefined
+      );
+      const totalInstallments = parseInteger(
+        columnMap.totalInstallments ? row[columnMap.totalInstallments] as string : undefined
+      );
+      const billingType = columnMap.billingType 
+        ? String(row[columnMap.billingType] || '').trim()
+        : '';
+      
+      // Apply "Recuperador inteligente" rule
+      let computedValue = grossValue;
+      if (billingType.toLowerCase().includes('recuperador inteligente')) {
+        computedValue = grossValue * totalInstallments;
+      }
+      
+      const transaction: HotmartTransaction = {
+        transaction_code: transactionCode,
+        product: columnMap.product ? String(row[columnMap.product] || '').trim() : '',
+        currency: columnMap.currency ? String(row[columnMap.currency] || 'BRL').trim().toUpperCase() : 'BRL',
+        country: columnMap.country ? String(row[columnMap.country] || '').trim() : '',
+        gross_value_with_taxes: grossValue,
+        sck_code: columnMap.sckCode ? String(row[columnMap.sckCode] || '').trim() : '',
+        payment_method: columnMap.paymentMethod ? String(row[columnMap.paymentMethod] || '').trim() : '',
+        total_installments: totalInstallments,
+        billing_type: billingType,
+        computed_value: computedValue,
+        buyer_name: columnMap.buyerName ? String(row[columnMap.buyerName] || '').trim() : '',
+        buyer_email: columnMap.buyerEmail ? String(row[columnMap.buyerEmail] || '').trim() : '',
+        purchase_date: parseDate(
+          columnMap.purchaseDate ? String(row[columnMap.purchaseDate] || '') : undefined
+        ),
+      };
+      
+      transactions.push(transaction);
+    } catch (error) {
+      errors.push({
+        row: rowNum,
+        type: 'parse_error',
+        message: `Erro ao processar linha: ${error}`,
+        rawData: row,
+      });
+    }
+  });
+  
+  return {
+    transactions,
+    errors,
+    totalRows: data.length,
+    duplicates,
+  };
+}
+
+export async function parseCSV(file: File): Promise<{ data: Record<string, unknown>[]; headers: string[] }> {
+  return new Promise((resolve, reject) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const headers = results.meta.fields || [];
+        resolve({ data: results.data as Record<string, unknown>[], headers });
+      },
+      error: (error) => {
+        reject(error);
+      },
+    });
+  });
+}
+
+export async function parseXLSX(file: File): Promise<{ data: Record<string, unknown>[]; headers: string[] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet) as Record<string, unknown>[];
+        
+        const headers = jsonData.length > 0 ? Object.keys(jsonData[0]) : [];
+        
+        resolve({ data: jsonData, headers });
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
+    reader.readAsBinaryString(file);
+  });
+}
+
+export async function parseFile(file: File): Promise<ParseResult> {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  
+  let data: Record<string, unknown>[];
+  let headers: string[];
+  
+  if (extension === 'csv') {
+    const result = await parseCSV(file);
+    data = result.data;
+    headers = result.headers;
+  } else if (extension === 'xlsx' || extension === 'xls') {
+    const result = await parseXLSX(file);
+    data = result.data;
+    headers = result.headers;
+  } else {
+    throw new Error('Formato de arquivo não suportado. Use CSV ou XLSX.');
+  }
+  
+  return parseHotmartData(data, headers);
+}
