@@ -89,6 +89,16 @@ export default function Dashboard() {
     return Object.keys(stats.totalByCurrency);
   }, [stats]);
 
+  // Taxa de conversão BRL -> USD (pode ser configurada depois)
+  const BRL_TO_USD_RATE = 0.17; // ~5.88 BRL = 1 USD
+
+  const consolidatedUSD = useMemo(() => {
+    if (!stats?.totalByCurrency) return 0;
+    const brlTotal = stats.totalByCurrency['BRL'] || 0;
+    const usdTotal = stats.totalByCurrency['USD'] || 0;
+    return usdTotal + (brlTotal * BRL_TO_USD_RATE);
+  }, [stats]);
+
   const topCustomer = topCustomers?.[0];
 
   if (isLoading) {
@@ -190,7 +200,7 @@ export default function Dashboard() {
         ) : (
           <>
             {/* KPI Cards - Sales by Currency (BRL and USD) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Cards by Currency */}
               {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
                 .sort(([, a], [, b]) => b - a)
@@ -205,12 +215,21 @@ export default function Dashboard() {
                 ))
               }
 
+              {/* Consolidated Total in USD */}
+              <KPICard
+                title="Total Consolidado (USD)"
+                value={formatCurrency(consolidatedUSD, 'USD')}
+                subtitle="BRL convertido a 1 USD = R$ 5,88"
+                icon={DollarSign}
+                delay={Object.keys(stats.totalByCurrency || {}).length}
+              />
+
               {/* Total Transactions */}
               <KPICard
                 title="Total Transações"
                 value={formatNumber(stats.totalTransactions)}
                 icon={ShoppingCart}
-                delay={Object.keys(stats.totalByCurrency || {}).length}
+                delay={Object.keys(stats.totalByCurrency || {}).length + 1}
               />
 
               {/* Top Customer */}
@@ -220,7 +239,7 @@ export default function Dashboard() {
                   value={topCustomer.name}
                   subtitle={`${formatCurrency(topCustomer.totalValue, topCustomer.currency)} • ${topCustomer.totalPurchases} compras`}
                   icon={Users}
-                  delay={Object.keys(stats.totalByCurrency || {}).length + 1}
+                  delay={Object.keys(stats.totalByCurrency || {}).length + 2}
                 />
               )}
             </div>
