@@ -71,14 +71,26 @@ export function calculateGoalProgress(
 }
 
 export function formatCurrency(value: number, currency: string = 'BRL'): string {
-  const locale = currency === 'BRL' ? 'pt-BR' : currency === 'EUR' ? 'de-DE' : 'en-US';
+  // Validate currency code - must be 3 uppercase letters
+  const validCurrency = /^[A-Z]{3}$/.test(currency) ? currency : 'BRL';
+  const locale = validCurrency === 'BRL' ? 'pt-BR' : validCurrency === 'EUR' ? 'de-DE' : 'en-US';
   
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: validCurrency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    // Fallback if currency is still invalid
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  }
 }
 
 export function formatNumber(value: number): string {
