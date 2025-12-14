@@ -45,6 +45,7 @@ const HOTMART_COLUMNS = {
   buyerName: ['comprador', 'buyer_name', 'nome do comprador', 'cliente'],
   buyerEmail: ['e-mail', 'email', 'buyer_email', 'email do comprador'],
   purchaseDate: [
+    'data da transação', 'data da transacao', 'data transação', 'data transacao', 'transaction_date',
     'data da compra', 'data compra', 'purchase_date', 'data', 
     'data de compra', 'data da venda', 'data venda', 'created_at',
     'data pedido', 'data do pedido', 'order_date', 'purchase date'
