@@ -7,9 +7,16 @@ export interface TransactionFilters {
   endDate?: Date;
 }
 
+export interface CountryCurrencyStats {
+  currency: string;
+  total: number;
+  count: number;
+}
+
 export interface TransactionStats {
   totalByCurrency: Record<string, number>;
   totalByCountry: Record<string, number>;
+  totalByCountryCurrency: Record<string, CountryCurrencyStats>;
   totalTransactions: number;
   transactionsWithoutDate: number;
 }
@@ -43,6 +50,7 @@ export function useTransactionStatsOptimized(filters?: TransactionFilters) {
       const result = data as unknown as {
         total_by_currency: Record<string, number> | null;
         total_by_country: Record<string, number> | null;
+        total_by_country_currency: Record<string, CountryCurrencyStats> | null;
         total_transactions: number;
         transactions_without_date: number;
       };
@@ -50,6 +58,7 @@ export function useTransactionStatsOptimized(filters?: TransactionFilters) {
       return {
         totalByCurrency: result?.total_by_currency || {},
         totalByCountry: result?.total_by_country || {},
+        totalByCountryCurrency: result?.total_by_country_currency || {},
         totalTransactions: result?.total_transactions || 0,
         transactionsWithoutDate: result?.transactions_without_date || 0,
       } as TransactionStats;

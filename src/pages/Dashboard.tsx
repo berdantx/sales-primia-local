@@ -189,44 +189,29 @@ export default function Dashboard() {
           </motion.div>
         ) : (
           <>
-            {/* KPI Cards */}
+            {/* KPI Cards - Sales by Country/Currency */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* BRL Card */}
-              {stats.totalByCurrency.BRL !== undefined && (
-                <KPICard
-                  title="Total BRL"
-                  value={formatCurrency(stats.totalByCurrency.BRL, 'BRL')}
-                  icon={DollarSign}
-                  delay={0}
-                />
-              )}
-
-              {/* USD Card */}
-              {stats.totalByCurrency.USD !== undefined && (
-                <KPICard
-                  title="Total USD"
-                  value={formatCurrency(stats.totalByCurrency.USD, 'USD')}
-                  icon={DollarSign}
-                  delay={1}
-                />
-              )}
-
-              {/* EUR Card */}
-              {stats.totalByCurrency.EUR !== undefined && (
-                <KPICard
-                  title="Total EUR"
-                  value={formatCurrency(stats.totalByCurrency.EUR, 'EUR')}
-                  icon={DollarSign}
-                  delay={2}
-                />
-              )}
+              {/* Cards by Country with their Currency */}
+              {stats.totalByCountryCurrency && Object.entries(stats.totalByCountryCurrency)
+                .sort(([, a], [, b]) => b.total - a.total)
+                .map(([country, data], index) => (
+                  <KPICard
+                    key={country}
+                    title={country === 'Brasil' ? 'Vendas Brasil' : `Vendas ${country}`}
+                    value={formatCurrency(data.total, data.currency)}
+                    subtitle={`${formatNumber(data.count)} transações`}
+                    icon={DollarSign}
+                    delay={index}
+                  />
+                ))
+              }
 
               {/* Total Transactions */}
               <KPICard
                 title="Total Transações"
                 value={formatNumber(stats.totalTransactions)}
                 icon={ShoppingCart}
-                delay={3}
+                delay={Object.keys(stats.totalByCountryCurrency || {}).length}
               />
 
               {/* Top Customer */}
@@ -236,7 +221,7 @@ export default function Dashboard() {
                   value={topCustomer.name}
                   subtitle={`${formatCurrency(topCustomer.totalValue, topCustomer.currency)} • ${topCustomer.totalPurchases} compras`}
                   icon={Users}
-                  delay={4}
+                  delay={Object.keys(stats.totalByCountryCurrency || {}).length + 1}
                 />
               )}
             </div>
