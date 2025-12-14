@@ -1,7 +1,11 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { DateRange } from 'react-day-picker';
-import { useTransactionStats, useTransactions } from '@/hooks/useTransactions';
+import { 
+  useTransactionStatsOptimized, 
+  useTopCustomersOptimized, 
+  useSalesByDateOptimized 
+} from '@/hooks/useTransactionStatsOptimized';
 import { useActiveGoals } from '@/hooks/useGoals';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { KPICard } from '@/components/dashboard/KPICard';
@@ -60,26 +64,32 @@ export default function Dashboard() {
     };
   }, [period, customDateRange]);
 
-  const { stats, isLoading } = useTransactionStats({
+  // Use optimized database aggregations
+  const { data: stats, isLoading: statsLoading } = useTransactionStatsOptimized({
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
   });
 
-  // Get all transactions to check for null dates
-  const { data: allTransactions } = useTransactions();
-  const transactionsWithoutDate = useMemo(() => {
-    if (!allTransactions) return 0;
-    return allTransactions.filter(t => !t.purchase_date).length;
-  }, [allTransactions]);
+  const { data: topCustomers, isLoading: customersLoading } = useTopCustomersOptimized({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  });
+
+  const { data: salesByDate, isLoading: salesLoading } = useSalesByDateOptimized({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  });
 
   const { activeGoals } = useActiveGoals();
+
+  const isLoading = statsLoading || customersLoading || salesLoading;
 
   const currencies = useMemo(() => {
     if (!stats?.totalByCurrency) return [];
     return Object.keys(stats.totalByCurrency);
   }, [stats]);
 
-  const topCustomer = stats?.topCustomers[0];
+  const topCustomer = topCustomers?.[0];
 
   if (isLoading) {
     return (
@@ -142,11 +152,11 @@ export default function Dashboard() {
         </motion.div>
 
         {/* Warning for transactions without date */}
-        {period !== 'all' && transactionsWithoutDate > 0 && (
+        {period !== 'all' && stats && stats.transactionsWithoutDate > 0 && (
           <Alert variant="default" className="border-warning/50 bg-warning/5">
             <AlertTriangle className="h-4 w-4 text-warning" />
             <AlertDescription className="text-warning">
-              <strong>{transactionsWithoutDate} transações</strong> não têm data registrada e não aparecem no filtro atual.{' '}
+              <strong>{stats.transactionsWithoutDate} transações</strong> não têm data registrada e não aparecem no filtro atual.{' '}
               <button 
                 onClick={() => setPeriod('all')} 
                 className="underline font-medium hover:no-underline"
@@ -211,7 +221,7 @@ export default function Dashboard() {
                 />
               )}
 
-              {/* Other currencies combined or Total Transactions */}
+              {/* Total Transactions */}
               <KPICard
                 title="Total Transações"
                 value={formatNumber(stats.totalTransactions)}
@@ -248,7 +258,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
                 <SalesByTimeChart 
-                  data={stats.salesByDate} 
+                  data={salesByDate || {}} 
                   currencies={currencies}
                 />
               </div>
@@ -258,7 +268,7 @@ export default function Dashboard() {
             </div>
 
             {/* Top Customers */}
-            <TopCustomers customers={stats.topCustomers} />
+            <TopCustomers customers={topCustomers || []} />
           </>
         )}
       </div>
