@@ -38,6 +38,7 @@ const HOTMART_COLUMNS = {
   currency: ['moeda', 'currency', 'moeda da transação'],
   country: ['país', 'pais', 'country', 'país do comprador'],
   grossValue: ['valor de compra com impostos', 'valor com impostos', 'gross_value', 'valor'],
+  grossValueNoTax: ['faturamento bruto (sem impostos)', 'faturamento bruto sem impostos', 'faturamento bruto', 'gross_revenue', 'gross revenue'],
   sckCode: ['código sck', 'codigo sck', 'sck_code', 'sck'],
   paymentMethod: ['método de pagamento', 'metodo de pagamento', 'payment_method', 'forma de pagamento'],
   totalInstallments: ['quantidade total de parcelas', 'total de parcelas', 'parcelas', 'installments'],
@@ -51,6 +52,68 @@ const HOTMART_COLUMNS = {
     'data pedido', 'data do pedido', 'order_date', 'purchase date'
   ],
 };
+
+// Map country to currency
+function getCurrencyFromCountry(country: string): string {
+  const countryLower = country.toLowerCase().trim();
+  
+  const currencyMap: Record<string, string> = {
+    // Americas
+    'brasil': 'BRL',
+    'brazil': 'BRL',
+    'estados unidos': 'USD',
+    'united states': 'USD',
+    'usa': 'USD',
+    'eua': 'USD',
+    'canadá': 'CAD',
+    'canada': 'CAD',
+    'méxico': 'MXN',
+    'mexico': 'MXN',
+    'argentina': 'ARS',
+    'chile': 'CLP',
+    'colômbia': 'COP',
+    'colombia': 'COP',
+    'peru': 'PEN',
+    'paraguai': 'PYG',
+    'paraguay': 'PYG',
+    'uruguai': 'UYU',
+    'uruguay': 'UYU',
+    
+    // Europe
+    'portugal': 'EUR',
+    'espanha': 'EUR',
+    'spain': 'EUR',
+    'frança': 'EUR',
+    'france': 'EUR',
+    'alemanha': 'EUR',
+    'germany': 'EUR',
+    'itália': 'EUR',
+    'italy': 'EUR',
+    'holanda': 'EUR',
+    'netherlands': 'EUR',
+    'bélgica': 'EUR',
+    'belgium': 'EUR',
+    'áustria': 'EUR',
+    'austria': 'EUR',
+    'irlanda': 'EUR',
+    'ireland': 'EUR',
+    'reino unido': 'GBP',
+    'united kingdom': 'GBP',
+    'uk': 'GBP',
+    'suíça': 'CHF',
+    'switzerland': 'CHF',
+    
+    // Asia/Oceania
+    'japão': 'JPY',
+    'japan': 'JPY',
+    'austrália': 'AUD',
+    'australia': 'AUD',
+    'nova zelândia': 'NZD',
+    'new zealand': 'NZD',
+  };
+  
+  return currencyMap[countryLower] || 'USD'; // Default to USD for unknown countries
+}
 
 function normalizeHeader(header: string): string {
   return header.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -196,6 +259,7 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
     currency: findColumn(headers, HOTMART_COLUMNS.currency),
     country: findColumn(headers, HOTMART_COLUMNS.country),
     grossValue: findColumn(headers, HOTMART_COLUMNS.grossValue),
+    grossValueNoTax: findColumn(headers, HOTMART_COLUMNS.grossValueNoTax),
     sckCode: findColumn(headers, HOTMART_COLUMNS.sckCode),
     paymentMethod: findColumn(headers, HOTMART_COLUMNS.paymentMethod),
     totalInstallments: findColumn(headers, HOTMART_COLUMNS.totalInstallments),
@@ -239,9 +303,28 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
       }
       seenCodes.add(transactionCode);
       
-      const grossValue = parseNumber(
-        columnMap.grossValue ? row[columnMap.grossValue] as string : undefined
-      );
+      // Get country first to determine which value column to use
+      const country = columnMap.country ? String(row[columnMap.country] || '').trim() : '';
+      const isBrazil = country.toLowerCase() === 'brasil' || country.toLowerCase() === 'brazil' || country === '';
+      
+      // For Brazil: use "valor de compra com impostos"
+      // For other countries: use "faturamento bruto (sem impostos)"
+      let grossValue: number;
+      if (isBrazil) {
+        grossValue = parseNumber(
+          columnMap.grossValue ? row[columnMap.grossValue] as string : undefined
+        );
+      } else {
+        // For international sales, prefer grossValueNoTax, fallback to grossValue
+        const noTaxValue = columnMap.grossValueNoTax 
+          ? parseNumber(row[columnMap.grossValueNoTax] as string)
+          : 0;
+        const withTaxValue = columnMap.grossValue 
+          ? parseNumber(row[columnMap.grossValue] as string)
+          : 0;
+        grossValue = noTaxValue > 0 ? noTaxValue : withTaxValue;
+      }
+      
       const totalInstallments = parseInteger(
         columnMap.totalInstallments ? row[columnMap.totalInstallments] as string : undefined
       );
@@ -255,21 +338,21 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
         computedValue = grossValue * totalInstallments;
       }
       
-      // Parse and validate currency - must be 3-letter ISO code
-      let currency = 'BRL';
-      if (columnMap.currency) {
-        const rawCurrency = String(row[columnMap.currency] || '').trim().toUpperCase();
-        // Validate it's a proper currency code (3 uppercase letters)
-        if (/^[A-Z]{3}$/.test(rawCurrency)) {
-          currency = rawCurrency;
-        }
+      // Determine currency based on country (not from column)
+      // For Brazil: BRL
+      // For other countries: infer from country
+      let currency: string;
+      if (isBrazil) {
+        currency = 'BRL';
+      } else {
+        currency = getCurrencyFromCountry(country);
       }
       
       const transaction: HotmartTransaction = {
         transaction_code: transactionCode,
         product: columnMap.product ? String(row[columnMap.product] || '').trim() : '',
         currency: currency,
-        country: columnMap.country ? String(row[columnMap.country] || '').trim() : '',
+        country: country,
         gross_value_with_taxes: grossValue,
         sck_code: columnMap.sckCode ? String(row[columnMap.sckCode] || '').trim() : '',
         payment_method: columnMap.paymentMethod ? String(row[columnMap.paymentMethod] || '').trim() : '',
