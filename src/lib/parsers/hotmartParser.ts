@@ -93,41 +93,67 @@ function parseDate(value: string | number | undefined): Date | null {
   const strValue = String(value).trim();
   if (!strValue) return null;
   
-  // Handle Excel serial date numbers
-  if (typeof value === 'number' || /^\d+(\.\d+)?$/.test(strValue)) {
-    const numValue = typeof value === 'number' ? value : parseFloat(strValue);
+  // Handle Excel serial date numbers first
+  if (typeof value === 'number') {
     // Excel dates are days since 1899-12-30 (with a bug for 1900)
-    if (numValue > 1 && numValue < 100000) {
-      const date = new Date((numValue - 25569) * 86400 * 1000);
+    if (value > 1 && value < 100000) {
+      const date = new Date((value - 25569) * 86400 * 1000);
       if (!isNaN(date.getTime())) return date;
     }
   }
   
-  // DD/MM/YYYY HH:MM:SS or DD/MM/YYYY HH:MM
-  const brDateTimeMatch = strValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+  // DD/MM/YYYY HH:MM:SS or DD/MM/YYYY HH:MM (with optional space variations)
+  const brDateTimeMatch = strValue.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})[\s\-]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
   if (brDateTimeMatch) {
-    const [, day, month, year, hours, minutes, seconds = '0'] = brDateTimeMatch;
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds));
-    if (!isNaN(date.getTime())) return date;
+    const [, dayOrMonth1, dayOrMonth2, year, hours, minutes, seconds = '0'] = brDateTimeMatch;
+    // Detect if it's DD/MM or MM/DD based on which value > 12
+    let day: number, month: number;
+    const val1 = parseInt(dayOrMonth1);
+    const val2 = parseInt(dayOrMonth2);
+    
+    if (val1 > 12) {
+      // val1 must be day (DD/MM format)
+      day = val1;
+      month = val2;
+    } else if (val2 > 12) {
+      // val2 must be day (MM/DD format) - unlikely for Brazilian data
+      day = val2;
+      month = val1;
+    } else {
+      // Both <= 12, assume DD/MM (Brazilian format)
+      day = val1;
+      month = val2;
+    }
+    
+    const date = new Date(parseInt(year), month - 1, day, parseInt(hours), parseInt(minutes), parseInt(seconds));
+    if (!isNaN(date.getTime()) && date.getDate() === day) return date;
   }
   
-  // DD/MM/YYYY
-  const brDateMatch = strValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  // DD/MM/YYYY or DD-MM-YYYY (most common in Hotmart exports)
+  const brDateMatch = strValue.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (brDateMatch) {
-    const [, day, month, year] = brDateMatch;
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (!isNaN(date.getTime())) return date;
+    const [, dayOrMonth1, dayOrMonth2, year] = brDateMatch;
+    let day: number, month: number;
+    const val1 = parseInt(dayOrMonth1);
+    const val2 = parseInt(dayOrMonth2);
+    
+    if (val1 > 12) {
+      day = val1;
+      month = val2;
+    } else if (val2 > 12) {
+      day = val2;
+      month = val1;
+    } else {
+      // Both <= 12, assume DD/MM (Brazilian format)
+      day = val1;
+      month = val2;
+    }
+    
+    const date = new Date(parseInt(year), month - 1, day);
+    if (!isNaN(date.getTime()) && date.getDate() === day) return date;
   }
   
-  // DD-MM-YYYY
-  const brDateDashMatch = strValue.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-  if (brDateDashMatch) {
-    const [, day, month, year] = brDateDashMatch;
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    if (!isNaN(date.getTime())) return date;
-  }
-  
-  // YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS
+  // YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS (ISO format)
   const isoMatch = strValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
   if (isoMatch) {
     const [, year, month, day, hours = '0', minutes = '0', seconds = '0'] = isoMatch;
@@ -135,9 +161,17 @@ function parseDate(value: string | number | undefined): Date | null {
     if (!isNaN(date.getTime())) return date;
   }
   
-  // Try native parsing as last resort
-  const parsed = new Date(strValue);
-  return isNaN(parsed.getTime()) ? null : parsed;
+  // YYYY/MM/DD format
+  const isoSlashMatch = strValue.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+  if (isoSlashMatch) {
+    const [, year, month, day] = isoSlashMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // DO NOT use native Date parsing as fallback - it interprets DD/MM as MM/DD
+  // which causes days > 12 to fail silently
+  return null;
 }
 
 function parseInteger(value: string | number | undefined): number {

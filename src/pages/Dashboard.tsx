@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useTransactionStats } from '@/hooks/useTransactions';
+import { useTransactionStats, useTransactions } from '@/hooks/useTransactions';
 import { useActiveGoals } from '@/hooks/useGoals';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { KPICard } from '@/components/dashboard/KPICard';
@@ -8,6 +8,7 @@ import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 import { CountryDistribution } from '@/components/dashboard/CountryDistribution';
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 import { GoalProgressCard } from '@/components/dashboard/GoalProgressCard';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
 import { 
   DollarSign, 
@@ -16,7 +17,8 @@ import {
   Upload,
   Target,
   Loader2,
-  Calendar
+  Calendar,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -50,6 +52,13 @@ export default function Dashboard() {
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
   });
+
+  // Get all transactions to check for null dates
+  const { data: allTransactions } = useTransactions();
+  const transactionsWithoutDate = useMemo(() => {
+    if (!allTransactions) return 0;
+    return allTransactions.filter(t => !t.purchase_date).length;
+  }, [allTransactions]);
 
   const { activeGoals } = useActiveGoals();
 
@@ -111,6 +120,22 @@ export default function Dashboard() {
             </Button>
           </div>
         </motion.div>
+
+        {/* Warning for transactions without date */}
+        {period !== 'all' && transactionsWithoutDate > 0 && (
+          <Alert variant="default" className="border-warning/50 bg-warning/5">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <AlertDescription className="text-warning">
+              <strong>{transactionsWithoutDate} transações</strong> não têm data registrada e não aparecem no filtro atual.{' '}
+              <button 
+                onClick={() => setPeriod('all')} 
+                className="underline font-medium hover:no-underline"
+              >
+                Ver todas as transações
+              </button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {!hasData ? (
           /* Empty State */

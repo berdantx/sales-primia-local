@@ -11,8 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, AlertTriangle, CalendarX } from 'lucide-react';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface ImportPreviewProps {
   transactions: HotmartTransaction[];
@@ -24,6 +26,13 @@ interface ImportPreviewProps {
 export function ImportPreview({ transactions, errors, duplicates, totalRows }: ImportPreviewProps) {
   const previewTransactions = transactions.slice(0, 10);
   const hasWarnings = errors.length > 0 || duplicates.length > 0;
+  
+  // Date parsing stats
+  const transactionsWithDate = transactions.filter(t => t.purchase_date !== null);
+  const transactionsWithoutDate = transactions.filter(t => t.purchase_date === null);
+  const dateParseRate = transactions.length > 0 
+    ? Math.round((transactionsWithDate.length / transactions.length) * 100) 
+    : 0;
 
   return (
     <motion.div
@@ -32,7 +41,7 @@ export function ImportPreview({ transactions, errors, duplicates, totalRows }: I
       className="space-y-6"
     >
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -88,7 +97,41 @@ export function ImportPreview({ transactions, errors, duplicates, totalRows }: I
             </div>
           </CardContent>
         </Card>
+
+        <Card className={transactionsWithoutDate.length > 0 ? 'border-warning/50' : ''}>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${dateParseRate === 100 ? 'bg-success/10' : 'bg-warning/10'}`}>
+                <CalendarX className={`h-5 w-5 ${dateParseRate === 100 ? 'text-success' : 'text-warning'}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{dateParseRate}%</p>
+                <p className="text-sm text-muted-foreground">Com data</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Date parsing warning */}
+      {transactionsWithoutDate.length > 0 && (
+        <Card className="border-warning/50 bg-warning/5">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <CalendarX className="h-5 w-5 text-warning mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-warning">
+                  {transactionsWithoutDate.length} transações sem data de compra
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Essas transações serão importadas, mas não aparecerão em filtros de período.
+                  Verifique se sua planilha contém a coluna "Data da compra" ou "Data de compra".
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Preview Table */}
       <Card>
@@ -108,10 +151,10 @@ export function ImportPreview({ transactions, errors, duplicates, totalRows }: I
               <TableHeader>
                 <TableRow>
                   <TableHead>Código</TableHead>
+                  <TableHead>Data</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead>Comprador</TableHead>
                   <TableHead>Moeda</TableHead>
-                  <TableHead className="text-right">Valor Bruto</TableHead>
                   <TableHead className="text-right">Valor Calculado</TableHead>
                   <TableHead>Tipo Cobrança</TableHead>
                 </TableRow>
@@ -122,17 +165,21 @@ export function ImportPreview({ transactions, errors, duplicates, totalRows }: I
                     <TableCell className="font-mono text-xs">
                       {transaction.transaction_code.slice(0, 12)}...
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
+                    <TableCell className="text-sm">
+                      {transaction.purchase_date ? (
+                        format(transaction.purchase_date, 'dd/MM/yyyy', { locale: ptBR })
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-[180px] truncate">
                       {transaction.product}
                     </TableCell>
-                    <TableCell className="max-w-[150px] truncate">
+                    <TableCell className="max-w-[130px] truncate">
                       {transaction.buyer_name || transaction.buyer_email}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{transaction.currency}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(transaction.gross_value_with_taxes, transaction.currency)}
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(transaction.computed_value, transaction.currency)}
