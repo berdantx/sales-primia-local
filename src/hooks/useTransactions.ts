@@ -36,8 +36,9 @@ export function useTransactions(filters?: TransactionFilters) {
     queryFn: async () => {
       let query = supabase
         .from('transactions')
-        .select('*')
-        .order('purchase_date', { ascending: false, nullsFirst: false });
+        .select('*', { count: 'exact' })
+        .order('purchase_date', { ascending: false, nullsFirst: false })
+        .range(0, 50000);
 
       // Only apply date filters if both dates are provided
       if (filters?.startDate && filters?.endDate) {
