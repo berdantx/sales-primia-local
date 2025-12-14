@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { DateRange } from 'react-day-picker';
 import { useTransactionStats, useTransactions } from '@/hooks/useTransactions';
 import { useActiveGoals } from '@/hooks/useGoals';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -8,6 +9,7 @@ import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 import { CountryDistribution } from '@/components/dashboard/CountryDistribution';
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 import { GoalProgressCard } from '@/components/dashboard/GoalProgressCard';
+import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
 import { 
@@ -31,14 +33,24 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all';
+type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [period, setPeriod] = useState<PeriodFilter>('all');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
 
   const dateRange = useMemo(() => {
     if (period === 'all') {
+      return { startDate: undefined, endDate: undefined };
+    }
+    if (period === 'custom' && customDateRange?.from && customDateRange?.to) {
+      return {
+        startDate: customDateRange.from,
+        endDate: customDateRange.to,
+      };
+    }
+    if (period === 'custom') {
       return { startDate: undefined, endDate: undefined };
     }
     const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
@@ -46,7 +58,7 @@ export default function Dashboard() {
       startDate: subDays(new Date(), days),
       endDate: new Date(),
     };
-  }, [period]);
+  }, [period, customDateRange]);
 
   const { stats, isLoading } = useTransactionStats({
     startDate: dateRange.startDate,
@@ -108,8 +120,16 @@ export default function Dashboard() {
                 <SelectItem value="90d">Últimos 90 dias</SelectItem>
                 <SelectItem value="365d">Último ano</SelectItem>
                 <SelectItem value="all">Tudo</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
+            {period === 'custom' && (
+              <DateRangePicker
+                dateRange={customDateRange}
+                onDateRangeChange={setCustomDateRange}
+                className="w-[260px]"
+              />
+            )}
             <Button variant="outline" onClick={() => navigate('/goals')}>
               <Target className="h-4 w-4 mr-2" />
               Metas
