@@ -195,10 +195,20 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
         computedValue = grossValue * totalInstallments;
       }
       
+      // Parse and validate currency - must be 3-letter ISO code
+      let currency = 'BRL';
+      if (columnMap.currency) {
+        const rawCurrency = String(row[columnMap.currency] || '').trim().toUpperCase();
+        // Validate it's a proper currency code (3 uppercase letters)
+        if (/^[A-Z]{3}$/.test(rawCurrency)) {
+          currency = rawCurrency;
+        }
+      }
+      
       const transaction: HotmartTransaction = {
         transaction_code: transactionCode,
         product: columnMap.product ? String(row[columnMap.product] || '').trim() : '',
-        currency: columnMap.currency ? String(row[columnMap.currency] || 'BRL').trim().toUpperCase() : 'BRL',
+        currency: currency,
         country: columnMap.country ? String(row[columnMap.country] || '').trim() : '',
         gross_value_with_taxes: grossValue,
         sck_code: columnMap.sckCode ? String(row[columnMap.sckCode] || '').trim() : '',
