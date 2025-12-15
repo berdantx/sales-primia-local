@@ -190,15 +190,15 @@ function TmbTransactions() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div>
-            <h1 className="text-3xl font-bold">Transações TMB</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold">Transações TMB</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               {filteredTransactions.length} transações encontradas
             </p>
           </div>
-          <Button variant="outline" onClick={handleExportCSV}>
+          <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
@@ -244,30 +244,32 @@ function TmbTransactions() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="flex flex-wrap items-center gap-4"
+          className="flex flex-col sm:flex-row sm:items-center gap-3"
         >
           <span className="text-sm font-medium text-muted-foreground">Período:</span>
-          <Select value={period} onValueChange={(v) => { setPeriod(v as PeriodFilter); setCurrentPage(1); }}>
-            <SelectTrigger className="w-[160px]">
-              <Calendar className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Últimos 7 dias</SelectItem>
-              <SelectItem value="30d">Últimos 30 dias</SelectItem>
-              <SelectItem value="90d">Últimos 90 dias</SelectItem>
-              <SelectItem value="365d">Último ano</SelectItem>
-              <SelectItem value="all">Tudo</SelectItem>
-              <SelectItem value="custom">Personalizado</SelectItem>
-            </SelectContent>
-          </Select>
-          {period === 'custom' && (
-            <DateRangePicker
-              dateRange={customDateRange}
-              onDateRangeChange={setCustomDateRange}
-              className="w-[260px]"
-            />
-          )}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Select value={period} onValueChange={(v) => { setPeriod(v as PeriodFilter); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="90d">Últimos 90 dias</SelectItem>
+                <SelectItem value="365d">Último ano</SelectItem>
+                <SelectItem value="all">Tudo</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            {period === 'custom' && (
+              <DateRangePicker
+                dateRange={customDateRange}
+                onDateRangeChange={setCustomDateRange}
+                className="w-full sm:w-[260px]"
+              />
+            )}
+          </div>
         </motion.div>
 
         {/* Advanced Filters */}
@@ -318,26 +320,27 @@ function TmbTransactions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID Pedido</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>UTM Source</TableHead>
+                  <TableHead className="text-xs sm:text-sm">ID Pedido</TableHead>
+                  <TableHead className="text-xs sm:text-sm">Produto</TableHead>
+                  <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Cliente</TableHead>
+                  <TableHead className="text-right text-xs sm:text-sm">Valor</TableHead>
+                  <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Data</TableHead>
+                  <TableHead className="hidden md:table-cell text-xs sm:text-sm">UTM Source</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedTransactions.map((transaction) => (
                   <TableRow key={transaction.id}>
-                    <TableCell className="font-mono text-xs">
-                      {transaction.order_id.slice(0, 15)}...
+                    <TableCell className="font-mono text-xs p-2 sm:p-4">
+                      <span className="hidden sm:inline">{transaction.order_id.slice(0, 15)}...</span>
+                      <span className="sm:hidden">{transaction.order_id.slice(0, 8)}...</span>
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
+                    <TableCell className="max-w-[120px] sm:max-w-[200px] truncate text-xs sm:text-sm p-2 sm:p-4">
                       {transaction.product || '-'}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell p-2 sm:p-4">
                       <div className="max-w-[180px]">
-                        <p className="truncate font-medium">
+                        <p className="truncate font-medium text-sm">
                           {transaction.buyer_name || '-'}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
@@ -345,16 +348,16 @@ function TmbTransactions() {
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-medium">
+                    <TableCell className="text-right font-medium text-xs sm:text-sm p-2 sm:p-4">
                       {formatCurrency(Number(transaction.ticket_value), 'BRL')}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell text-xs sm:text-sm p-2 sm:p-4">
                       {transaction.effective_date 
                         ? format(parseISO(transaction.effective_date), 'dd/MM/yy HH:mm', { locale: ptBR })
                         : '-'
                       }
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell p-2 sm:p-4">
                       {transaction.utm_source ? (
                         <Badge variant="outline" className="text-xs">
                           {transaction.utm_source}
@@ -365,9 +368,9 @@ function TmbTransactions() {
                 ))}
                 {paginatedTransactions.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
-                      <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 sm:py-12">
+                      <FileSpreadsheet className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                      <p className="text-muted-foreground text-sm sm:text-base">
                         {hasActiveFilters 
                           ? 'Nenhuma transação encontrada com os filtros aplicados'
                           : 'Nenhuma transação TMB ainda. Importe um arquivo para começar.'
@@ -383,30 +386,31 @@ function TmbTransactions() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
               Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredTransactions.length)} de {filteredTransactions.length}
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-1 sm:gap-2 justify-center">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
+                className="h-8 w-8 p-0 sm:h-9 sm:w-9"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
                   let page: number;
-                  if (totalPages <= 5) {
+                  if (totalPages <= 3) {
                     page = i + 1;
-                  } else if (currentPage <= 3) {
+                  } else if (currentPage <= 2) {
                     page = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    page = totalPages - 4 + i;
+                  } else if (currentPage >= totalPages - 1) {
+                    page = totalPages - 2 + i;
                   } else {
-                    page = currentPage - 2 + i;
+                    page = currentPage - 1 + i;
                   }
                   return (
                     <Button
@@ -414,6 +418,7 @@ function TmbTransactions() {
                       variant={currentPage === page ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
+                      className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
                     >
                       {page}
                     </Button>
@@ -425,6 +430,7 @@ function TmbTransactions() {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0 sm:h-9 sm:w-9"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
