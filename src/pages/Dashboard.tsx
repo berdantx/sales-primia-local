@@ -6,7 +6,7 @@ import { useActiveGoals } from '@/hooks/useGoals';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
-import { CountryDistribution } from '@/components/dashboard/CountryDistribution';
+
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 
 import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
@@ -352,15 +352,14 @@ export default function Dashboard() {
                 />
               </div>
               
-              {/* Secondary charts - 1/3 width, stacked */}
-              <div className="flex flex-col gap-6">
+              {/* Secondary chart - 1/3 width */}
+              <div className="flex flex-col h-full">
                 {(hotmartTotalBRL > 0 || tmbTotalBRL > 0) && (
                   <PlatformSharePieChart 
                     hotmartTotal={hotmartTotalBRL} 
                     tmbTotal={tmbTotalBRL} 
                   />
                 )}
-                <CountryDistribution data={stats.totalByCountry} />
               </div>
             </div>
 
