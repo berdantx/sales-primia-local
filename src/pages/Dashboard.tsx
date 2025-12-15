@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [billingType, setBillingType] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [sckCode, setSckCode] = useState<string | null>(null);
+  const [product, setProduct] = useState<string | null>(null);
   
   // Selected view
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
@@ -72,6 +73,7 @@ export default function Dashboard() {
     setBillingType(view.billing_type);
     setPaymentMethod(view.payment_method);
     setSckCode(view.sck_code);
+    setProduct(view.product || null);
   };
 
   const handleClearView = () => {
@@ -105,7 +107,8 @@ export default function Dashboard() {
     billingType,
     paymentMethod,
     sckCode,
-  }), [dateRange, billingType, paymentMethod, sckCode]);
+    product,
+  }), [dateRange, billingType, paymentMethod, sckCode, product]);
 
   // Use optimized database aggregations
   const { data: stats, isLoading: statsLoading } = useTransactionStatsOptimized(filters);
@@ -231,9 +234,12 @@ export default function Dashboard() {
             billingType={billingType}
             paymentMethod={paymentMethod}
             sckCode={sckCode}
+            product={product}
             onBillingTypeChange={setBillingType}
             onPaymentMethodChange={setPaymentMethod}
             onSckCodeChange={setSckCode}
+            onProductChange={setProduct}
+            totalFilteredTransactions={stats?.totalTransactions}
           />
         </motion.div>
 

@@ -25,6 +25,7 @@ export type Database = {
           name: string
           payment_method: string | null
           period: string | null
+          product: string | null
           sck_code: string | null
           updated_at: string | null
           user_id: string
@@ -39,6 +40,7 @@ export type Database = {
           name: string
           payment_method?: string | null
           period?: string | null
+          product?: string | null
           sck_code?: string | null
           updated_at?: string | null
           user_id: string
@@ -53,6 +55,7 @@ export type Database = {
           name?: string
           payment_method?: string | null
           period?: string | null
+          product?: string | null
           sck_code?: string | null
           updated_at?: string | null
           user_id?: string
@@ -365,6 +368,17 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: {
+              p_billing_type?: string
+              p_end_date?: string
+              p_payment_method?: string
+              p_product?: string
+              p_sck_code?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
       get_top_customers:
         | {
             Args: {
@@ -385,6 +399,18 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: {
+              p_billing_type?: string
+              p_end_date?: string
+              p_limit?: number
+              p_payment_method?: string
+              p_product?: string
+              p_sck_code?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
       get_transaction_date_range: { Args: never; Returns: Json }
       get_transaction_stats:
         | {
@@ -396,6 +422,17 @@ export type Database = {
               p_billing_type?: string
               p_end_date?: string
               p_payment_method?: string
+              p_sck_code?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_billing_type?: string
+              p_end_date?: string
+              p_payment_method?: string
+              p_product?: string
               p_sck_code?: string
               p_start_date?: string
             }

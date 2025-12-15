@@ -11,12 +11,14 @@ export interface FilterOptions {
   billingTypes: FilterOption[];
   paymentMethods: FilterOption[];
   sckCodes: FilterOption[];
+  products: FilterOption[];
 }
 
 interface RpcResponse {
   billing_types: FilterOption[] | null;
   payment_methods: FilterOption[] | null;
   sck_codes: FilterOption[] | null;
+  products: FilterOption[] | null;
 }
 
 export function useFilterOptions() {
@@ -36,6 +38,7 @@ export function useFilterOptions() {
         billingTypes: response?.billing_types || [],
         paymentMethods: response?.payment_methods || [],
         sckCodes: response?.sck_codes || [],
+        products: response?.products || [],
       } as FilterOptions;
     },
     enabled: !!user,
