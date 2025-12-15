@@ -37,10 +37,12 @@ function Transactions() {
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: transactions, isLoading, error } = useTransactions({
+  const filters = useMemo(() => ({
     startDate: subDays(new Date(), 365),
     endDate: new Date(),
-  });
+  }), []);
+
+  const { data: transactions, isLoading, error } = useTransactions(filters);
 
   // Debug logging
   console.log('Transactions state:', { isLoading, count: transactions?.length, error });
