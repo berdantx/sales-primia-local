@@ -447,6 +447,7 @@ export type Database = {
             }
             Returns: Json
           }
+      get_tmb_filter_options: { Args: never; Returns: Json }
       get_tmb_sales_by_date: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
