@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -108,15 +108,7 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
         <CardContent className="flex-1 pb-4">
           <div className="h-full min-h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-                <defs>
-                  {currencies.map((currency, index) => (
-                    <linearGradient key={currency} id={`color${currency}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS[currency] || `hsl(${index * 60}, 70%, 50%)`} stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor={COLORS[currency] || `hsl(${index * 60}, 70%, 50%)`} stopOpacity={0}/>
-                    </linearGradient>
-                  ))}
-                </defs>
+              <LineChart data={chartData} margin={{ top: 5, right: 50, left: -15, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis 
                   dataKey="date" 
@@ -127,8 +119,18 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
                   axisLine={false}
                 />
                 <YAxis 
+                  yAxisId="left"
                   tickFormatter={formatValue}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke={COLORS['BRL']}
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis 
+                  yAxisId="right"
+                  orientation="right"
+                  tickFormatter={formatValue}
+                  stroke={COLORS['USD']}
                   fontSize={10}
                   tickLine={false}
                   axisLine={false}
@@ -143,21 +145,26 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
                   labelFormatter={(value) => format(parseISO(value as string), "dd 'de' MMMM", { locale: ptBR })}
                   formatter={(value: number, name: string) => [
                     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: name }).format(value),
-                    name
+                    name === 'BRL' ? 'Real (R$)' : name === 'USD' ? 'Dólar (US$)' : name
                   ]}
                 />
+                <Legend 
+                  formatter={(value) => value === 'BRL' ? 'Real (R$)' : value === 'USD' ? 'Dólar (US$)' : value}
+                  wrapperStyle={{ fontSize: '11px' }}
+                />
                 {currencies.map((currency, index) => (
-                  <Area
+                  <Line
                     key={currency}
+                    yAxisId={currency === 'BRL' ? 'left' : 'right'}
                     type="monotone"
                     dataKey={currency}
                     stroke={COLORS[currency] || `hsl(${index * 60}, 70%, 50%)`}
-                    fillOpacity={1}
-                    fill={`url(#color${currency})`}
-                    strokeWidth={2}
+                    strokeWidth={2.5}
+                    dot={false}
+                    connectNulls={true}
                   />
                 ))}
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
