@@ -14,6 +14,7 @@ import { CountryDistribution } from '@/components/dashboard/CountryDistribution'
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
+import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
 import { 
@@ -44,6 +45,11 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [period, setPeriod] = useState<PeriodFilter>('all');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  
+  // Advanced filters
+  const [billingType, setBillingType] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [sckCode, setSckCode] = useState<string | null>(null);
 
   const dateRange = useMemo(() => {
     if (period === 'all') {
@@ -65,21 +71,19 @@ export default function Dashboard() {
     };
   }, [period, customDateRange]);
 
+  // Build complete filters object
+  const filters = useMemo(() => ({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    billingType,
+    paymentMethod,
+    sckCode,
+  }), [dateRange, billingType, paymentMethod, sckCode]);
+
   // Use optimized database aggregations
-  const { data: stats, isLoading: statsLoading } = useTransactionStatsOptimized({
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-  });
-
-  const { data: topCustomers, isLoading: customersLoading } = useTopCustomersOptimized({
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-  });
-
-  const { data: salesByDate, isLoading: salesLoading } = useSalesByDateOptimized({
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-  });
+  const { data: stats, isLoading: statsLoading } = useTransactionStatsOptimized(filters);
+  const { data: topCustomers, isLoading: customersLoading } = useTopCustomersOptimized(filters);
+  const { data: salesByDate, isLoading: salesLoading } = useSalesByDateOptimized(filters);
 
   const { activeGoals } = useActiveGoals();
 
@@ -168,6 +172,23 @@ export default function Dashboard() {
               className="w-[260px]"
             />
           )}
+        </motion.div>
+
+        {/* Advanced Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="p-4 bg-muted/30 rounded-lg border"
+        >
+          <AdvancedFilters
+            billingType={billingType}
+            paymentMethod={paymentMethod}
+            sckCode={sckCode}
+            onBillingTypeChange={setBillingType}
+            onPaymentMethodChange={setPaymentMethod}
+            onSckCodeChange={setSckCode}
+          />
         </motion.div>
 
         {/* Warning for transactions without date */}

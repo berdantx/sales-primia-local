@@ -5,6 +5,9 @@ import { useAuth } from './useAuth';
 export interface TransactionFilters {
   startDate?: Date;
   endDate?: Date;
+  billingType?: string | null;
+  paymentMethod?: string | null;
+  sckCode?: string | null;
 }
 
 export interface CountryCurrencyStats {
@@ -38,11 +41,22 @@ export function useTransactionStatsOptimized(filters?: TransactionFilters) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['transaction-stats-optimized', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString()],
+    queryKey: [
+      'transaction-stats-optimized', 
+      user?.id, 
+      filters?.startDate?.toISOString(), 
+      filters?.endDate?.toISOString(),
+      filters?.billingType,
+      filters?.paymentMethod,
+      filters?.sckCode,
+    ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_transaction_stats', {
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
+        p_billing_type: filters?.billingType || null,
+        p_payment_method: filters?.paymentMethod || null,
+        p_sck_code: filters?.sckCode || null,
       });
 
       if (error) throw error;
@@ -71,12 +85,23 @@ export function useTopCustomersOptimized(filters?: TransactionFilters) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['top-customers-optimized', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString()],
+    queryKey: [
+      'top-customers-optimized', 
+      user?.id, 
+      filters?.startDate?.toISOString(), 
+      filters?.endDate?.toISOString(),
+      filters?.billingType,
+      filters?.paymentMethod,
+      filters?.sckCode,
+    ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_top_customers', {
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
         p_limit: 10,
+        p_billing_type: filters?.billingType || null,
+        p_payment_method: filters?.paymentMethod || null,
+        p_sck_code: filters?.sckCode || null,
       });
 
       if (error) throw error;
@@ -90,11 +115,22 @@ export function useSalesByDateOptimized(filters?: TransactionFilters) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['sales-by-date-optimized', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString()],
+    queryKey: [
+      'sales-by-date-optimized', 
+      user?.id, 
+      filters?.startDate?.toISOString(), 
+      filters?.endDate?.toISOString(),
+      filters?.billingType,
+      filters?.paymentMethod,
+      filters?.sckCode,
+    ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_sales_by_date', {
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
+        p_billing_type: filters?.billingType || null,
+        p_payment_method: filters?.paymentMethod || null,
+        p_sck_code: filters?.sckCode || null,
       });
 
       if (error) throw error;

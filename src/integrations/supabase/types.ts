@@ -304,19 +304,57 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_sales_by_date: {
-        Args: { p_end_date?: string; p_start_date?: string }
-        Returns: Json
-      }
-      get_top_customers: {
-        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
-        Returns: Json
-      }
+      get_sales_by_date:
+        | {
+            Args: { p_end_date?: string; p_start_date?: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_billing_type?: string
+              p_end_date?: string
+              p_payment_method?: string
+              p_sck_code?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
+      get_top_customers:
+        | {
+            Args: {
+              p_end_date?: string
+              p_limit?: number
+              p_start_date?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_billing_type?: string
+              p_end_date?: string
+              p_limit?: number
+              p_payment_method?: string
+              p_sck_code?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
       get_transaction_date_range: { Args: never; Returns: Json }
-      get_transaction_stats: {
-        Args: { p_end_date?: string; p_start_date?: string }
-        Returns: Json
-      }
+      get_transaction_stats:
+        | {
+            Args: { p_end_date?: string; p_start_date?: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_billing_type?: string
+              p_end_date?: string
+              p_payment_method?: string
+              p_sck_code?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
