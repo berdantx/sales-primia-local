@@ -143,42 +143,41 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2"
         >
-          <div>
-            <h1 className="text-3xl font-bold">Projeção de Faturamento</h1>
-            <p className="text-muted-foreground">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight">Projeção de Faturamento</h1>
+            <p className="text-muted-foreground text-sm">
               Acompanhe suas metas e desempenho financeiro
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={() => navigate('/transactions')}>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/transactions')} className="h-9">
               <History className="h-4 w-4 mr-2" />
               Histórico
             </Button>
-            <Button variant="outline" onClick={() => navigate('/goals')}>
+            <Button variant="outline" size="sm" onClick={() => navigate('/goals')} className="h-9">
               <Target className="h-4 w-4 mr-2" />
               Metas
             </Button>
-            <Button onClick={() => navigate('/upload')}>
+            <Button size="sm" onClick={() => navigate('/upload')} className="h-9">
               <Upload className="h-4 w-4 mr-2" />
-              Importar Vendas
+              Importar
             </Button>
           </div>
         </motion.div>
 
-        {/* Period and Platform Selectors */}
+        {/* Period and Platform Selectors - Compact bar */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-wrap items-center gap-4"
+          className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-xl border"
         >
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-muted-foreground">Período:</span>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
-              <SelectTrigger className="w-[160px]">
-                <Calendar className="h-4 w-4 mr-2" />
+              <SelectTrigger className="w-[140px] h-8 text-sm bg-background">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -190,14 +189,17 @@ export default function Dashboard() {
                 <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
-            {period === 'custom' && (
-              <DateRangePicker
-                dateRange={customDateRange}
-                onDateRangeChange={setCustomDateRange}
-                className="w-[260px]"
-              />
-            )}
           </div>
+          
+          {period === 'custom' && (
+            <DateRangePicker
+              dateRange={customDateRange}
+              onDateRangeChange={setCustomDateRange}
+              className="w-[240px]"
+            />
+          )}
+          
+          <div className="h-6 w-px bg-border hidden sm:block" />
           
           <PlatformFilter value={platform} onChange={setPlatform} />
         </motion.div>
@@ -340,26 +342,24 @@ export default function Dashboard() {
               </motion.div>
             )}
 
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="lg:col-span-2 h-full">
-                <SalesByTimeChart 
-                  data={salesByDate || {}} 
-                  currencies={currencies}
+            {/* Charts Row - 3 equal columns */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <SalesByTimeChart 
+                data={salesByDate || {}} 
+                currencies={currencies}
+              />
+              
+              {/* Platform Share Pie Chart */}
+              {(hotmartTotalBRL > 0 || tmbTotalBRL > 0) ? (
+                <PlatformSharePieChart 
+                  hotmartTotal={hotmartTotalBRL} 
+                  tmbTotal={tmbTotalBRL} 
                 />
-              </div>
-              <div className="flex flex-col gap-6 h-full">
-                {/* Platform Share Pie Chart - show when both platforms have data */}
-                {(hotmartTotalBRL > 0 || tmbTotalBRL > 0) && (
-                  <PlatformSharePieChart 
-                    hotmartTotal={hotmartTotalBRL} 
-                    tmbTotal={tmbTotalBRL} 
-                  />
-                )}
-                <div className="flex-1 min-h-[300px]">
-                  <CountryDistribution data={stats.totalByCountry} />
-                </div>
-              </div>
+              ) : (
+                <div className="hidden lg:block" />
+              )}
+              
+              <CountryDistribution data={stats.totalByCountry} />
             </div>
 
             {/* Top Customers */}
