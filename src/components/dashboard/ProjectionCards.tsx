@@ -40,8 +40,8 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
       transition={{ delay: 0.4 }}
     >
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Projeções para Atingir a Meta</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <h3 className="text-base sm:text-lg font-semibold">Projeções para Atingir a Meta</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
           {projections.map((projection, index) => (
             <Card key={projection.title} className="hover:shadow-medium transition-shadow">
               <CardContent className="pt-4 pb-4">

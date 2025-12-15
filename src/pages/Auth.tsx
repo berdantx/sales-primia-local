@@ -106,11 +106,11 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary to-primary/80" />
-        <div className="relative z-10 flex flex-col justify-center px-12 text-primary-foreground">
+        <div className="relative z-10 flex flex-col justify-center px-8 xl:px-12 text-primary-foreground">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -171,30 +171,30 @@ export default function Auth() {
       </div>
 
       {/* Right side - Auth form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-background">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-background">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="w-full max-w-md"
         >
-          <div className="lg:hidden flex items-center gap-2 mb-8 justify-center">
-            <BarChart3 className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">Sales Analytics</span>
+          <div className="lg:hidden flex items-center gap-2 mb-6 sm:mb-8 justify-center">
+            <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+            <span className="text-xl sm:text-2xl font-bold">Sales Analytics</span>
           </div>
 
           <Card className="border-0 shadow-medium">
-            <CardHeader className="space-y-1 pb-4">
-              <CardTitle className="text-2xl font-bold">Bem-vindo</CardTitle>
-              <CardDescription>
+            <CardHeader className="space-y-1 pb-4 px-4 sm:px-6">
+              <CardTitle className="text-xl sm:text-2xl font-bold">Bem-vindo</CardTitle>
+              <CardDescription className="text-sm">
                 Entre na sua conta ou crie uma nova para começar
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 sm:px-6">
               <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="login">Entrar</TabsTrigger>
-                  <TabsTrigger value="signup">Cadastrar</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
+                  <TabsTrigger value="login" className="text-sm">Entrar</TabsTrigger>
+                  <TabsTrigger value="signup" className="text-sm">Cadastrar</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="login">

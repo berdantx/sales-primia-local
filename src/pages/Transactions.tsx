@@ -5,7 +5,7 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -33,6 +33,34 @@ import {
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 
 const ITEMS_PER_PAGE = 20;
+
+// Mobile transaction card component
+function TransactionCard({ transaction }: { transaction: any }) {
+  return (
+    <Card className="mb-2">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{transaction.product || 'Sem produto'}</p>
+            <p className="text-xs text-muted-foreground truncate">{transaction.buyer_name || '-'}</p>
+          </div>
+          <Badge variant="outline" className="ml-2 text-xs shrink-0">{transaction.currency}</Badge>
+        </div>
+        <div className="flex justify-between items-end">
+          <div className="text-xs text-muted-foreground">
+            {transaction.purchase_date 
+              ? format(parseISO(transaction.purchase_date), 'dd/MM/yy', { locale: ptBR })
+              : 'Sem data'
+            }
+          </div>
+          <div className="text-sm font-semibold text-right">
+            {formatCurrency(Number(transaction.computed_value), transaction.currency)}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function Transactions() {
   const [search, setSearch] = useState('');
@@ -158,20 +186,20 @@ function Transactions() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
         >
           <div>
-            <h1 className="text-3xl font-bold">Transações</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold">Transações</h1>
+            <p className="text-muted-foreground text-sm">
               {filteredTransactions.length} transações encontradas
             </p>
           </div>
-          <Button variant="outline" onClick={handleExportCSV}>
+          <Button variant="outline" onClick={handleExportCSV} size="sm" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
@@ -182,7 +210,7 @@ function Transactions() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4"
         >
           <ColoredKPICard
             title="Total em Reais"
@@ -191,6 +219,7 @@ function Transactions() {
             icon={DollarSign}
             variant="green"
             delay={0}
+            className="text-sm sm:text-base"
           />
           <ColoredKPICard
             title="Total em Dólares"
@@ -199,6 +228,7 @@ function Transactions() {
             icon={DollarSign}
             variant="blue"
             delay={1}
+            className="text-sm sm:text-base"
           />
           <ColoredKPICard
             title="Total de Transações"
@@ -207,155 +237,181 @@ function Transactions() {
             icon={Receipt}
             variant="purple"
             delay={2}
+            className="col-span-2 sm:col-span-1 text-sm sm:text-base"
           />
         </motion.div>
 
         {/* Filters */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-[200px]">
+          <CardContent className="p-3 sm:pt-6 sm:px-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por produto, cliente ou código..."
+                    placeholder="Buscar produto, cliente..."
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
                       setCurrentPage(1);
                     }}
-                    className="pl-10"
+                    className="pl-10 h-9 text-sm"
                   />
                 </div>
               </div>
               
-              <Select value={currencyFilter} onValueChange={(v) => { setCurrencyFilter(v); setCurrentPage(1); }}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Moeda" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas moedas</SelectItem>
-                  {currencies.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={currencyFilter} onValueChange={(v) => { setCurrencyFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[100px] sm:w-[140px] h-9 text-sm">
+                    <SelectValue placeholder="Moeda" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {currencies.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select value={countryFilter} onValueChange={(v) => { setCountryFilter(v); setCurrentPage(1); }}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="País" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos países</SelectItem>
-                  {countries.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <Select value={countryFilter} onValueChange={(v) => { setCountryFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[100px] sm:w-[160px] h-9 text-sm">
+                    <SelectValue placeholder="País" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {countries.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  <X className="h-4 w-4 mr-1" />
-                  Limpar
-                </Button>
-              )}
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2">
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Table */}
-        <Card>
+        {/* Mobile: Card View */}
+        <div className="md:hidden">
+          {paginatedTransactions.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground text-sm">
+                  {hasActiveFilters 
+                    ? 'Nenhuma transação encontrada com os filtros aplicados'
+                    : 'Nenhuma transação ainda. Importe uma planilha para começar.'
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            paginatedTransactions.map((transaction) => (
+              <TransactionCard key={transaction.id} transaction={transaction} />
+            ))
+          )}
+        </div>
+
+        {/* Desktop: Table View */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Comprador</TableHead>
-                  <TableHead>Moeda</TableHead>
-                  <TableHead>País</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Data</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell className="font-mono text-xs">
-                      {transaction.transaction_code.slice(0, 12)}...
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {transaction.product || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-[180px]">
-                        <p className="truncate font-medium">
-                          {transaction.buyer_name || '-'}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {transaction.buyer_email}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{transaction.currency}</Badge>
-                    </TableCell>
-                    <TableCell>{transaction.country || '-'}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(Number(transaction.computed_value), transaction.currency)}
-                    </TableCell>
-                    <TableCell>
-                      {transaction.purchase_date 
-                        ? format(parseISO(transaction.purchase_date), 'dd/MM/yy', { locale: ptBR })
-                        : '-'
-                      }
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {paginatedTransactions.length === 0 && (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12">
-                      <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">
-                        {hasActiveFilters 
-                          ? 'Nenhuma transação encontrada com os filtros aplicados'
-                          : 'Nenhuma transação ainda. Importe uma planilha para começar.'
-                        }
-                      </p>
-                    </TableCell>
+                    <TableHead className="min-w-[100px]">Código</TableHead>
+                    <TableHead className="min-w-[150px]">Produto</TableHead>
+                    <TableHead className="min-w-[150px]">Comprador</TableHead>
+                    <TableHead>Moeda</TableHead>
+                    <TableHead className="hidden lg:table-cell">País</TableHead>
+                    <TableHead className="text-right min-w-[100px]">Valor</TableHead>
+                    <TableHead className="min-w-[80px]">Data</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell className="font-mono text-xs">
+                        {transaction.transaction_code.slice(0, 12)}...
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {transaction.product || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="max-w-[180px]">
+                          <p className="truncate font-medium text-sm">
+                            {transaction.buyer_name || '-'}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {transaction.buyer_email}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{transaction.currency}</Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">{transaction.country || '-'}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(Number(transaction.computed_value), transaction.currency)}
+                      </TableCell>
+                      <TableCell>
+                        {transaction.purchase_date 
+                          ? format(parseISO(transaction.purchase_date), 'dd/MM/yy', { locale: ptBR })
+                          : '-'
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {paginatedTransactions.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12">
+                        <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">
+                          {hasActiveFilters 
+                            ? 'Nenhuma transação encontrada com os filtros aplicados'
+                            : 'Nenhuma transação ainda. Importe uma planilha para começar.'
+                          }
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
               Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredTransactions.length)} de {filteredTransactions.length}
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-1 sm:gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
+                className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                {Array.from({ length: Math.min(3, totalPages) }, (_, i) => {
                   let page: number;
-                  if (totalPages <= 5) {
+                  if (totalPages <= 3) {
                     page = i + 1;
-                  } else if (currentPage <= 3) {
+                  } else if (currentPage <= 2) {
                     page = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    page = totalPages - 4 + i;
+                  } else if (currentPage >= totalPages - 1) {
+                    page = totalPages - 2 + i;
                   } else {
-                    page = currentPage - 2 + i;
+                    page = currentPage - 1 + i;
                   }
                   return (
                     <Button
@@ -363,6 +419,7 @@ function Transactions() {
                       variant={currentPage === page ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
+                      className="h-8 w-8 p-0 sm:h-9 sm:w-9 text-xs sm:text-sm"
                     >
                       {page}
                     </Button>
@@ -374,6 +431,7 @@ function Transactions() {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>

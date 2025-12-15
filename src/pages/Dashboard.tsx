@@ -143,25 +143,26 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2"
+          className="flex flex-col gap-3 sm:gap-4 pb-2"
         >
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Projeção de Faturamento</h1>
-            <p className="text-muted-foreground text-sm">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Projeção de Faturamento</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm">
               Acompanhe suas metas e desempenho financeiro
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/transactions')} className="h-9">
-              <History className="h-4 w-4 mr-2" />
-              Histórico
+            <Button variant="outline" size="sm" onClick={() => navigate('/transactions')} className="h-8 sm:h-9 text-xs sm:text-sm">
+              <History className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Histórico</span>
+              <span className="xs:hidden">Hist.</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/goals')} className="h-9">
-              <Target className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" onClick={() => navigate('/goals')} className="h-8 sm:h-9 text-xs sm:text-sm">
+              <Target className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Metas
             </Button>
-            <Button size="sm" onClick={() => navigate('/upload')} className="h-9">
-              <Upload className="h-4 w-4 mr-2" />
+            <Button size="sm" onClick={() => navigate('/upload')} className="h-8 sm:h-9 text-xs sm:text-sm">
+              <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Importar
             </Button>
           </div>
@@ -172,12 +173,12 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-xl border"
+          className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/30 rounded-xl border"
         >
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-muted-foreground hidden sm:block" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
-              <SelectTrigger className="w-[140px] h-8 text-sm bg-background">
+              <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs sm:text-sm bg-background">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -195,11 +196,11 @@ export default function Dashboard() {
             <DateRangePicker
               dateRange={customDateRange}
               onDateRangeChange={setCustomDateRange}
-              className="w-[240px]"
+              className="w-full sm:w-[240px]"
             />
           )}
           
-          <div className="h-6 w-px bg-border hidden sm:block" />
+          <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
           
           <PlatformFilter value={platform} onChange={setPlatform} />
         </motion.div>
@@ -209,7 +210,7 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12 }}
-          className="p-3 bg-muted/20 rounded-lg border"
+          className="p-2 sm:p-3 bg-muted/20 rounded-lg border overflow-x-auto"
         >
           <SavedFilterViews
             currentPeriod={period}
@@ -229,7 +230,7 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="p-4 bg-muted/30 rounded-lg border"
+            className="p-2 sm:p-4 bg-muted/30 rounded-lg border overflow-x-auto"
           >
             <AdvancedFilters
               billingType={billingType}
@@ -292,7 +293,7 @@ export default function Dashboard() {
             )}
 
             {/* Currency and Transaction KPI Cards - ALWAYS show */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
               {/* Cards by Currency */}
               {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
                 .sort(([, a], [, b]) => b - a)
@@ -343,9 +344,9 @@ export default function Dashboard() {
             )}
 
             {/* Charts Row - 2/3 + 1/3 layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Main chart - 2/3 width */}
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 min-w-0">
                 <SalesByTimeChart 
                   data={salesByDate || {}} 
                   currencies={currencies}
@@ -353,7 +354,7 @@ export default function Dashboard() {
               </div>
               
               {/* Secondary chart - 1/3 width */}
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col h-full min-w-0">
                 {(hotmartTotalBRL > 0 || tmbTotalBRL > 0) && (
                   <PlatformSharePieChart 
                     hotmartTotal={hotmartTotalBRL} 
