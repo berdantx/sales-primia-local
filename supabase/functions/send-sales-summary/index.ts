@@ -27,6 +27,16 @@ function formatPercent(value: number): string {
   return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 }
 
+// ============= Dynamic Variables =============
+
+function replaceVariables(text: string, variables: Record<string, string>): string {
+  let result = text;
+  for (const [key, value] of Object.entries(variables)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+  }
+  return result;
+}
+
 // ============= Interfaces =============
 
 interface RawSalesData {
@@ -216,9 +226,14 @@ serve(async (req) => {
 
     if (activeGoal) {
       // Get all sales within goal period using RPC functions (with deduplication logic)
+      // Pass all parameters explicitly to avoid function overload ambiguity
       const { data: hotmartStats, error: hotmartStatsError } = await supabase.rpc('get_transaction_stats', {
         p_start_date: activeGoal.start_date,
         p_end_date: activeGoal.end_date + 'T23:59:59Z',
+        p_billing_type: null,
+        p_payment_method: null,
+        p_sck_code: null,
+        p_product: null,
       });
 
       if (hotmartStatsError) {
@@ -279,9 +294,33 @@ serve(async (req) => {
     // Build formatted date
     const formattedDate = formatDateBR(today);
 
-    // Get custom text from webhook
-    const customTextStart = webhook.custom_text_start || null;
-    const customTextEnd = webhook.custom_text_end || null;
+    // Build dynamic variables map for custom text replacement
+    const dynamicVariables: Record<string, string> = {
+      data: formattedDate,
+      faturamento_brl: formatBRL(totalBrl),
+      faturamento_usd: formatUSD(totalUsd),
+      transacoes: String(totalTransactions),
+      hotmart_brl: formatBRL(hotmartBrl),
+      hotmart_usd: formatUSD(hotmartUsd),
+      hotmart_transacoes: String(hotmartCount),
+      tmb_brl: formatBRL(tmbBrl),
+      tmb_transacoes: String(tmbCount),
+      meta_nome: goalsRawData?.active_goal || '',
+      meta_valor: goalsRawData ? (goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.target_value) : formatUSD(goalsRawData.target_value)) : '',
+      meta_atual: goalsRawData ? (goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.current_progress) : formatUSD(goalsRawData.current_progress)) : '',
+      meta_percent: goalsRawData ? formatPercent(goalsRawData.progress_percent) : '',
+      meta_falta: goalsRawData ? (goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.total) : formatUSD(goalsRawData.remaining.total)) : '',
+      meta_diaria: goalsRawData ? (goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.per_day) : formatUSD(goalsRawData.remaining.per_day)) : '',
+      meta_semanal: goalsRawData ? (goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.per_week) : formatUSD(goalsRawData.remaining.per_week)) : '',
+      meta_mensal: goalsRawData ? (goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.per_month) : formatUSD(goalsRawData.remaining.per_month)) : '',
+      dias_restantes: goalsRawData ? String(goalsRawData.time_remaining.days) : '',
+    };
+
+    // Get custom text from webhook and apply variable replacement
+    const rawCustomTextStart = webhook.custom_text_start || null;
+    const rawCustomTextEnd = webhook.custom_text_end || null;
+    const customTextStart = rawCustomTextStart ? replaceVariables(rawCustomTextStart, dynamicVariables) : null;
+    const customTextEnd = rawCustomTextEnd ? replaceVariables(rawCustomTextEnd, dynamicVariables) : null;
 
     // Build verbose message
     const message = {

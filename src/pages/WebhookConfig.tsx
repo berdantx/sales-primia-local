@@ -200,27 +200,40 @@ export default function WebhookConfig() {
                   <Label htmlFor="custom_text_start">Texto Personalizado (Início)</Label>
                   <Textarea
                     id="custom_text_start"
-                    placeholder="Ex: 🚀 Bom dia equipe! Segue o resumo de vendas:"
+                    placeholder="Ex: 🚀 Vendas de hoje: {faturamento_brl} ({meta_percent} da meta)"
                     value={formData.custom_text_start}
                     onChange={(e) => setFormData({ ...formData, custom_text_start: e.target.value })}
                     rows={2}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Este texto aparecerá no início do payload
-                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="custom_text_end">Texto Personalizado (Final)</Label>
                   <Textarea
                     id="custom_text_end"
-                    placeholder="Ex: 📞 Dúvidas? Entre em contato com o time comercial!"
+                    placeholder="Ex: 📞 Faltam {meta_falta} para a meta!"
                     value={formData.custom_text_end}
                     onChange={(e) => setFormData({ ...formData, custom_text_end: e.target.value })}
                     rows={2}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Este texto aparecerá no final do payload
-                  </p>
+                </div>
+                
+                {/* Dynamic Variables Documentation */}
+                <div className="p-3 bg-muted/50 rounded-lg border">
+                  <p className="text-sm font-medium mb-2">Variáveis Dinâmicas</p>
+                  <div className="text-xs text-muted-foreground grid grid-cols-2 gap-x-4 gap-y-1">
+                    <span><code className="bg-muted px-1 rounded">{'{data}'}</code> Data atual</span>
+                    <span><code className="bg-muted px-1 rounded">{'{transacoes}'}</code> Nº vendas</span>
+                    <span><code className="bg-muted px-1 rounded">{'{faturamento_brl}'}</code> Total BRL</span>
+                    <span><code className="bg-muted px-1 rounded">{'{faturamento_usd}'}</code> Total USD</span>
+                    <span><code className="bg-muted px-1 rounded">{'{meta_nome}'}</code> Nome da meta</span>
+                    <span><code className="bg-muted px-1 rounded">{'{meta_valor}'}</code> Valor da meta</span>
+                    <span><code className="bg-muted px-1 rounded">{'{meta_atual}'}</code> Faturamento atual</span>
+                    <span><code className="bg-muted px-1 rounded">{'{meta_percent}'}</code> % atingido</span>
+                    <span><code className="bg-muted px-1 rounded">{'{meta_falta}'}</code> Valor restante</span>
+                    <span><code className="bg-muted px-1 rounded">{'{meta_diaria}'}</code> Meta diária</span>
+                    <span><code className="bg-muted px-1 rounded">{'{dias_restantes}'}</code> Dias restantes</span>
+                    <span><code className="bg-muted px-1 rounded">{'{hotmart_brl}'}</code> Hotmart BRL</span>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
