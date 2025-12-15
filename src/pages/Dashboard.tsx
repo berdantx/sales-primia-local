@@ -7,6 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 import { CountryDistribution } from '@/components/dashboard/CountryDistribution';
+import { TopCustomers } from '@/components/dashboard/TopCustomers';
 
 import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
@@ -289,7 +290,7 @@ export default function Dashboard() {
             )}
 
             {/* Currency and Transaction KPI Cards - ALWAYS show */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Cards by Currency */}
               {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
                 .sort(([, a], [, b]) => b - a)
@@ -359,6 +360,8 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Top Customers */}
+            <TopCustomers customers={topCustomers || []} />
           </>
         )}
       </div>
