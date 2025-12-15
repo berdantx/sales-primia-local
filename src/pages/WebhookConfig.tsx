@@ -25,6 +25,60 @@ import { Loader2, Plus, Send, Trash2, Edit2, CheckCircle, XCircle, Clock, Webhoo
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+interface ScheduleConfig {
+  frequency: 'manual' | 'daily' | 'weekly' | 'monthly';
+  time: string;
+  weekDay: string;
+  monthDay: string;
+}
+
+const WEEK_DAYS = [
+  { value: '0', label: 'Domingo' },
+  { value: '1', label: 'Segunda-feira' },
+  { value: '2', label: 'Terça-feira' },
+  { value: '3', label: 'Quarta-feira' },
+  { value: '4', label: 'Quinta-feira' },
+  { value: '5', label: 'Sexta-feira' },
+  { value: '6', label: 'Sábado' },
+];
+
+function buildCronExpression(config: ScheduleConfig): string | null {
+  if (config.frequency === 'manual') return null;
+  
+  const [hour, minute] = config.time.split(':').map(Number);
+  
+  switch (config.frequency) {
+    case 'daily':
+      return `${minute} ${hour} * * *`;
+    case 'weekly':
+      return `${minute} ${hour} * * ${config.weekDay}`;
+    case 'monthly':
+      return `${minute} ${hour} ${config.monthDay} * *`;
+    default:
+      return null;
+  }
+}
+
+function parseCronExpression(cron: string | null): ScheduleConfig {
+  const defaultConfig: ScheduleConfig = { frequency: 'manual', time: '18:00', weekDay: '1', monthDay: '1' };
+  
+  if (!cron) return defaultConfig;
+  
+  const parts = cron.split(' ');
+  if (parts.length !== 5) return defaultConfig;
+  
+  const [minute, hour, dayOfMonth, , dayOfWeek] = parts;
+  const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  
+  if (dayOfMonth !== '*') {
+    return { frequency: 'monthly', time, weekDay: '1', monthDay: dayOfMonth };
+  }
+  if (dayOfWeek !== '*') {
+    return { frequency: 'weekly', time, weekDay: dayOfWeek, monthDay: '1' };
+  }
+  return { frequency: 'daily', time, weekDay: '1', monthDay: '1' };
+}
+
 export default function WebhookConfig() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<ExternalWebhook | null>(null);
@@ -33,9 +87,15 @@ export default function WebhookConfig() {
   const [formData, setFormData] = useState({
     name: '',
     url: '',
-    schedule: '',
     custom_text_start: '',
     custom_text_end: '',
+  });
+  
+  const [scheduleConfig, setScheduleConfig] = useState<ScheduleConfig>({
+    frequency: 'manual',
+    time: '18:00',
+    weekDay: '1',
+    monthDay: '1',
   });
 
   const { data: webhooks, isLoading: isLoadingWebhooks } = useExternalWebhooks();
@@ -46,7 +106,8 @@ export default function WebhookConfig() {
   const triggerWebhook = useTriggerWebhook();
 
   const resetForm = () => {
-    setFormData({ name: '', url: '', schedule: '', custom_text_start: '', custom_text_end: '' });
+    setFormData({ name: '', url: '', custom_text_start: '', custom_text_end: '' });
+    setScheduleConfig({ frequency: 'manual', time: '18:00', weekDay: '1', monthDay: '1' });
     setEditingWebhook(null);
   };
 
@@ -59,10 +120,10 @@ export default function WebhookConfig() {
     setFormData({
       name: webhook.name,
       url: webhook.url,
-      schedule: webhook.schedule || '',
       custom_text_start: webhook.custom_text_start || '',
       custom_text_end: webhook.custom_text_end || '',
     });
+    setScheduleConfig(parseCronExpression(webhook.schedule));
     setEditingWebhook(webhook);
     setIsCreateDialogOpen(true);
   };
@@ -70,13 +131,15 @@ export default function WebhookConfig() {
   const handleSubmit = async () => {
     if (!formData.name.trim() || !formData.url.trim()) return;
 
+    const schedule = buildCronExpression(scheduleConfig);
+
     try {
       if (editingWebhook) {
         await updateWebhook.mutateAsync({
           id: editingWebhook.id,
           name: formData.name,
           url: formData.url,
-          schedule: formData.schedule || null,
+          schedule,
           custom_text_start: formData.custom_text_start || null,
           custom_text_end: formData.custom_text_end || null,
         });
@@ -84,7 +147,7 @@ export default function WebhookConfig() {
         await createWebhook.mutateAsync({
           name: formData.name,
           url: formData.url,
-          schedule: formData.schedule || null,
+          schedule,
           custom_text_start: formData.custom_text_start || null,
           custom_text_end: formData.custom_text_end || null,
         });
@@ -118,15 +181,23 @@ export default function WebhookConfig() {
 
   const getScheduleLabel = (schedule: string | null) => {
     if (!schedule) return 'Manual';
-    const scheduleMap: Record<string, string> = {
-      '0 23 * * *': 'Diário (23:00)',
-      '0 8 * * *': 'Diário (08:00)',
-      '0 12 * * *': 'Diário (12:00)',
-      '0 18 * * *': 'Diário (18:00)',
-      '0 9 * * 1': 'Semanal (Seg 09:00)',
-      '0 9 1 * *': 'Mensal (Dia 1)',
-    };
-    return scheduleMap[schedule] || schedule;
+    
+    const parts = schedule.split(' ');
+    if (parts.length !== 5) return schedule;
+    
+    const [minute, hour, dayOfMonth, , dayOfWeek] = parts;
+    const time = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+    
+    const weekDayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    
+    if (dayOfMonth !== '*') {
+      return `Mensal (Dia ${dayOfMonth} às ${time})`;
+    }
+    if (dayOfWeek !== '*') {
+      const dayIndex = parseInt(dayOfWeek) % 7;
+      return `Semanal (${weekDayNames[dayIndex]} às ${time})`;
+    }
+    return `Diário às ${time}`;
   };
 
   return (
@@ -173,29 +244,85 @@ export default function WebhookConfig() {
                     onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                   />
                 </div>
+                {/* Frequência */}
                 <div className="space-y-2">
-                  <Label htmlFor="schedule">Agendamento</Label>
+                  <Label>Frequência</Label>
                   <Select
-                    value={formData.schedule || 'manual'}
-                    onValueChange={(value) => setFormData({ ...formData, schedule: value === 'manual' ? '' : value })}
+                    value={scheduleConfig.frequency}
+                    onValueChange={(value) => setScheduleConfig({ ...scheduleConfig, frequency: value as ScheduleConfig['frequency'] })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um agendamento" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="manual">Manual (sem agendamento)</SelectItem>
-                      <SelectItem value="0 8 * * *">Diário às 08:00</SelectItem>
-                      <SelectItem value="0 12 * * *">Diário às 12:00</SelectItem>
-                      <SelectItem value="0 18 * * *">Diário às 18:00</SelectItem>
-                      <SelectItem value="0 23 * * *">Diário às 23:00</SelectItem>
-                      <SelectItem value="0 9 * * 1">Semanal (Segunda 09:00)</SelectItem>
-                      <SelectItem value="0 9 1 * *">Mensal (Dia 1 às 09:00)</SelectItem>
+                      <SelectItem value="daily">Diário</SelectItem>
+                      <SelectItem value="weekly">Semanal</SelectItem>
+                      <SelectItem value="monthly">Mensal</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Agendamentos automáticos serão implementados em breve. Por enquanto, use o disparo manual.
-                  </p>
                 </div>
+
+                {/* Horário - visível quando não é manual */}
+                {scheduleConfig.frequency !== 'manual' && (
+                  <div className="space-y-2">
+                    <Label>Horário (Brasília)</Label>
+                    <Input
+                      type="time"
+                      value={scheduleConfig.time}
+                      onChange={(e) => setScheduleConfig({ ...scheduleConfig, time: e.target.value })}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+
+                {/* Dia da semana - visível quando semanal */}
+                {scheduleConfig.frequency === 'weekly' && (
+                  <div className="space-y-2">
+                    <Label>Dia da Semana</Label>
+                    <Select
+                      value={scheduleConfig.weekDay}
+                      onValueChange={(value) => setScheduleConfig({ ...scheduleConfig, weekDay: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WEEK_DAYS.map((day) => (
+                          <SelectItem key={day.value} value={day.value}>
+                            {day.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Dia do mês - visível quando mensal */}
+                {scheduleConfig.frequency === 'monthly' && (
+                  <div className="space-y-2">
+                    <Label>Dia do Mês</Label>
+                    <Select
+                      value={scheduleConfig.monthDay}
+                      onValueChange={(value) => setScheduleConfig({ ...scheduleConfig, monthDay: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 28 }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>
+                            Dia {i + 1}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  Agendamentos automáticos serão implementados em breve. Por enquanto, use o disparo manual.
+                </p>
                 <div className="space-y-2">
                   <Label htmlFor="custom_text_start">Texto Personalizado (Início)</Label>
                   <Textarea
