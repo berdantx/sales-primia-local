@@ -72,8 +72,9 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
+      className="h-full"
     >
-      <Card>
+      <Card className="h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
@@ -106,8 +107,8 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="h-[350px]">
+        <CardContent className="flex-1">
+          <div className="h-full min-h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
