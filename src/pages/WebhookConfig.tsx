@@ -321,7 +321,7 @@ export default function WebhookConfig() {
                 )}
 
                 <p className="text-xs text-muted-foreground">
-                  Agendamentos automáticos serão implementados em breve. Por enquanto, use o disparo manual.
+                  O webhook será disparado automaticamente no horário configurado (fuso de Brasília).
                 </p>
               </div>
               <DialogFooter>
