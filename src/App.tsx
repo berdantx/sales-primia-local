@@ -14,6 +14,8 @@ import ComparativeDashboard from "./pages/ComparativeDashboard";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import WebhookLogs from "./pages/WebhookLogs";
+import Users from "./pages/Users";
+import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +53,12 @@ const App = () => (
                 <WebhookLogs />
               </ProtectedRoute>
             } />
+            <Route path="/users" element={
+              <ProtectedRoute allowedRoles={['master']}>
+                <Users />
+              </ProtectedRoute>
+            } />
+            <Route path="/invite/:token" element={<AcceptInvite />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

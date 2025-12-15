@@ -17,6 +17,7 @@ export const routePermissions: Record<string, AppRole[]> = {
   '/webhook-logs': ['master', 'admin'],
   '/goals': ['master', 'admin', 'user'],
   '/settings': ['master', 'admin'],
+  '/users': ['master'],
 };
 
 export function hasRouteAccess(path: string, role: AppRole): boolean {
