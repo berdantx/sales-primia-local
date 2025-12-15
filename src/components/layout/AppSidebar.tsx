@@ -24,10 +24,12 @@ import {
   LogOut,
   LayoutDashboard,
   Wallet,
+  GitCompare,
 } from 'lucide-react';
 
 const menuItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+  { title: 'Comparativo', url: '/comparative', icon: GitCompare },
   { title: 'Upload', url: '/upload', icon: Upload },
   { title: 'Hotmart', url: '/transactions', icon: FileText },
   { title: 'TMB', url: '/tmb-transactions', icon: Wallet },

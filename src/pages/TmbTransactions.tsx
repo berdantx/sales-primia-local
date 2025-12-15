@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { DateRange } from 'react-day-picker';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useTmbTransactions } from '@/hooks/useTmbTransactions';
 import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsOptimized';
+import { TmbAdvancedFilters } from '@/components/dashboard/TmbAdvancedFilters';
+import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,6 +18,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
 import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -28,26 +38,51 @@ import {
   X,
   DollarSign,
   Receipt,
-  Package
+  Package,
+  Calendar
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 
 const ITEMS_PER_PAGE = 20;
 
+type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
+
 function TmbTransactions() {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [period, setPeriod] = useState<PeriodFilter>('365d');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  
+  // Advanced filters
+  const [productFilter, setProductFilter] = useState<string | null>(null);
+  const [utmSourceFilter, setUtmSourceFilter] = useState<string | null>(null);
+  const [utmMediumFilter, setUtmMediumFilter] = useState<string | null>(null);
+  const [utmCampaignFilter, setUtmCampaignFilter] = useState<string | null>(null);
+
+  const dateRange = useMemo(() => {
+    if (period === 'all') {
+      return { startDate: undefined, endDate: undefined };
+    }
+    if (period === 'custom' && customDateRange?.from && customDateRange?.to) {
+      return { startDate: customDateRange.from, endDate: customDateRange.to };
+    }
+    if (period === 'custom') {
+      return { startDate: undefined, endDate: undefined };
+    }
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
+    return { startDate: subDays(new Date(), days), endDate: new Date() };
+  }, [period, customDateRange]);
 
   const filters = useMemo(() => ({
-    startDate: subDays(new Date(), 365),
-    endDate: new Date(),
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
     search: search || undefined,
-  }), [search]);
+  }), [dateRange, search]);
 
   const { data: transactions, isLoading, error } = useTmbTransactions(filters);
   const { data: stats, isLoading: isLoadingStats } = useTmbTransactionStatsOptimized({
-    startDate: filters.startDate,
-    endDate: filters.endDate,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
   });
 
   // Get top product
@@ -70,19 +105,31 @@ function TmbTransactions() {
     return sorted[0] ? { name: sorted[0][0], total: sorted[0][1].total } : null;
   }, [transactions]);
 
-  // Filter transactions by search
+  // Filter transactions by search and advanced filters
   const filteredTransactions = useMemo(() => {
     if (!transactions) return [];
-    if (!search) return transactions;
     
-    const lowerSearch = search.toLowerCase();
-    return transactions.filter(t =>
-      t.product?.toLowerCase().includes(lowerSearch) ||
-      t.buyer_name?.toLowerCase().includes(lowerSearch) ||
-      t.buyer_email?.toLowerCase().includes(lowerSearch) ||
-      t.order_id.toLowerCase().includes(lowerSearch)
-    );
-  }, [transactions, search]);
+    return transactions.filter(t => {
+      // Text search
+      if (search) {
+        const lowerSearch = search.toLowerCase();
+        const matchesSearch = 
+          t.product?.toLowerCase().includes(lowerSearch) ||
+          t.buyer_name?.toLowerCase().includes(lowerSearch) ||
+          t.buyer_email?.toLowerCase().includes(lowerSearch) ||
+          t.order_id.toLowerCase().includes(lowerSearch);
+        if (!matchesSearch) return false;
+      }
+      
+      // Advanced filters
+      if (productFilter && t.product !== productFilter) return false;
+      if (utmSourceFilter && t.utm_source !== utmSourceFilter) return false;
+      if (utmMediumFilter && t.utm_medium !== utmMediumFilter) return false;
+      if (utmCampaignFilter && t.utm_campaign !== utmCampaignFilter) return false;
+      
+      return true;
+    });
+  }, [transactions, search, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter]);
 
   // Paginate
   const paginatedTransactions = useMemo(() => {
@@ -117,10 +164,14 @@ function TmbTransactions() {
 
   const clearFilters = () => {
     setSearch('');
+    setProductFilter(null);
+    setUtmSourceFilter(null);
+    setUtmMediumFilter(null);
+    setUtmCampaignFilter(null);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = !!search;
+  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter;
 
   if (isLoading || isLoadingStats) {
     return (
@@ -188,10 +239,54 @@ function TmbTransactions() {
           )}
         </motion.div>
 
-        {/* Filters */}
+        {/* Period Selector */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="flex flex-wrap items-center gap-4"
+        >
+          <span className="text-sm font-medium text-muted-foreground">Período:</span>
+          <Select value={period} onValueChange={(v) => { setPeriod(v as PeriodFilter); setCurrentPage(1); }}>
+            <SelectTrigger className="w-[160px]">
+              <Calendar className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="90d">Últimos 90 dias</SelectItem>
+              <SelectItem value="365d">Último ano</SelectItem>
+              <SelectItem value="all">Tudo</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          {period === 'custom' && (
+            <DateRangePicker
+              dateRange={customDateRange}
+              onDateRangeChange={setCustomDateRange}
+              className="w-[260px]"
+            />
+          )}
+        </motion.div>
+
+        {/* Advanced Filters */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4">
+          <CardContent className="pt-6 space-y-4">
+            <TmbAdvancedFilters
+              product={productFilter}
+              utmSource={utmSourceFilter}
+              utmMedium={utmMediumFilter}
+              utmCampaign={utmCampaignFilter}
+              onProductChange={(v) => { setProductFilter(v); setCurrentPage(1); }}
+              onUtmSourceChange={(v) => { setUtmSourceFilter(v); setCurrentPage(1); }}
+              onUtmMediumChange={(v) => { setUtmMediumFilter(v); setCurrentPage(1); }}
+              onUtmCampaignChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(1); }}
+              totalFilteredTransactions={filteredTransactions.length}
+            />
+            
+            {/* Search Bar */}
+            <div className="flex flex-wrap gap-4 pt-2 border-t">
               <div className="flex-1 min-w-[200px]">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -210,7 +305,7 @@ function TmbTransactions() {
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="h-4 w-4 mr-1" />
-                  Limpar
+                  Limpar Tudo
                 </Button>
               )}
             </div>
