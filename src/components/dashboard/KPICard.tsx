@@ -40,12 +40,12 @@ export function KPICard({
         {/* Subtle gradient overlay on hover */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
-        <CardContent className="pt-5 pb-5 relative">
+        <CardContent className="pt-3 pb-3 sm:pt-5 sm:pb-5 relative">
           <div className="flex items-start justify-between">
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
+            <div className="space-y-1 sm:space-y-1.5 min-w-0 flex-1">
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
               <motion.p 
-                className="text-2xl font-bold tracking-tight"
+                className="text-base sm:text-2xl font-bold"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: delay * 0.08 + 0.15 }}
@@ -65,8 +65,8 @@ export function KPICard({
                 </div>
               )}
             </div>
-            <div className="p-2.5 bg-primary/10 rounded-xl group-hover:bg-primary/15 transition-colors duration-300">
-              <Icon className="h-5 w-5 text-primary" />
+            <div className="p-1.5 sm:p-2.5 bg-primary/10 rounded-lg sm:rounded-xl group-hover:bg-primary/15 transition-colors duration-300">
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
           </div>
         </CardContent>
