@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      filter_views: {
+        Row: {
+          billing_type: string | null
+          created_at: string | null
+          custom_date_end: string | null
+          custom_date_start: string | null
+          id: string
+          is_favorite: boolean | null
+          name: string
+          payment_method: string | null
+          period: string | null
+          sck_code: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          billing_type?: string | null
+          created_at?: string | null
+          custom_date_end?: string | null
+          custom_date_start?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          name: string
+          payment_method?: string | null
+          period?: string | null
+          sck_code?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          billing_type?: string | null
+          created_at?: string | null
+          custom_date_end?: string | null
+          custom_date_start?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          name?: string
+          payment_method?: string | null
+          period?: string | null
+          sck_code?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       goal_history: {
         Row: {
           action: string
