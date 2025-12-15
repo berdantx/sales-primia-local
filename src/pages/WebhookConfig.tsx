@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   useExternalWebhooks, 
   useWebhookDispatchLogs, 
@@ -20,7 +21,7 @@ import {
   useTriggerWebhook,
   ExternalWebhook,
 } from '@/hooks/useExternalWebhooks';
-import { Loader2, Plus, Send, Trash2, Edit2, CheckCircle, XCircle, Clock, Webhook, History } from 'lucide-react';
+import { Loader2, Plus, Send, Trash2, Edit2, CheckCircle, XCircle, Clock, Webhook, History, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -33,6 +34,8 @@ export default function WebhookConfig() {
     name: '',
     url: '',
     schedule: '',
+    custom_text_start: '',
+    custom_text_end: '',
   });
 
   const { data: webhooks, isLoading: isLoadingWebhooks } = useExternalWebhooks();
@@ -43,7 +46,7 @@ export default function WebhookConfig() {
   const triggerWebhook = useTriggerWebhook();
 
   const resetForm = () => {
-    setFormData({ name: '', url: '', schedule: '' });
+    setFormData({ name: '', url: '', schedule: '', custom_text_start: '', custom_text_end: '' });
     setEditingWebhook(null);
   };
 
@@ -57,6 +60,8 @@ export default function WebhookConfig() {
       name: webhook.name,
       url: webhook.url,
       schedule: webhook.schedule || '',
+      custom_text_start: webhook.custom_text_start || '',
+      custom_text_end: webhook.custom_text_end || '',
     });
     setEditingWebhook(webhook);
     setIsCreateDialogOpen(true);
@@ -72,12 +77,16 @@ export default function WebhookConfig() {
           name: formData.name,
           url: formData.url,
           schedule: formData.schedule || null,
+          custom_text_start: formData.custom_text_start || null,
+          custom_text_end: formData.custom_text_end || null,
         });
       } else {
         await createWebhook.mutateAsync({
           name: formData.name,
           url: formData.url,
           schedule: formData.schedule || null,
+          custom_text_start: formData.custom_text_start || null,
+          custom_text_end: formData.custom_text_end || null,
         });
       }
       setIsCreateDialogOpen(false);
@@ -185,6 +194,32 @@ export default function WebhookConfig() {
                   </Select>
                   <p className="text-xs text-muted-foreground">
                     Agendamentos automáticos serão implementados em breve. Por enquanto, use o disparo manual.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom_text_start">Texto Personalizado (Início)</Label>
+                  <Textarea
+                    id="custom_text_start"
+                    placeholder="Ex: 🚀 Bom dia equipe! Segue o resumo de vendas:"
+                    value={formData.custom_text_start}
+                    onChange={(e) => setFormData({ ...formData, custom_text_start: e.target.value })}
+                    rows={2}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Este texto aparecerá no início do payload
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom_text_end">Texto Personalizado (Final)</Label>
+                  <Textarea
+                    id="custom_text_end"
+                    placeholder="Ex: 📞 Dúvidas? Entre em contato com o time comercial!"
+                    value={formData.custom_text_end}
+                    onChange={(e) => setFormData({ ...formData, custom_text_end: e.target.value })}
+                    rows={2}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Este texto aparecerá no final do payload
                   </p>
                 </div>
               </div>
@@ -412,52 +447,94 @@ export default function WebhookConfig() {
           </TabsContent>
         </Tabs>
 
-        {/* Payload Example Card */}
+        {/* Payload Preview Card */}
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Preview do Payload
+            </CardTitle>
+            <CardDescription>
+              Visualize como ficará a mensagem enviada para o webhook
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-muted rounded-lg p-4 font-mono text-xs space-y-3 overflow-x-auto">
+              {formData.custom_text_start && (
+                <div className="text-blue-500 font-semibold">{formData.custom_text_start}</div>
+              )}
+              
+              <div className="text-foreground font-semibold">📊 Resumo de Vendas - 15/12/2025</div>
+              
+              <div className="space-y-1">
+                <div className="text-orange-500 font-semibold">🔥 HOTMART</div>
+                <div className="text-muted-foreground pl-4">Vendas realizadas hoje: 43</div>
+                <div className="text-muted-foreground pl-4">Valor em Reais: R$ 17.986,99</div>
+                <div className="text-muted-foreground pl-4">Valor em Dólares: US$ 0,00</div>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="text-purple-500 font-semibold">💳 TMB</div>
+                <div className="text-muted-foreground pl-4">Vendas realizadas hoje: 5</div>
+                <div className="text-muted-foreground pl-4">Valor em Reais: R$ 2.450,00</div>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="text-green-500 font-semibold">📈 TOTAL CONSOLIDADO</div>
+                <div className="text-muted-foreground pl-4">Total de vendas hoje: 48</div>
+                <div className="text-muted-foreground pl-4">Total em Reais: R$ 20.436,99</div>
+                <div className="text-muted-foreground pl-4">Total em Dólares: US$ 0,00</div>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="text-yellow-500 font-semibold">🎯 META: Geral</div>
+                <div className="text-muted-foreground pl-4">Meta Global: R$ 8.000.000,00</div>
+                <div className="text-muted-foreground pl-4">Meta Alcançada: R$ 3.778.594,77 (47,23%)</div>
+                <div className="text-muted-foreground pl-4">Falta: R$ 4.221.405,23</div>
+                <div className="text-muted-foreground pl-4">Meta Diária: R$ 263.837,83</div>
+                <div className="text-muted-foreground pl-4">⏱️ Tempo restante: 16 dias</div>
+              </div>
+              
+              {formData.custom_text_end && (
+                <div className="text-green-500 font-semibold">{formData.custom_text_end}</div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payload JSON Example Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Formato do Payload</CardTitle>
+            <CardTitle className="text-lg">Formato do Payload JSON</CardTitle>
             <CardDescription>
-              Exemplo do JSON enviado para o webhook configurado
+              Estrutura completa do JSON enviado para o webhook configurado
             </CardDescription>
           </CardHeader>
           <CardContent>
             <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
 {`{
-  "date": "2025-12-15",
+  "date": "15/12/2025",
   "timestamp": "2025-12-15T14:30:00Z",
-  "sales_today": {
-    "total_brl": 15420.50,
-    "total_usd": 1250.00,
-    "transactions_count": 45
-  },
-  "sales_by_platform": {
+  "custom_text_start": ${formData.custom_text_start ? `"${formData.custom_text_start}"` : 'null'},
+  "custom_text_end": ${formData.custom_text_end ? `"${formData.custom_text_end}"` : 'null'},
+  "message": {
+    "custom_intro": ${formData.custom_text_start ? `"${formData.custom_text_start}"` : 'null'},
+    "title": "📊 Resumo de Vendas - 15/12/2025",
     "hotmart": {
-      "total_brl": 12500.00,
-      "total_usd": 1250.00,
-      "transactions": 35
+      "header": "🔥 HOTMART",
+      "transactions": "Vendas realizadas hoje: 43",
+      "total_brl": "Valor em Reais: R$ 17.986,99",
+      "total_usd": "Valor em Dólares: US$ 0,00"
     },
-    "tmb": {
-      "total_brl": 2920.50,
-      "transactions": 10
-    }
+    "tmb": { ... },
+    "combined": { ... },
+    "goals": { ... },
+    "custom_outro": ${formData.custom_text_end ? `"${formData.custom_text_end}"` : 'null'}
   },
-  "goals": {
-    "active_goal": "Meta Janeiro 2025",
-    "target_value": 500000.00,
-    "currency": "BRL",
-    "current_progress": 125000.00,
-    "progress_percent": 25.0,
-    "remaining": {
-      "total": 375000.00,
-      "per_day": 12500.00,
-      "per_week": 87500.00,
-      "per_month": 375000.00
-    },
-    "time_remaining": {
-      "days": 30,
-      "weeks": 5,
-      "months": 1
-    }
+  "raw_data": {
+    "sales_today": { "total_brl": 17986.99, "total_usd": 0, ... },
+    "sales_by_platform": { ... },
+    "goals": { ... }
   }
 }`}
             </pre>

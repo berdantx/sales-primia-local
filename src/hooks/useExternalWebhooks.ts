@@ -10,6 +10,8 @@ export interface ExternalWebhook {
   url: string;
   is_active: boolean;
   schedule: string | null;
+  custom_text_start: string | null;
+  custom_text_end: string | null;
   last_triggered_at: string | null;
   created_at: string;
   updated_at: string;
@@ -30,6 +32,8 @@ export interface CreateWebhookInput {
   name: string;
   url: string;
   schedule?: string | null;
+  custom_text_start?: string | null;
+  custom_text_end?: string | null;
 }
 
 export function useExternalWebhooks() {
@@ -97,6 +101,8 @@ export function useCreateWebhook() {
           name: input.name,
           url: input.url,
           schedule: input.schedule || null,
+          custom_text_start: input.custom_text_start || null,
+          custom_text_end: input.custom_text_end || null,
         })
         .select()
         .single();

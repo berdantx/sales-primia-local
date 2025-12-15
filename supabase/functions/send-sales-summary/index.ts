@@ -69,7 +69,10 @@ interface RawGoalData {
 interface VerbosePayload {
   date: string;
   timestamp: string;
+  custom_text_start: string | null;
+  custom_text_end: string | null;
   message: {
+    custom_intro: string | null;
     title: string;
     hotmart: {
       header: string;
@@ -98,6 +101,7 @@ interface VerbosePayload {
       monthly: string;
       time_remaining: string;
     } | null;
+    custom_outro: string | null;
   };
   raw_data: {
     sales_today: RawSalesData;
@@ -276,8 +280,13 @@ serve(async (req) => {
     // Build formatted date
     const formattedDate = formatDateBR(today);
 
+    // Get custom text from webhook
+    const customTextStart = webhook.custom_text_start || null;
+    const customTextEnd = webhook.custom_text_end || null;
+
     // Build verbose message
     const message = {
+      custom_intro: customTextStart,
       title: `📊 Resumo de Vendas - ${formattedDate}`,
       
       hotmart: {
@@ -310,12 +319,15 @@ serve(async (req) => {
         monthly: `Meta Mensal: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.per_month) : formatUSD(goalsRawData.remaining.per_month)}`,
         time_remaining: `⏱️ Tempo restante: ${goalsRawData.time_remaining.days} dias`,
       } : null,
+      custom_outro: customTextEnd,
     };
 
     // Build payload with both formatted message and raw data
     const payload: VerbosePayload = {
       date: formattedDate,
       timestamp: today.toISOString(),
+      custom_text_start: customTextStart,
+      custom_text_end: customTextEnd,
       message,
       raw_data: {
         sales_today: {
