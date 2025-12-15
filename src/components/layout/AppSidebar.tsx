@@ -27,7 +27,9 @@ import {
   Wallet,
   GitCompare,
   Webhook,
+  Users,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface MenuItem {
   title: string;
@@ -44,6 +46,7 @@ const menuItems: MenuItem[] = [
   { title: 'TMB', url: '/tmb-transactions', icon: Wallet, roles: ['master', 'admin', 'user'] },
   { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook, roles: ['master', 'admin'] },
   { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin', 'user'] },
+  { title: 'Usuários', url: '/users', icon: Users, roles: ['master'] },
   { title: 'Configurações', url: '/settings', icon: Settings, roles: ['master', 'admin'] },
 ];
 
@@ -111,8 +114,30 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <div className="flex flex-col gap-3">
           {!collapsed && user && (
-            <div className="text-sm">
-              <p className="font-medium truncate">{user.email}</p>
+            <div className="space-y-2">
+              <Badge 
+                className={
+                  role === 'master' 
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0' 
+                    : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                }
+              >
+                {role === 'master' ? '👑 Master' : '👤 Cliente'}
+              </Badge>
+              <p className="font-medium truncate text-sm">{user.email}</p>
+            </div>
+          )}
+          {collapsed && (
+            <div className="flex justify-center">
+              <Badge 
+                className={
+                  role === 'master' 
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 px-1' 
+                    : 'bg-blue-500/10 text-blue-500 border-blue-500/20 px-1'
+                }
+              >
+                {role === 'master' ? '👑' : '👤'}
+              </Badge>
             </div>
           )}
           <Button
