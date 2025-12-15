@@ -7,7 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 import { CountryDistribution } from '@/components/dashboard/CountryDistribution';
-import { TopCustomers } from '@/components/dashboard/TopCustomers';
+
 import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
@@ -19,7 +19,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
 import { 
   DollarSign, 
-  Users, 
   ShoppingCart, 
   Upload,
   Target,
@@ -118,7 +117,7 @@ export default function Dashboard() {
 
   const { activeGoals } = useActiveGoals();
 
-  const topCustomer = topCustomers?.[0];
+  
   
   // Get the first active goal for the summary section
   const primaryGoal = activeGoals[0];
@@ -313,16 +312,6 @@ export default function Dashboard() {
                 delay={Object.keys(stats.totalByCurrency || {}).length}
               />
 
-              {/* Top Customer */}
-              {topCustomer && (
-                <KPICard
-                  title="Top Cliente"
-                  value={topCustomer.name}
-                  subtitle={`${formatCurrency(topCustomer.totalValue, topCustomer.currency)} • ${topCustomer.totalPurchases} compras`}
-                  icon={Users}
-                  delay={Object.keys(stats.totalByCurrency || {}).length + 1}
-                />
-              )}
             </div>
 
             {/* Call to action for creating a goal - only when no goal exists */}
@@ -370,8 +359,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Top Customers */}
-            <TopCustomers customers={topCustomers || []} />
           </>
         )}
       </div>
