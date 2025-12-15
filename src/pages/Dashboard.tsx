@@ -13,6 +13,7 @@ import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
 import { SavedFilterViews } from '@/components/dashboard/SavedFilterViews';
 import { PlatformFilter } from '@/components/dashboard/PlatformFilter';
+import { PlatformSharePieChart } from '@/components/dashboard/PlatformSharePieChart';
 import { FilterView } from '@/hooks/useFilterViews';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
@@ -109,7 +110,11 @@ export default function Dashboard() {
   }), [dateRange, billingType, paymentMethod, sckCode, product]);
 
   // Use combined stats hook that handles platform switching
-  const { stats, topCustomers, salesByDate, currencies, isLoading } = useCombinedStats(filters, platform);
+  const { stats, topCustomers, salesByDate, currencies, isLoading, hotmartStats, tmbStats } = useCombinedStats(filters, platform);
+  
+  // Calculate platform totals for pie chart
+  const hotmartTotalBRL = hotmartStats?.totalByCurrency?.['BRL'] || 0;
+  const tmbTotalBRL = tmbStats?.totalBRL || 0;
 
   const { activeGoals } = useActiveGoals();
 
@@ -353,7 +358,14 @@ export default function Dashboard() {
                   currencies={currencies}
                 />
               </div>
-              <div>
+              <div className="space-y-6">
+                {/* Platform Share Pie Chart - show when both platforms have data */}
+                {(hotmartTotalBRL > 0 || tmbTotalBRL > 0) && (
+                  <PlatformSharePieChart 
+                    hotmartTotal={hotmartTotalBRL} 
+                    tmbTotal={tmbTotalBRL} 
+                  />
+                )}
                 <CountryDistribution data={stats.totalByCountry} />
               </div>
             </div>
