@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  LineChart, Line, BarChart, Bar, AreaChart, Area,
+  LineChart, Line, BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, TrendingDown, BarChart3, AreaChart as AreaChartIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, AreaChart as AreaChartIcon, PieChart as PieChartIcon } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface SalesByTimeChartProps {
@@ -21,7 +21,7 @@ const COLORS: Record<string, string> = {
   EUR: 'hsl(38, 92%, 50%)',
 };
 
-type ChartType = 'line' | 'bar' | 'area';
+type ChartType = 'line' | 'bar' | 'area' | 'pie';
 
 export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
   const [chartType, setChartType] = useState<ChartType>('line');
@@ -107,8 +107,64 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
     />
   );
 
+  const pieData = useMemo(() => {
+    return currencies.map(currency => ({
+      name: currency === 'BRL' ? 'Real (R$)' : currency === 'USD' ? 'Dólar (US$)' : currency,
+      value: totals[currency]?.total || 0,
+      currency,
+    }));
+  }, [currencies, totals]);
+
+  const totalValue = pieData.reduce((sum, item) => sum + item.value, 0);
+
   const renderChart = () => {
     const margin = { top: 5, right: 50, left: -15, bottom: 0 };
+    
+    if (chartType === 'pie') {
+      return (
+        <PieChart>
+          <Pie
+            data={pieData}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={100}
+            paddingAngle={2}
+            dataKey="value"
+            labelLine={false}
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+            isAnimationActive={true}
+            animationDuration={800}
+            animationEasing="ease-out"
+          >
+            {pieData.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`} 
+                fill={COLORS[entry.currency] || `hsl(${index * 60}, 70%, 50%)`}
+                stroke="hsl(var(--background))"
+                strokeWidth={2}
+              />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{ 
+              backgroundColor: 'hsl(var(--card))',
+              border: '1px solid hsl(var(--border))',
+              borderRadius: '8px',
+              fontSize: '12px',
+            }}
+            formatter={(value: number, name: string, entry: any) => {
+              const percent = totalValue > 0 ? ((value / totalValue) * 100).toFixed(1) : 0;
+              return [
+                `${formatCurrencyValue(value, entry.payload.currency)} (${percent}%)`,
+                name
+              ];
+            }}
+          />
+          {commonLegend}
+        </PieChart>
+      );
+    }
     
     if (chartType === 'bar') {
       return (
@@ -275,6 +331,9 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
               </ToggleGroupItem>
               <ToggleGroupItem value="area" size="sm" className="h-7 w-7 p-0 data-[state=on]:bg-background">
                 <AreaChartIcon className="h-3.5 w-3.5" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="pie" size="sm" className="h-7 w-7 p-0 data-[state=on]:bg-background">
+                <PieChartIcon className="h-3.5 w-3.5" />
               </ToggleGroupItem>
             </ToggleGroup>
           </div>
