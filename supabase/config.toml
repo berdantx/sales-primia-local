@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-sales-summary]
 verify_jwt = false
+
+[functions.test-llm-connection]
+verify_jwt = true
