@@ -167,14 +167,14 @@ export default function WebhookConfig() {
                 <div className="space-y-2">
                   <Label htmlFor="schedule">Agendamento</Label>
                   <Select
-                    value={formData.schedule}
-                    onValueChange={(value) => setFormData({ ...formData, schedule: value })}
+                    value={formData.schedule || 'manual'}
+                    onValueChange={(value) => setFormData({ ...formData, schedule: value === 'manual' ? '' : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um agendamento" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Manual (sem agendamento)</SelectItem>
+                      <SelectItem value="manual">Manual (sem agendamento)</SelectItem>
                       <SelectItem value="0 8 * * *">Diário às 08:00</SelectItem>
                       <SelectItem value="0 12 * * *">Diário às 12:00</SelectItem>
                       <SelectItem value="0 18 * * *">Diário às 18:00</SelectItem>
