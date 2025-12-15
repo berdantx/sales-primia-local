@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { User, Mail, Calendar, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { LLMIntegrationsCard } from '@/components/settings/LLMIntegrationsCard';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -105,6 +106,9 @@ export default function Settings() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* LLM Integrations */}
+        <LLMIntegrationsCard />
       </div>
     </MainLayout>
   );
