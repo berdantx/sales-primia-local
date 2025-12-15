@@ -69,9 +69,9 @@ export default function WebhookLogs() {
               <div className="flex flex-col gap-3">
                 <div className="flex-1">
                   <p className="text-sm font-medium mb-1">Webhook Hotmart</p>
-                  <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto">
-                    {HOTMART_WEBHOOK_URL}
-                  </code>
+                <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto break-all">
+                  {HOTMART_WEBHOOK_URL}
+                </code>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => handleCopyUrl(HOTMART_WEBHOOK_URL, 'Hotmart')}>
@@ -103,9 +103,9 @@ export default function WebhookLogs() {
               <div className="flex flex-col gap-3">
                 <div className="flex-1">
                   <p className="text-sm font-medium mb-1">Webhook TMB</p>
-                  <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto">
-                    {TMB_WEBHOOK_URL}
-                  </code>
+                <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto break-all">
+                  {TMB_WEBHOOK_URL}
+                </code>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => handleCopyUrl(TMB_WEBHOOK_URL, 'TMB')}>

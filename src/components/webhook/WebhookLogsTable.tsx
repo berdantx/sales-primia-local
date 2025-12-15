@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { WebhookLog } from '@/hooks/useWebhookLogs';
 
 interface WebhookLogsTableProps {
@@ -20,23 +21,20 @@ interface WebhookLogsTableProps {
   onViewDetails: (log: WebhookLog) => void;
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, isMobile }: { status: string; isMobile?: boolean }) {
   const config = {
     processed: {
-      label: 'Processado',
-      variant: 'default' as const,
+      label: isMobile ? 'OK' : 'Processado',
       icon: CheckCircle,
       className: 'bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20',
     },
     skipped: {
-      label: 'Ignorado',
-      variant: 'secondary' as const,
+      label: isMobile ? 'Skip' : 'Ignorado',
       icon: AlertCircle,
       className: 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20',
     },
     error: {
       label: 'Erro',
-      variant: 'destructive' as const,
       icon: XCircle,
       className: 'bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20',
     },
@@ -46,7 +44,7 @@ function StatusBadge({ status }: { status: string }) {
   const Icon = statusConfig.icon;
 
   return (
-    <Badge variant="outline" className={statusConfig.className}>
+    <Badge variant="outline" className={`${statusConfig.className} text-xs px-1.5 sm:px-2`}>
       <Icon className="h-3 w-3 mr-1" />
       {statusConfig.label}
     </Badge>
@@ -54,6 +52,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function WebhookLogsTable({ logs, isLoading, onViewDetails }: WebhookLogsTableProps) {
+  const isMobile = useIsMobile();
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -82,7 +82,9 @@ export function WebhookLogsTable({ logs, isLoading, onViewDetails }: WebhookLogs
             <TableHead className="text-xs sm:text-sm">Tipo</TableHead>
             <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Código</TableHead>
             <TableHead className="text-xs sm:text-sm">Status</TableHead>
-            <TableHead className="w-[60px] sm:w-[80px]">Ações</TableHead>
+            <TableHead className="w-[50px] sm:w-[80px]">
+              <span className="sr-only sm:not-sr-only">Ações</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -97,23 +99,23 @@ export function WebhookLogsTable({ logs, isLoading, onViewDetails }: WebhookLogs
                 </span>
               </TableCell>
               <TableCell className="p-2 sm:p-4">
-                <span className="font-medium text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none block">
+                <span className="font-medium text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none block">
                   {log.event_type}
                 </span>
               </TableCell>
               <TableCell className="hidden sm:table-cell font-mono text-xs sm:text-sm p-2 sm:p-4">
                 {log.transaction_code || '-'}
               </TableCell>
-              <TableCell className="p-2 sm:p-4">
-                <StatusBadge status={log.status} />
+              <TableCell className="p-1 sm:p-4">
+                <StatusBadge status={log.status} isMobile={isMobile} />
               </TableCell>
-              <TableCell className="p-2 sm:p-4">
+              <TableCell className="p-1 sm:p-4">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => onViewDetails(log)}
                   title="Ver detalhes"
-                  className="h-8 w-8"
+                  className="h-7 w-7 sm:h-8 sm:w-8"
                 >
                   <Eye className="h-4 w-4" />
                 </Button>
