@@ -226,21 +226,19 @@ serve(async (req) => {
 
     if (activeGoal) {
       // Get all sales within goal period using RPC functions (with deduplication logic)
-      // Pass all parameters explicitly to avoid function overload ambiguity
-      const { data: hotmartStats, error: hotmartStatsError } = await supabase.rpc('get_transaction_stats', {
+      // Using _by_user versions that accept p_user_id explicitly (auth.uid() is null in Edge Functions)
+      const { data: hotmartStats, error: hotmartStatsError } = await supabase.rpc('get_transaction_stats_by_user', {
+        p_user_id: user_id,
         p_start_date: activeGoal.start_date,
         p_end_date: activeGoal.end_date + 'T23:59:59Z',
-        p_billing_type: null,
-        p_payment_method: null,
-        p_sck_code: null,
-        p_product: null,
       });
 
       if (hotmartStatsError) {
         console.error('[send-sales-summary] Error fetching Hotmart stats via RPC:', hotmartStatsError);
       }
 
-      const { data: tmbStats, error: tmbStatsError } = await supabase.rpc('get_tmb_transaction_stats', {
+      const { data: tmbStats, error: tmbStatsError } = await supabase.rpc('get_tmb_transaction_stats_by_user', {
+        p_user_id: user_id,
         p_start_date: activeGoal.start_date,
         p_end_date: activeGoal.end_date + 'T23:59:59Z',
       });
