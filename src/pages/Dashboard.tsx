@@ -348,7 +348,7 @@ export default function Dashboard() {
                   currencies={currencies}
                 />
               </div>
-              <div className="space-y-6">
+              <div className="flex flex-col gap-6">
                 {/* Platform Share Pie Chart - show when both platforms have data */}
                 {(hotmartTotalBRL > 0 || tmbTotalBRL > 0) && (
                   <PlatformSharePieChart 
@@ -356,7 +356,9 @@ export default function Dashboard() {
                     tmbTotal={tmbTotalBRL} 
                   />
                 )}
-                <CountryDistribution data={stats.totalByCountry} />
+                <div className="flex-1 min-h-[300px]">
+                  <CountryDistribution data={stats.totalByCountry} />
+                </div>
               </div>
             </div>
 
