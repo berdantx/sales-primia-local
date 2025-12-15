@@ -215,34 +215,33 @@ serve(async (req) => {
     let goalsRawData: RawGoalData | null = null;
 
     if (activeGoal) {
-      // Get all sales within goal period for progress calculation
-      const { data: goalPeriodSales } = await supabase
-        .from('transactions')
-        .select('computed_value, currency')
-        .eq('user_id', user_id)
-        .gte('purchase_date', activeGoal.start_date)
-        .lte('purchase_date', activeGoal.end_date);
+      // Get all sales within goal period using RPC functions (with deduplication logic)
+      const { data: hotmartStats, error: hotmartStatsError } = await supabase.rpc('get_transaction_stats', {
+        p_start_date: activeGoal.start_date,
+        p_end_date: activeGoal.end_date + 'T23:59:59Z',
+      });
 
-      const { data: goalPeriodTmbSales } = await supabase
-        .from('tmb_transactions')
-        .select('ticket_value')
-        .eq('user_id', user_id)
-        .gte('effective_date', activeGoal.start_date)
-        .lte('effective_date', activeGoal.end_date);
+      if (hotmartStatsError) {
+        console.error('[send-sales-summary] Error fetching Hotmart stats via RPC:', hotmartStatsError);
+      }
 
-      // Calculate total based on goal currency
+      const { data: tmbStats, error: tmbStatsError } = await supabase.rpc('get_tmb_transaction_stats', {
+        p_start_date: activeGoal.start_date,
+        p_end_date: activeGoal.end_date + 'T23:59:59Z',
+      });
+
+      if (tmbStatsError) {
+        console.error('[send-sales-summary] Error fetching TMB stats via RPC:', tmbStatsError);
+      }
+
+      // Calculate total based on goal currency using RPC results (with Recuperador Inteligente deduplication)
       let currentProgress = 0;
       if (activeGoal.currency === 'BRL') {
-        const hotmartProgress = (goalPeriodSales || [])
-          .filter(s => s.currency === 'BRL')
-          .reduce((sum, s) => sum + Number(s.computed_value), 0);
-        const tmbProgress = (goalPeriodTmbSales || [])
-          .reduce((sum, s) => sum + Number(s.ticket_value), 0);
-        currentProgress = hotmartProgress + tmbProgress;
+        const hotmartBrlProgress = hotmartStats?.total_by_currency?.BRL || 0;
+        const tmbBrlProgress = tmbStats?.total_brl || 0;
+        currentProgress = hotmartBrlProgress + tmbBrlProgress;
       } else if (activeGoal.currency === 'USD') {
-        currentProgress = (goalPeriodSales || [])
-          .filter(s => s.currency === 'USD')
-          .reduce((sum, s) => sum + Number(s.computed_value), 0);
+        currentProgress = hotmartStats?.total_by_currency?.USD || 0;
       }
 
       // Calculate time remaining
@@ -312,7 +311,7 @@ serve(async (req) => {
       goals: goalsRawData ? {
         header: `🎯 META: ${goalsRawData.active_goal}`,
         target: `Meta Global: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.target_value) : formatUSD(goalsRawData.target_value)}`,
-        current: `Meta Alcançada: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.current_progress) : formatUSD(goalsRawData.current_progress)} (${formatPercent(goalsRawData.progress_percent)})`,
+        current: `Faturamento Atual: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.current_progress) : formatUSD(goalsRawData.current_progress)} (${formatPercent(goalsRawData.progress_percent)})`,
         remaining: `Falta: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.total) : formatUSD(goalsRawData.remaining.total)}`,
         daily: `Meta Diária: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.per_day) : formatUSD(goalsRawData.remaining.per_day)}`,
         weekly: `Meta Semanal: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.per_week) : formatUSD(goalsRawData.remaining.per_week)}`,
