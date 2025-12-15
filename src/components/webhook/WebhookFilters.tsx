@@ -18,6 +18,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { WebhookLogsFilters } from '@/hooks/useWebhookLogs';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface WebhookFiltersProps {
   filters: WebhookLogsFilters;
@@ -33,6 +34,7 @@ const periodOptions = [
 ];
 
 export function WebhookFilters({ filters, onFiltersChange }: WebhookFiltersProps) {
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState(filters.search || '');
   const [period, setPeriod] = useState('all');
   const [showCalendar, setShowCalendar] = useState(false);
@@ -98,63 +100,66 @@ export function WebhookFilters({ filters, onFiltersChange }: WebhookFiltersProps
   };
 
   return (
-    <div className="flex flex-wrap gap-3 items-center">
-      <Select value={filters.status || 'all'} onValueChange={handleStatusChange}>
-        <SelectTrigger className="w-[150px]">
-          <Filter className="h-4 w-4 mr-2" />
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          <SelectItem value="processed">Processados</SelectItem>
-          <SelectItem value="skipped">Ignorados</SelectItem>
-          <SelectItem value="error">Erros</SelectItem>
-        </SelectContent>
-      </Select>
+    <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex gap-2 w-full sm:w-auto">
+        <Select value={filters.status || 'all'} onValueChange={handleStatusChange}>
+          <SelectTrigger className="w-full sm:w-[150px]">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="processed">Processados</SelectItem>
+            <SelectItem value="skipped">Ignorados</SelectItem>
+            <SelectItem value="error">Erros</SelectItem>
+          </SelectContent>
+        </Select>
 
-      <Popover open={showCalendar} onOpenChange={setShowCalendar}>
-        <PopoverTrigger asChild>
-          <div>
-            <Select value={period} onValueChange={handlePeriodChange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                {periodOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="range"
-            selected={dateRange as { from: Date; to: Date }}
-            onSelect={(range) => handleDateRangeSelect(range || {})}
-            locale={ptBR}
-            numberOfMonths={2}
-          />
-          {dateRange.from && dateRange.to && (
-            <div className="p-3 border-t text-sm text-muted-foreground">
-              {format(dateRange.from, 'dd/MM/yyyy', { locale: ptBR })} -{' '}
-              {format(dateRange.to, 'dd/MM/yyyy', { locale: ptBR })}
+        <Popover open={showCalendar} onOpenChange={setShowCalendar}>
+          <PopoverTrigger asChild>
+            <div className="flex-1 sm:flex-none">
+              <Select value={period} onValueChange={handlePeriodChange}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </PopoverContent>
-      </Popover>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="range"
+              selected={dateRange as { from: Date; to: Date }}
+              onSelect={(range) => handleDateRangeSelect(range || {})}
+              locale={ptBR}
+              numberOfMonths={isMobile ? 1 : 2}
+              className="pointer-events-auto"
+            />
+            {dateRange.from && dateRange.to && (
+              <div className="p-3 border-t text-sm text-muted-foreground">
+                {format(dateRange.from, 'dd/MM/yyyy', { locale: ptBR })} -{' '}
+                {format(dateRange.to, 'dd/MM/yyyy', { locale: ptBR })}
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+      </div>
 
-      <div className="flex gap-2 flex-1 min-w-[200px]">
+      <div className="flex gap-2 flex-1 min-w-0">
         <Input
-          placeholder="Buscar código de transação..."
+          placeholder="Buscar código..."
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1"
+          className="flex-1 text-sm"
         />
-        <Button variant="secondary" onClick={handleSearch}>
+        <Button variant="secondary" onClick={handleSearch} size="icon" className="shrink-0">
           <Search className="h-4 w-4" />
         </Button>
       </div>

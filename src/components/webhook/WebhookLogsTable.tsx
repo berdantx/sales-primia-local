@@ -74,38 +74,46 @@ export function WebhookLogsTable({ logs, isLoading, onViewDetails }: WebhookLogs
   }
 
   return (
-    <div className="rounded-md border border-border/50">
+    <div className="rounded-md border border-border/50 overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Data/Hora</TableHead>
-            <TableHead>Tipo de Evento</TableHead>
-            <TableHead>Código da Transação</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-[80px]">Ações</TableHead>
+            <TableHead className="text-xs sm:text-sm">Data/Hora</TableHead>
+            <TableHead className="text-xs sm:text-sm">Tipo</TableHead>
+            <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Código</TableHead>
+            <TableHead className="text-xs sm:text-sm">Status</TableHead>
+            <TableHead className="w-[60px] sm:w-[80px]">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {logs.map((log) => (
             <TableRow key={log.id}>
-              <TableCell className="font-mono text-sm">
-                {format(new Date(log.created_at), "dd/MM/yy HH:mm:ss", { locale: ptBR })}
+              <TableCell className="font-mono text-xs p-2 sm:p-4">
+                <span className="hidden sm:inline">
+                  {format(new Date(log.created_at), "dd/MM/yy HH:mm:ss", { locale: ptBR })}
+                </span>
+                <span className="sm:hidden">
+                  {format(new Date(log.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                </span>
               </TableCell>
-              <TableCell>
-                <span className="font-medium">{log.event_type}</span>
+              <TableCell className="p-2 sm:p-4">
+                <span className="font-medium text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none block">
+                  {log.event_type}
+                </span>
               </TableCell>
-              <TableCell className="font-mono text-sm">
+              <TableCell className="hidden sm:table-cell font-mono text-xs sm:text-sm p-2 sm:p-4">
                 {log.transaction_code || '-'}
               </TableCell>
-              <TableCell>
+              <TableCell className="p-2 sm:p-4">
                 <StatusBadge status={log.status} />
               </TableCell>
-              <TableCell>
+              <TableCell className="p-2 sm:p-4">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => onViewDetails(log)}
                   title="Ver detalhes"
+                  className="h-8 w-8"
                 >
                   <Eye className="h-4 w-4" />
                 </Button>
