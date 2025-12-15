@@ -34,7 +34,8 @@ export interface ParseError {
 // Hotmart column mappings (Portuguese headers)
 const HOTMART_COLUMNS = {
   transactionCode: ['código da transação', 'codigo da transacao', 'transaction_code', 'código transação'],
-  product: ['produto', 'product', 'nome do produto'],
+  // Prioriza "nome do produto" para evitar conflito com "produtor"
+  product: ['nome do produto', 'product name', 'produto'],
   currency: ['moeda', 'currency', 'moeda da transação'],
   country: ['país', 'pais', 'country', 'país do comprador'],
   grossValue: ['valor de compra com impostos', 'valor com impostos', 'gross_value', 'valor'],
@@ -53,6 +54,9 @@ const HOTMART_COLUMNS = {
   ],
 };
 
+// Headers que devem ser excluídos ao buscar a coluna de produto
+const PRODUCT_EXCLUSIONS = ['produtor', 'nome do produtor', 'producer'];
+
 // Map country to currency - Hotmart uses USD for all international sales
 function getCurrencyFromCountry(country: string): string {
   const countryLower = country.toLowerCase().trim();
@@ -68,11 +72,34 @@ function normalizeHeader(header: string): string {
   return header.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-function findColumn(headers: string[], possibleNames: string[]): string | null {
+function findColumn(headers: string[], possibleNames: string[], exclusions: string[] = []): string | null {
   const normalizedHeaders = headers.map(normalizeHeader);
+  const normalizedExclusions = exclusions.map(normalizeHeader);
+  
+  // Primeiro: buscar correspondência EXATA
   for (const name of possibleNames) {
     const normalizedName = normalizeHeader(name);
-    const index = normalizedHeaders.findIndex(h => h.includes(normalizedName) || normalizedName.includes(h));
+    const exactIndex = normalizedHeaders.findIndex(h => h === normalizedName);
+    if (exactIndex !== -1) {
+      // Verificar se não está na lista de exclusões
+      const isExcluded = normalizedExclusions.some(ex => normalizedHeaders[exactIndex].includes(ex));
+      if (!isExcluded) {
+        return headers[exactIndex];
+      }
+    }
+  }
+  
+  // Segundo: buscar correspondência parcial (se não encontrou exata)
+  for (const name of possibleNames) {
+    const normalizedName = normalizeHeader(name);
+    const index = normalizedHeaders.findIndex(h => {
+      const matches = h.includes(normalizedName) || normalizedName.includes(h);
+      if (!matches) return false;
+      
+      // Verificar se não está na lista de exclusões
+      const isExcluded = normalizedExclusions.some(ex => h.includes(ex));
+      return !isExcluded;
+    });
     if (index !== -1) {
       return headers[index];
     }
@@ -204,7 +231,7 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
   // Find column mappings
   const columnMap = {
     transactionCode: findColumn(headers, HOTMART_COLUMNS.transactionCode),
-    product: findColumn(headers, HOTMART_COLUMNS.product),
+    product: findColumn(headers, HOTMART_COLUMNS.product, PRODUCT_EXCLUSIONS),
     currency: findColumn(headers, HOTMART_COLUMNS.currency),
     country: findColumn(headers, HOTMART_COLUMNS.country),
     grossValue: findColumn(headers, HOTMART_COLUMNS.grossValue),
