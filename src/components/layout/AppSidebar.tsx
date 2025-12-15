@@ -14,6 +14,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole, AppRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import {
   BarChart3,
@@ -28,20 +29,28 @@ import {
   Webhook,
 } from 'lucide-react';
 
-const menuItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Comparativo', url: '/comparative', icon: GitCompare },
-  { title: 'Upload', url: '/upload', icon: Upload },
-  { title: 'Hotmart', url: '/transactions', icon: FileText },
-  { title: 'TMB', url: '/tmb-transactions', icon: Wallet },
-  { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook },
-  { title: 'Metas', url: '/goals', icon: Target },
-  { title: 'Configurações', url: '/settings', icon: Settings },
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: AppRole[];
+}
+
+const menuItems: MenuItem[] = [
+  { title: 'Dashboard', url: '/', icon: LayoutDashboard, roles: ['master', 'admin', 'user'] },
+  { title: 'Comparativo', url: '/comparative', icon: GitCompare, roles: ['master', 'admin'] },
+  { title: 'Upload', url: '/upload', icon: Upload, roles: ['master', 'admin'] },
+  { title: 'Hotmart', url: '/transactions', icon: FileText, roles: ['master', 'admin', 'user'] },
+  { title: 'TMB', url: '/tmb-transactions', icon: Wallet, roles: ['master', 'admin', 'user'] },
+  { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook, roles: ['master', 'admin'] },
+  { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin', 'user'] },
+  { title: 'Configurações', url: '/settings', icon: Settings, roles: ['master', 'admin'] },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const { role } = useUserRole();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
 
@@ -51,6 +60,9 @@ export function AppSidebar() {
     }
     return location.pathname.startsWith(path);
   };
+
+  // Filter menu items based on user role
+  const visibleMenuItems = menuItems.filter(item => item.roles.includes(role));
 
   return (
     <Sidebar collapsible="icon">
@@ -73,7 +85,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {visibleMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
