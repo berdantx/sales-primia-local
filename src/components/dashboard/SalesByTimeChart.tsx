@@ -102,8 +102,8 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
 
   const commonLegend = (
     <Legend 
-      formatter={(value) => value === 'BRL' ? 'Real (R$)' : value === 'USD' ? 'Dólar (US$)' : value}
-      wrapperStyle={{ fontSize: '11px' }}
+      formatter={(value) => value === 'BRL' ? 'R$' : value === 'USD' ? 'US$' : value}
+      wrapperStyle={{ fontSize: '10px' }}
     />
   );
 
@@ -310,50 +310,50 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
       transition={{ delay: 0.3 }}
       className="h-full"
     >
-      <Card className="h-full flex flex-col min-h-[400px]">
-        <CardHeader className="pb-2 space-y-3">
-          <div className="flex items-center justify-between">
+      <Card className="h-full flex flex-col min-h-[320px] sm:min-h-[400px]">
+        <CardHeader className="pb-2 space-y-2 sm:space-y-3 px-3 sm:px-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <CardTitle className="text-base font-semibold">Evolução do Faturamento</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">Últimos 30 dias</p>
+              <CardTitle className="text-sm sm:text-base font-semibold">Evolução do Faturamento</CardTitle>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Últimos 30 dias</p>
             </div>
             <ToggleGroup 
               type="single" 
               value={chartType} 
               onValueChange={(v) => v && setChartType(v as ChartType)}
-              className="bg-muted/50 rounded-lg p-0.5"
+              className="bg-muted/50 rounded-lg p-0.5 self-start sm:self-auto"
             >
-              <ToggleGroupItem value="line" size="sm" className="h-7 w-7 p-0 data-[state=on]:bg-background">
-                <TrendingUp className="h-3.5 w-3.5" />
+              <ToggleGroupItem value="line" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
+                <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="bar" size="sm" className="h-7 w-7 p-0 data-[state=on]:bg-background">
-                <BarChart3 className="h-3.5 w-3.5" />
+              <ToggleGroupItem value="bar" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
+                <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="area" size="sm" className="h-7 w-7 p-0 data-[state=on]:bg-background">
-                <AreaChartIcon className="h-3.5 w-3.5" />
+              <ToggleGroupItem value="area" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
+                <AreaChartIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </ToggleGroupItem>
-              <ToggleGroupItem value="pie" size="sm" className="h-7 w-7 p-0 data-[state=on]:bg-background">
-                <PieChartIcon className="h-3.5 w-3.5" />
+              <ToggleGroupItem value="pie" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
+                <PieChartIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </ToggleGroupItem>
             </ToggleGroup>
           </div>
           
           {/* Compact totals */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             {currencies.map((currency) => {
               const { total, growth } = totals[currency] || { total: 0, growth: 0 };
               const isPositive = growth >= 0;
               
               return (
-                <div key={currency} className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 rounded-lg">
-                  <span className="text-sm font-bold" style={{ color: COLORS[currency] }}>
+                <div key={currency} className="flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-2.5 sm:py-1.5 bg-muted/50 rounded-lg">
+                  <span className="text-xs sm:text-sm font-bold" style={{ color: COLORS[currency] }}>
                     {formatCurrencyValue(total, currency)}
                   </span>
-                  <div className={`flex items-center gap-0.5 text-[10px] font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                  <div className={`flex items-center gap-0.5 text-[9px] sm:text-[10px] font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>
                     {isPositive ? (
-                      <TrendingUp className="h-2.5 w-2.5" />
+                      <TrendingUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                     ) : (
-                      <TrendingDown className="h-2.5 w-2.5" />
+                      <TrendingDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                     )}
                     <span>{isPositive ? '+' : ''}{growth.toFixed(0)}%</span>
                   </div>
@@ -362,8 +362,8 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
             })}
           </div>
         </CardHeader>
-        <CardContent className="flex-1 pb-4">
-          <div className="h-full min-h-[280px]">
+        <CardContent className="flex-1 pb-3 sm:pb-4 px-2 sm:px-6">
+          <div className="h-full min-h-[200px] sm:min-h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               {renderChart()}
             </ResponsiveContainer>
