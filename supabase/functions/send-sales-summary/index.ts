@@ -6,6 +6,48 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ============= Brasília Timezone Functions (GMT-3) =============
+
+const BRASILIA_OFFSET_HOURS = -3;
+
+function nowBrasilia(): Date {
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return new Date(utc + (BRASILIA_OFFSET_HOURS * 3600000));
+}
+
+function getStartOfDayBrasiliaUTC(): Date {
+  const brasilia = nowBrasilia();
+  // Início do dia em Brasília: 00:00 BRT = 03:00 UTC
+  return new Date(Date.UTC(
+    brasilia.getFullYear(),
+    brasilia.getMonth(),
+    brasilia.getDate(),
+    -BRASILIA_OFFSET_HOURS, // +3 hours
+    0, 0, 0
+  ));
+}
+
+function getEndOfDayBrasiliaUTC(): Date {
+  const brasilia = nowBrasilia();
+  // Fim do dia em Brasília: 23:59:59 BRT = 02:59:59 UTC do dia seguinte
+  return new Date(Date.UTC(
+    brasilia.getFullYear(),
+    brasilia.getMonth(),
+    brasilia.getDate() + 1,
+    -BRASILIA_OFFSET_HOURS - 1, // +2 hours
+    59, 59, 999
+  ));
+}
+
+function getTodayBrasiliaISO(): string {
+  const d = nowBrasilia();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // ============= Formatting Functions =============
 
 function formatDateBR(date: Date): string {
@@ -133,7 +175,10 @@ serve(async (req) => {
 
     const { webhook_id, user_id, manual = false } = await req.json();
 
-    console.log(`[send-sales-summary] Starting dispatch for webhook_id: ${webhook_id}, user_id: ${user_id}, manual: ${manual}`);
+    // Get current time in Brasília for logging
+    const brasiliaTime = nowBrasilia();
+    console.log(`[send-sales-summary] Starting dispatch at ${formatDateBR(brasiliaTime)} ${String(brasiliaTime.getHours()).padStart(2, '0')}:${String(brasiliaTime.getMinutes()).padStart(2, '0')} (Brasília)`);
+    console.log(`[send-sales-summary] webhook_id: ${webhook_id}, user_id: ${user_id}, manual: ${manual}`);
 
     if (!webhook_id || !user_id) {
       return new Response(
@@ -165,12 +210,15 @@ serve(async (req) => {
       );
     }
 
-    // Get today's date range
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    // Get today's date range in Brasília timezone (converted to UTC for queries)
+    const startOfDay = getStartOfDayBrasiliaUTC();
+    const endOfDay = getEndOfDayBrasiliaUTC();
+    const todayBrasiliaDate = getTodayBrasiliaISO();
 
-    // Fetch Hotmart sales for today
+    console.log(`[send-sales-summary] Querying sales for Brasília date: ${todayBrasiliaDate}`);
+    console.log(`[send-sales-summary] UTC range: ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
+
+    // Fetch Hotmart sales for today (Brasília time)
     const { data: hotmartSales, error: hotmartError } = await supabase
       .from('transactions')
       .select('computed_value, currency')
@@ -182,7 +230,7 @@ serve(async (req) => {
       console.error('[send-sales-summary] Error fetching Hotmart sales:', hotmartError);
     }
 
-    // Fetch TMB sales for today
+    // Fetch TMB sales for today (Brasília time)
     const { data: tmbSales, error: tmbError } = await supabase
       .from('tmb_transactions')
       .select('ticket_value')
@@ -212,14 +260,16 @@ serve(async (req) => {
     const totalUsd = hotmartUsd;
     const totalTransactions = hotmartCount + tmbCount;
 
-    // Fetch active goal
+    console.log(`[send-sales-summary] Found ${hotmartCount} Hotmart + ${tmbCount} TMB = ${totalTransactions} total transactions`);
+
+    // Fetch active goal (using Brasília date)
     const { data: activeGoal } = await supabase
       .from('goals')
       .select('*')
       .eq('user_id', user_id)
       .eq('is_active', true)
-      .lte('start_date', today.toISOString().split('T')[0])
-      .gte('end_date', today.toISOString().split('T')[0])
+      .lte('start_date', todayBrasiliaDate)
+      .gte('end_date', todayBrasiliaDate)
       .maybeSingle();
 
     let goalsRawData: RawGoalData | null = null;
@@ -257,9 +307,9 @@ serve(async (req) => {
         currentProgress = hotmartStats?.total_by_currency?.USD || 0;
       }
 
-      // Calculate time remaining
+      // Calculate time remaining using Brasília time
       const endDate = new Date(activeGoal.end_date);
-      const diffTime = endDate.getTime() - today.getTime();
+      const diffTime = endDate.getTime() - brasiliaTime.getTime();
       const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
       const weeksRemaining = Math.max(0, Math.ceil(daysRemaining / 7));
       const monthsRemaining = Math.max(0, Math.ceil(daysRemaining / 30));
@@ -289,8 +339,8 @@ serve(async (req) => {
       };
     }
 
-    // Build formatted date
-    const formattedDate = formatDateBR(today);
+    // Build formatted date using Brasília time
+    const formattedDate = formatDateBR(brasiliaTime);
 
     // Build dynamic variables map for custom text replacement
     const dynamicVariables: Record<string, string> = {
@@ -359,9 +409,10 @@ serve(async (req) => {
     };
 
     // Build payload with both formatted message and raw data
+    // Use Brasília time for timestamp
     const payload: VerbosePayload = {
       date: formattedDate,
-      timestamp: today.toISOString(),
+      timestamp: brasiliaTime.toISOString(),
       custom_text_start: customTextStart,
       custom_text_end: customTextEnd,
       message,
@@ -427,7 +478,7 @@ serve(async (req) => {
       payload: payload,
     });
 
-    // Update last_triggered_at
+    // Update last_triggered_at (use current UTC time for database storage)
     await supabase
       .from('external_webhooks')
       .update({ last_triggered_at: new Date().toISOString() })
