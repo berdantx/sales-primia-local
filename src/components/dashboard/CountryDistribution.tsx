@@ -28,13 +28,14 @@ export function CountryDistribution({ data }: CountryDistributionProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.4 }}
+      className="h-full"
     >
-      <Card>
+      <Card className="h-full flex flex-col">
         <CardHeader>
           <CardTitle>Distribuição por País</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
+        <CardContent className="flex-1">
+          <div className="h-full min-h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
