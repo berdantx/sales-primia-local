@@ -65,9 +65,9 @@ export function AdvancedFilters({
           <SelectContent className="bg-popover z-50">
             <SelectItem value="all">Todos os tipos</SelectItem>
             {filterOptions?.billingTypes.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+              <SelectItem key={option.value} value={option.value} title={option.value}>
                 <span className="flex items-center justify-between w-full gap-2">
-                  <span className="truncate">{option.value}</span>
+                  <span className="truncate" title={option.value}>{option.value}</span>
                   <span className="text-muted-foreground text-xs">({option.count})</span>
                 </span>
               </SelectItem>
@@ -86,9 +86,9 @@ export function AdvancedFilters({
           <SelectContent className="bg-popover z-50">
             <SelectItem value="all">Todos pagamentos</SelectItem>
             {filterOptions?.paymentMethods.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+              <SelectItem key={option.value} value={option.value} title={option.value}>
                 <span className="flex items-center justify-between w-full gap-2">
-                  <span className="truncate">{option.value}</span>
+                  <span className="truncate" title={option.value}>{option.value}</span>
                   <span className="text-muted-foreground text-xs">({option.count})</span>
                 </span>
               </SelectItem>
@@ -107,9 +107,9 @@ export function AdvancedFilters({
           <SelectContent className="bg-popover z-50 max-h-[300px]">
             <SelectItem value="all">Todas origens</SelectItem>
             {filterOptions?.sckCodes.map((option) => (
-              <SelectItem key={option.value} value={option.value} className="text-xs">
+              <SelectItem key={option.value} value={option.value} className="text-xs" title={option.value}>
                 <span className="flex items-center justify-between w-full gap-2">
-                  <span className="truncate">{option.value.length > 25 ? `${option.value.slice(0, 25)}...` : option.value}</span>
+                  <span className="truncate" title={option.value}>{option.value.length > 25 ? `${option.value.slice(0, 25)}...` : option.value}</span>
                   <span className="text-muted-foreground">({option.count})</span>
                 </span>
               </SelectItem>
@@ -129,9 +129,9 @@ export function AdvancedFilters({
           <SelectContent className="bg-popover z-50 max-h-[300px]">
             <SelectItem value="all">Todos os produtos</SelectItem>
             {filterOptions?.products.map((option) => (
-              <SelectItem key={option.value} value={option.value} className="text-xs">
+              <SelectItem key={option.value} value={option.value} className="text-xs" title={option.value}>
                 <span className="flex items-center justify-between w-full gap-2">
-                  <span className="truncate">{option.value.length > 30 ? `${option.value.slice(0, 30)}...` : option.value}</span>
+                  <span className="truncate" title={option.value}>{option.value.length > 30 ? `${option.value.slice(0, 30)}...` : option.value}</span>
                   <span className="text-muted-foreground">({option.count})</span>
                 </span>
               </SelectItem>
@@ -156,7 +156,7 @@ export function AdvancedFilters({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-muted-foreground">Filtros ativos:</span>
           {billingType && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs" title={billingType}>
               Tipo: {billingType}
               <button
                 onClick={() => onBillingTypeChange(null)}
@@ -167,7 +167,7 @@ export function AdvancedFilters({
             </Badge>
           )}
           {paymentMethod && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs" title={paymentMethod}>
               Pagamento: {paymentMethod}
               <button
                 onClick={() => onPaymentMethodChange(null)}
@@ -178,7 +178,7 @@ export function AdvancedFilters({
             </Badge>
           )}
           {sckCode && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs" title={sckCode}>
               SCK: {sckCode.length > 20 ? `${sckCode.slice(0, 20)}...` : sckCode}
               <button
                 onClick={() => onSckCodeChange(null)}
@@ -189,7 +189,7 @@ export function AdvancedFilters({
             </Badge>
           )}
           {product && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs" title={product}>
               Produto: {product.length > 20 ? `${product.slice(0, 20)}...` : product}
               <button
                 onClick={() => onProductChange(null)}
