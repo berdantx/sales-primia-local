@@ -151,58 +151,55 @@ export default function Dashboard() {
               Acompanhe suas metas e desempenho financeiro
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/transactions')} className="h-8 sm:h-9 text-xs sm:text-sm">
+          
+          {/* Period and Platform Selectors - Mobile: acima dos botões */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/30 rounded-xl border">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground hidden sm:block" />
+              <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
+                <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs sm:text-sm bg-background">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                  <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                  <SelectItem value="90d">Últimos 90 dias</SelectItem>
+                  <SelectItem value="365d">Último ano</SelectItem>
+                  <SelectItem value="all">Tudo</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {period === 'custom' && (
+              <DateRangePicker
+                dateRange={customDateRange}
+                onDateRangeChange={setCustomDateRange}
+                className="w-full sm:w-[240px]"
+              />
+            )}
+            
+            <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
+            
+            <PlatformFilter value={platform} onChange={setPlatform} />
+          </div>
+          
+          {/* Action buttons - Mobile: largura total */}
+          <div className="flex w-full gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/transactions')} className="flex-1 h-8 sm:h-9 text-xs sm:text-sm">
               <History className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden xs:inline">Histórico</span>
               <span className="xs:hidden">Hist.</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/goals')} className="h-8 sm:h-9 text-xs sm:text-sm">
+            <Button variant="outline" size="sm" onClick={() => navigate('/goals')} className="flex-1 h-8 sm:h-9 text-xs sm:text-sm">
               <Target className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Metas
             </Button>
-            <Button size="sm" onClick={() => navigate('/upload')} className="h-8 sm:h-9 text-xs sm:text-sm">
+            <Button size="sm" onClick={() => navigate('/upload')} className="flex-1 h-8 sm:h-9 text-xs sm:text-sm">
               <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Importar
             </Button>
           </div>
-        </motion.div>
-
-        {/* Period and Platform Selectors - Compact bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/30 rounded-xl border"
-        >
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground hidden sm:block" />
-            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
-              <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs sm:text-sm bg-background">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Últimos 7 dias</SelectItem>
-                <SelectItem value="30d">Últimos 30 dias</SelectItem>
-                <SelectItem value="90d">Últimos 90 dias</SelectItem>
-                <SelectItem value="365d">Último ano</SelectItem>
-                <SelectItem value="all">Tudo</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {period === 'custom' && (
-            <DateRangePicker
-              dateRange={customDateRange}
-              onDateRangeChange={setCustomDateRange}
-              className="w-full sm:w-[240px]"
-            />
-          )}
-          
-          <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
-          
-          <PlatformFilter value={platform} onChange={setPlatform} />
         </motion.div>
 
         {/* Saved Filter Views */}
