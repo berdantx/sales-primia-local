@@ -15,6 +15,8 @@ import { TopCustomers } from '@/components/dashboard/TopCustomers';
 import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
+import { SavedFilterViews } from '@/components/dashboard/SavedFilterViews';
+import { FilterView } from '@/hooks/useFilterViews';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
 import { 
@@ -30,7 +32,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { subDays } from 'date-fns';
+import { subDays, parseISO } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -50,6 +52,31 @@ export default function Dashboard() {
   const [billingType, setBillingType] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [sckCode, setSckCode] = useState<string | null>(null);
+  
+  // Selected view
+  const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
+
+  const handleSelectView = (view: FilterView) => {
+    setSelectedViewId(view.id);
+    setPeriod(view.period as PeriodFilter);
+    
+    if (view.period === 'custom' && view.custom_date_start && view.custom_date_end) {
+      setCustomDateRange({
+        from: parseISO(view.custom_date_start),
+        to: parseISO(view.custom_date_end),
+      });
+    } else {
+      setCustomDateRange(undefined);
+    }
+    
+    setBillingType(view.billing_type);
+    setPaymentMethod(view.payment_method);
+    setSckCode(view.sck_code);
+  };
+
+  const handleClearView = () => {
+    setSelectedViewId(null);
+  };
 
   const dateRange = useMemo(() => {
     if (period === 'all') {
@@ -172,6 +199,25 @@ export default function Dashboard() {
               className="w-[260px]"
             />
           )}
+        </motion.div>
+
+        {/* Saved Filter Views */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="p-3 bg-muted/20 rounded-lg border"
+        >
+          <SavedFilterViews
+            currentPeriod={period}
+            currentCustomDateRange={customDateRange}
+            currentBillingType={billingType}
+            currentPaymentMethod={paymentMethod}
+            currentSckCode={sckCode}
+            selectedViewId={selectedViewId}
+            onSelectView={handleSelectView}
+            onClearView={handleClearView}
+          />
         </motion.div>
 
         {/* Advanced Filters */}
