@@ -50,7 +50,7 @@ export function PlatformSharePieChart({ hotmartTotal, tmbTotal }: PlatformShareP
       transition={{ delay: 0.4 }}
       className="h-full"
     >
-      <Card className="h-full flex flex-col min-h-[400px]">
+      <Card className="h-full flex flex-col flex-1 min-h-[200px]">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">Participação por Plataforma</CardTitle>
           <p className="text-xs text-muted-foreground">Distribuição do faturamento</p>

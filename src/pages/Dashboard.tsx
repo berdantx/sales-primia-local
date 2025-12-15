@@ -342,24 +342,26 @@ export default function Dashboard() {
               </motion.div>
             )}
 
-            {/* Charts Row - 3 equal columns */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <SalesByTimeChart 
-                data={salesByDate || {}} 
-                currencies={currencies}
-              />
-              
-              {/* Platform Share Pie Chart */}
-              {(hotmartTotalBRL > 0 || tmbTotalBRL > 0) ? (
-                <PlatformSharePieChart 
-                  hotmartTotal={hotmartTotalBRL} 
-                  tmbTotal={tmbTotalBRL} 
+            {/* Charts Row - 2/3 + 1/3 layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main chart - 2/3 width */}
+              <div className="lg:col-span-2">
+                <SalesByTimeChart 
+                  data={salesByDate || {}} 
+                  currencies={currencies}
                 />
-              ) : (
-                <div className="hidden lg:block" />
-              )}
+              </div>
               
-              <CountryDistribution data={stats.totalByCountry} />
+              {/* Secondary charts - 1/3 width, stacked */}
+              <div className="flex flex-col gap-6">
+                {(hotmartTotalBRL > 0 || tmbTotalBRL > 0) && (
+                  <PlatformSharePieChart 
+                    hotmartTotal={hotmartTotalBRL} 
+                    tmbTotal={tmbTotalBRL} 
+                  />
+                )}
+                <CountryDistribution data={stats.totalByCountry} />
+              </div>
             </div>
 
             {/* Top Customers */}
