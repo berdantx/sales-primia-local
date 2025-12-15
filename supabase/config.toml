@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.tmb-webhook]
 verify_jwt = false
+
+[functions.send-sales-summary]
+verify_jwt = false
