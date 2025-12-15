@@ -349,6 +349,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_filter_options_with_counts: { Args: never; Returns: Json }
       get_sales_by_date:
         | {
             Args: { p_end_date?: string; p_start_date?: string }
