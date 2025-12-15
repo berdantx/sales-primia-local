@@ -20,14 +20,16 @@ import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Search, 
-  Filter, 
   Download, 
   Loader2, 
   ChevronLeft, 
   ChevronRight,
   FileSpreadsheet,
-  X
+  X,
+  DollarSign,
+  Receipt
 } from 'lucide-react';
+import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -91,6 +93,23 @@ function Transactions() {
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
 
+  // Summary stats for KPI cards
+  const summaryStats = useMemo(() => {
+    if (!filteredTransactions.length) {
+      return { totalBRL: 0, totalUSD: 0, countBRL: 0, countUSD: 0 };
+    }
+
+    const brlTransactions = filteredTransactions.filter(t => t.currency === 'BRL');
+    const usdTransactions = filteredTransactions.filter(t => t.currency === 'USD');
+
+    return {
+      totalBRL: brlTransactions.reduce((sum, t) => sum + Number(t.computed_value), 0),
+      totalUSD: usdTransactions.reduce((sum, t) => sum + Number(t.computed_value), 0),
+      countBRL: brlTransactions.length,
+      countUSD: usdTransactions.length,
+    };
+  }, [filteredTransactions]);
+
   const handleExportCSV = () => {
     const headers = ['Código', 'Produto', 'Comprador', 'Email', 'Moeda', 'País', 'Valor', 'Data'];
     const rows = filteredTransactions.map(t => [
@@ -151,6 +170,39 @@ function Transactions() {
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
+        </motion.div>
+
+        {/* Summary KPIs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
+          <ColoredKPICard
+            title="Total em Reais"
+            value={formatCurrency(summaryStats.totalBRL, 'BRL')}
+            subtitle={`${summaryStats.countBRL} transações`}
+            icon={DollarSign}
+            variant="green"
+            delay={0}
+          />
+          <ColoredKPICard
+            title="Total em Dólares"
+            value={formatCurrency(summaryStats.totalUSD, 'USD')}
+            subtitle={`${summaryStats.countUSD} transações`}
+            icon={DollarSign}
+            variant="blue"
+            delay={1}
+          />
+          <ColoredKPICard
+            title="Total de Transações"
+            value={filteredTransactions.length.toString()}
+            subtitle="no período filtrado"
+            icon={Receipt}
+            variant="purple"
+            delay={2}
+          />
         </motion.div>
 
         {/* Filters */}
