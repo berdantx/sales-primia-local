@@ -37,22 +37,22 @@ export function ColoredKPICard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: delay * 0.1 }}
       className={cn(
-        'rounded-lg p-5 shadow-medium transition-transform hover:scale-[1.02]',
+        'rounded-lg p-3 sm:p-5 shadow-medium transition-transform hover:scale-[1.02]',
         variantStyles[variant],
         className
       )}
     >
       <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium opacity-90">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
+        <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
+          <p className="text-xs sm:text-sm font-medium opacity-90 truncate">{title}</p>
+          <p className="text-lg sm:text-2xl font-bold truncate">{value}</p>
           {subtitle && (
-            <p className="text-sm opacity-80">{subtitle}</p>
+            <p className="text-xs sm:text-sm opacity-80 truncate">{subtitle}</p>
           )}
         </div>
         {Icon && (
-          <div className="p-2 rounded-full bg-white/20">
-            <Icon className="h-5 w-5" />
+          <div className="p-1.5 sm:p-2 rounded-full bg-white/20 shrink-0 ml-2">
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
         )}
       </div>

@@ -24,14 +24,14 @@ export function GoalSummarySection({ goal, totalSold }: GoalSummarySectionProps)
       : 'Atenção necessária';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Period Info */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-2 text-sm"
+        className="flex flex-wrap items-center gap-2 text-xs sm:text-sm"
       >
-        <Badge variant="outline" className="font-normal">
+        <Badge variant="outline" className="font-normal text-xs">
           Período da Meta Atual
         </Badge>
         <span className="text-muted-foreground">
@@ -44,7 +44,7 @@ export function GoalSummarySection({ goal, totalSold }: GoalSummarySectionProps)
       </motion.div>
 
       {/* 4 Colored KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <ColoredKPICard
           title="Meta de Faturamento"
           value={formatCurrency(goal.target_value, goal.currency)}
