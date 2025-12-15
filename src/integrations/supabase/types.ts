@@ -447,6 +447,18 @@ export type Database = {
             }
             Returns: Json
           }
+      get_tmb_sales_by_date: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: Json
+      }
+      get_tmb_top_customers: {
+        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
+        Returns: Json
+      }
+      get_tmb_transaction_stats: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: Json
+      }
       get_top_customers:
         | {
             Args: {

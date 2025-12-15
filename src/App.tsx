@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Upload from "./pages/Upload";
 import Transactions from "./pages/Transactions";
+import TmbTransactions from "./pages/TmbTransactions";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/transactions" element={<Transactions />} />
+            <Route path="/tmb-transactions" element={<TmbTransactions />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/settings" element={<Settings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

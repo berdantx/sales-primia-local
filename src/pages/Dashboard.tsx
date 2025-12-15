@@ -1,11 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { DateRange } from 'react-day-picker';
-import { 
-  useTransactionStatsOptimized, 
-  useTopCustomersOptimized, 
-  useSalesByDateOptimized 
-} from '@/hooks/useTransactionStatsOptimized';
+import { useCombinedStats, PlatformType } from '@/hooks/useCombinedStats';
 import { useActiveGoals } from '@/hooks/useGoals';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { KPICard } from '@/components/dashboard/KPICard';
@@ -16,6 +12,7 @@ import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
 import { SavedFilterViews } from '@/components/dashboard/SavedFilterViews';
+import { PlatformFilter } from '@/components/dashboard/PlatformFilter';
 import { FilterView } from '@/hooks/useFilterViews';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
@@ -47,6 +44,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [period, setPeriod] = useState<PeriodFilter>('all');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [platform, setPlatform] = useState<PlatformType>('all');
   
   // Advanced filters
   const [billingType, setBillingType] = useState<string | null>(null);
@@ -110,19 +108,10 @@ export default function Dashboard() {
     product,
   }), [dateRange, billingType, paymentMethod, sckCode, product]);
 
-  // Use optimized database aggregations
-  const { data: stats, isLoading: statsLoading } = useTransactionStatsOptimized(filters);
-  const { data: topCustomers, isLoading: customersLoading } = useTopCustomersOptimized(filters);
-  const { data: salesByDate, isLoading: salesLoading } = useSalesByDateOptimized(filters);
+  // Use combined stats hook that handles platform switching
+  const { stats, topCustomers, salesByDate, currencies, isLoading } = useCombinedStats(filters, platform);
 
   const { activeGoals } = useActiveGoals();
-
-  const isLoading = statsLoading || customersLoading || salesLoading;
-
-  const currencies = useMemo(() => {
-    if (!stats?.totalByCurrency) return [];
-    return Object.keys(stats.totalByCurrency);
-  }, [stats]);
 
   const topCustomer = topCustomers?.[0];
   
@@ -173,35 +162,39 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Period Selector */}
+        {/* Period and Platform Selectors */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-wrap items-center gap-3"
+          className="flex flex-wrap items-center gap-4"
         >
-          <span className="text-sm font-medium text-muted-foreground">Período de Análise:</span>
-          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
-            <SelectTrigger className="w-[160px]">
-              <Calendar className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Período" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Últimos 7 dias</SelectItem>
-              <SelectItem value="30d">Últimos 30 dias</SelectItem>
-              <SelectItem value="90d">Últimos 90 dias</SelectItem>
-              <SelectItem value="365d">Último ano</SelectItem>
-              <SelectItem value="all">Tudo</SelectItem>
-              <SelectItem value="custom">Personalizado</SelectItem>
-            </SelectContent>
-          </Select>
-          {period === 'custom' && (
-            <DateRangePicker
-              dateRange={customDateRange}
-              onDateRangeChange={setCustomDateRange}
-              className="w-[260px]"
-            />
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-muted-foreground">Período:</span>
+            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
+              <SelectTrigger className="w-[160px]">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="90d">Últimos 90 dias</SelectItem>
+                <SelectItem value="365d">Último ano</SelectItem>
+                <SelectItem value="all">Tudo</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            {period === 'custom' && (
+              <DateRangePicker
+                dateRange={customDateRange}
+                onDateRangeChange={setCustomDateRange}
+                className="w-[260px]"
+              />
+            )}
+          </div>
+          
+          <PlatformFilter value={platform} onChange={setPlatform} />
         </motion.div>
 
         {/* Saved Filter Views */}
@@ -223,25 +216,27 @@ export default function Dashboard() {
           />
         </motion.div>
 
-        {/* Advanced Filters */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="p-4 bg-muted/30 rounded-lg border"
-        >
-          <AdvancedFilters
-            billingType={billingType}
-            paymentMethod={paymentMethod}
-            sckCode={sckCode}
-            product={product}
-            onBillingTypeChange={setBillingType}
-            onPaymentMethodChange={setPaymentMethod}
-            onSckCodeChange={setSckCode}
-            onProductChange={setProduct}
-            totalFilteredTransactions={stats?.totalTransactions}
-          />
-        </motion.div>
+        {/* Advanced Filters - only show for Hotmart/All */}
+        {platform !== 'tmb' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="p-4 bg-muted/30 rounded-lg border"
+          >
+            <AdvancedFilters
+              billingType={billingType}
+              paymentMethod={paymentMethod}
+              sckCode={sckCode}
+              product={product}
+              onBillingTypeChange={setBillingType}
+              onPaymentMethodChange={setPaymentMethod}
+              onSckCodeChange={setSckCode}
+              onProductChange={setProduct}
+              totalFilteredTransactions={stats?.totalTransactions}
+            />
+          </motion.div>
+        )}
 
         {/* Warning for transactions without date */}
         {period !== 'all' && stats && stats.transactionsWithoutDate > 0 && (
