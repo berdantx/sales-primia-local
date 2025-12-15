@@ -23,12 +23,14 @@ import {
   Settings,
   LogOut,
   LayoutDashboard,
+  Wallet,
 } from 'lucide-react';
 
 const menuItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
   { title: 'Upload', url: '/upload', icon: Upload },
-  { title: 'Transações', url: '/transactions', icon: FileText },
+  { title: 'Hotmart', url: '/transactions', icon: FileText },
+  { title: 'TMB', url: '/tmb-transactions', icon: Wallet },
   { title: 'Metas', url: '/goals', icon: Target },
   { title: 'Configurações', url: '/settings', icon: Settings },
 ];
