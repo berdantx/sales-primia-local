@@ -10,7 +10,8 @@ import { WebhookLogsTable } from '@/components/webhook/WebhookLogsTable';
 import { WebhookFilters } from '@/components/webhook/WebhookFilters';
 import { LogDetailDialog } from '@/components/webhook/LogDetailDialog';
 
-const WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/hotmart-webhook';
+const HOTMART_WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/hotmart-webhook';
+const TMB_WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/tmb-webhook';
 
 export default function WebhookLogs() {
   const { toast } = useToast();
@@ -35,11 +36,11 @@ export default function WebhookLogs() {
     setDetailDialogOpen(true);
   };
 
-  const handleCopyUrl = () => {
-    navigator.clipboard.writeText(WEBHOOK_URL);
+  const handleCopyUrl = (url: string, platform: string) => {
+    navigator.clipboard.writeText(url);
     toast({
       title: 'Copiado!',
-      description: 'URL do webhook copiada para a área de transferência',
+      description: `URL do webhook ${platform} copiada para a área de transferência`,
     });
   };
 
@@ -51,7 +52,7 @@ export default function WebhookLogs() {
           <div>
             <h1 className="text-2xl font-bold">Webhook Logs</h1>
             <p className="text-muted-foreground">
-              Monitore os eventos recebidos via webhook da Hotmart
+              Monitore os eventos recebidos via webhook
             </p>
           </div>
           <Button onClick={handleRefresh} variant="outline">
@@ -60,39 +61,62 @@ export default function WebhookLogs() {
           </Button>
         </div>
 
-        {/* Webhook URL Card */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1">
-                <p className="text-sm font-medium mb-1">URL do Webhook</p>
-                <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto">
-                  {WEBHOOK_URL}
-                </code>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleCopyUrl}>
-                  <Copy className="h-4 w-4 mr-1" />
-                  Copiar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                >
-                  <a
-                    href="https://developers.hotmart.com/docs/pt-BR/webhooks/webhooks-v2/"
-                    target="_blank"
-                    rel="noopener noreferrer"
+        {/* Webhook URLs */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Hotmart Webhook URL */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-medium mb-1">Webhook Hotmart</p>
+                  <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto">
+                    {HOTMART_WEBHOOK_URL}
+                  </code>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleCopyUrl(HOTMART_WEBHOOK_URL, 'Hotmart')}>
+                    <Copy className="h-4 w-4 mr-1" />
+                    Copiar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
                   >
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    Docs
-                  </a>
-                </Button>
+                    <a
+                      href="https://developers.hotmart.com/docs/pt-BR/webhooks/webhooks-v2/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Docs
+                    </a>
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          {/* TMB Webhook URL */}
+          <Card className="border-orange-500/20 bg-orange-500/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-medium mb-1">Webhook TMB</p>
+                  <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto">
+                    {TMB_WEBHOOK_URL}
+                  </code>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleCopyUrl(TMB_WEBHOOK_URL, 'TMB')}>
+                    <Copy className="h-4 w-4 mr-1" />
+                    Copiar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Status Cards */}
         <WebhookStatusCards stats={stats} isLoading={statsLoading} />
