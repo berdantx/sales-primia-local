@@ -17,6 +17,8 @@ export type Database = {
       external_webhooks: {
         Row: {
           created_at: string
+          custom_text_end: string | null
+          custom_text_start: string | null
           id: string
           is_active: boolean | null
           last_triggered_at: string | null
@@ -28,6 +30,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_text_end?: string | null
+          custom_text_start?: string | null
           id?: string
           is_active?: boolean | null
           last_triggered_at?: string | null
@@ -39,6 +43,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_text_end?: string | null
+          custom_text_start?: string | null
           id?: string
           is_active?: boolean | null
           last_triggered_at?: string | null
