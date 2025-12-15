@@ -57,9 +57,12 @@ export function AdvancedFilters({
           </SelectTrigger>
           <SelectContent className="bg-popover z-50">
             <SelectItem value="all">Todos os tipos</SelectItem>
-            {filterOptions?.billingTypes.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
+            {filterOptions?.billingTypes.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <span className="flex items-center justify-between w-full gap-2">
+                  <span className="truncate">{option.value}</span>
+                  <span className="text-muted-foreground text-xs">({option.count})</span>
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -75,9 +78,12 @@ export function AdvancedFilters({
           </SelectTrigger>
           <SelectContent className="bg-popover z-50">
             <SelectItem value="all">Todos pagamentos</SelectItem>
-            {filterOptions?.paymentMethods.map((method) => (
-              <SelectItem key={method} value={method}>
-                {method}
+            {filterOptions?.paymentMethods.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                <span className="flex items-center justify-between w-full gap-2">
+                  <span className="truncate">{option.value}</span>
+                  <span className="text-muted-foreground text-xs">({option.count})</span>
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -93,9 +99,12 @@ export function AdvancedFilters({
           </SelectTrigger>
           <SelectContent className="bg-popover z-50 max-h-[300px]">
             <SelectItem value="all">Todas origens</SelectItem>
-            {filterOptions?.sckCodes.map((code) => (
-              <SelectItem key={code} value={code} className="text-xs">
-                {code.length > 30 ? `${code.slice(0, 30)}...` : code}
+            {filterOptions?.sckCodes.map((option) => (
+              <SelectItem key={option.value} value={option.value} className="text-xs">
+                <span className="flex items-center justify-between w-full gap-2">
+                  <span className="truncate">{option.value.length > 25 ? `${option.value.slice(0, 25)}...` : option.value}</span>
+                  <span className="text-muted-foreground">({option.count})</span>
+                </span>
               </SelectItem>
             ))}
           </SelectContent>
