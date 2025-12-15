@@ -489,7 +489,7 @@ export default function WebhookConfig() {
               <div className="space-y-1">
                 <div className="text-yellow-500 font-semibold">🎯 META: Geral</div>
                 <div className="text-muted-foreground pl-4">Meta Global: R$ 8.000.000,00</div>
-                <div className="text-muted-foreground pl-4">Meta Alcançada: R$ 3.778.594,77 (47,23%)</div>
+                <div className="text-muted-foreground pl-4">Faturamento Atual: R$ 6.425.472,50 (80,32%)</div>
                 <div className="text-muted-foreground pl-4">Falta: R$ 4.221.405,23</div>
                 <div className="text-muted-foreground pl-4">Meta Diária: R$ 263.837,83</div>
                 <div className="text-muted-foreground pl-4">⏱️ Tempo restante: 16 dias</div>
