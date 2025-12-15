@@ -6,43 +6,104 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface SalesPayload {
-  date: string;
-  timestamp: string;
-  sales_today: {
+// ============= Formatting Functions =============
+
+function formatDateBR(date: Date): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function formatBRL(value: number): string {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function formatUSD(value: number): string {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' });
+}
+
+function formatPercent(value: number): string {
+  return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+}
+
+// ============= Interfaces =============
+
+interface RawSalesData {
+  total_brl: number;
+  total_usd: number;
+  transactions_count: number;
+}
+
+interface RawPlatformData {
+  hotmart: {
     total_brl: number;
     total_usd: number;
-    transactions_count: number;
+    transactions: number;
   };
-  sales_by_platform: {
+  tmb: {
+    total_brl: number;
+    transactions: number;
+  };
+}
+
+interface RawGoalData {
+  active_goal: string | null;
+  target_value: number;
+  currency: string;
+  current_progress: number;
+  progress_percent: number;
+  remaining: {
+    total: number;
+    per_day: number;
+    per_week: number;
+    per_month: number;
+  };
+  time_remaining: {
+    days: number;
+    weeks: number;
+    months: number;
+  };
+}
+
+interface VerbosePayload {
+  date: string;
+  timestamp: string;
+  message: {
+    title: string;
     hotmart: {
-      total_brl: number;
-      total_usd: number;
-      transactions: number;
+      header: string;
+      transactions: string;
+      total_brl: string;
+      total_usd: string;
     };
     tmb: {
-      total_brl: number;
-      transactions: number;
+      header: string;
+      transactions: string;
+      total_brl: string;
     };
+    combined: {
+      header: string;
+      transactions: string;
+      total_brl: string;
+      total_usd: string;
+    };
+    goals: {
+      header: string;
+      target: string;
+      current: string;
+      remaining: string;
+      daily: string;
+      weekly: string;
+      monthly: string;
+      time_remaining: string;
+    } | null;
   };
-  goals: {
-    active_goal: string | null;
-    target_value: number;
-    currency: string;
-    current_progress: number;
-    progress_percent: number;
-    remaining: {
-      total: number;
-      per_day: number;
-      per_week: number;
-      per_month: number;
-    };
-    time_remaining: {
-      days: number;
-      weeks: number;
-      months: number;
-    };
-  } | null;
+  raw_data: {
+    sales_today: RawSalesData;
+    sales_by_platform: RawPlatformData;
+    goals: RawGoalData | null;
+  };
 }
 
 serve(async (req) => {
@@ -147,7 +208,7 @@ serve(async (req) => {
       .gte('end_date', today.toISOString().split('T')[0])
       .maybeSingle();
 
-    let goalsPayload: SalesPayload['goals'] = null;
+    let goalsRawData: RawGoalData | null = null;
 
     if (activeGoal) {
       // Get all sales within goal period for progress calculation
@@ -192,7 +253,7 @@ serve(async (req) => {
         ? Math.min(100, (currentProgress / activeGoal.target_value) * 100)
         : 0;
 
-      goalsPayload = {
+      goalsRawData = {
         active_goal: activeGoal.name,
         target_value: activeGoal.target_value,
         currency: activeGoal.currency,
@@ -212,27 +273,69 @@ serve(async (req) => {
       };
     }
 
-    // Build payload
-    const payload: SalesPayload = {
-      date: today.toISOString().split('T')[0],
+    // Build formatted date
+    const formattedDate = formatDateBR(today);
+
+    // Build verbose message
+    const message = {
+      title: `📊 Resumo de Vendas - ${formattedDate}`,
+      
+      hotmart: {
+        header: "🔥 HOTMART",
+        transactions: `Vendas realizadas hoje: ${hotmartCount}`,
+        total_brl: `Valor em Reais: ${formatBRL(hotmartBrl)}`,
+        total_usd: `Valor em Dólares: ${formatUSD(hotmartUsd)}`,
+      },
+      
+      tmb: {
+        header: "💳 TMB",
+        transactions: `Vendas realizadas hoje: ${tmbCount}`,
+        total_brl: `Valor em Reais: ${formatBRL(tmbBrl)}`,
+      },
+      
+      combined: {
+        header: "📈 TOTAL CONSOLIDADO",
+        transactions: `Total de vendas hoje: ${totalTransactions}`,
+        total_brl: `Total em Reais: ${formatBRL(totalBrl)}`,
+        total_usd: `Total em Dólares: ${formatUSD(totalUsd)}`,
+      },
+      
+      goals: goalsRawData ? {
+        header: `🎯 META: ${goalsRawData.active_goal}`,
+        target: `Meta Global: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.target_value) : formatUSD(goalsRawData.target_value)}`,
+        current: `Meta Alcançada: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.current_progress) : formatUSD(goalsRawData.current_progress)} (${formatPercent(goalsRawData.progress_percent)})`,
+        remaining: `Falta: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.total) : formatUSD(goalsRawData.remaining.total)}`,
+        daily: `Meta Diária: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.per_day) : formatUSD(goalsRawData.remaining.per_day)}`,
+        weekly: `Meta Semanal: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.per_week) : formatUSD(goalsRawData.remaining.per_week)}`,
+        monthly: `Meta Mensal: ${goalsRawData.currency === 'BRL' ? formatBRL(goalsRawData.remaining.per_month) : formatUSD(goalsRawData.remaining.per_month)}`,
+        time_remaining: `⏱️ Tempo restante: ${goalsRawData.time_remaining.days} dias`,
+      } : null,
+    };
+
+    // Build payload with both formatted message and raw data
+    const payload: VerbosePayload = {
+      date: formattedDate,
       timestamp: today.toISOString(),
-      sales_today: {
-        total_brl: totalBrl,
-        total_usd: totalUsd,
-        transactions_count: totalTransactions,
-      },
-      sales_by_platform: {
-        hotmart: {
-          total_brl: hotmartBrl,
-          total_usd: hotmartUsd,
-          transactions: hotmartCount,
+      message,
+      raw_data: {
+        sales_today: {
+          total_brl: totalBrl,
+          total_usd: totalUsd,
+          transactions_count: totalTransactions,
         },
-        tmb: {
-          total_brl: tmbBrl,
-          transactions: tmbCount,
+        sales_by_platform: {
+          hotmart: {
+            total_brl: hotmartBrl,
+            total_usd: hotmartUsd,
+            transactions: hotmartCount,
+          },
+          tmb: {
+            total_brl: tmbBrl,
+            transactions: tmbCount,
+          },
         },
+        goals: goalsRawData,
       },
-      goals: goalsPayload,
     };
 
     console.log('[send-sales-summary] Payload built:', JSON.stringify(payload));
