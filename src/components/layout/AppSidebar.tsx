@@ -25,6 +25,7 @@ import {
   LayoutDashboard,
   Wallet,
   GitCompare,
+  Webhook,
 } from 'lucide-react';
 
 const menuItems = [
@@ -33,6 +34,7 @@ const menuItems = [
   { title: 'Upload', url: '/upload', icon: Upload },
   { title: 'Hotmart', url: '/transactions', icon: FileText },
   { title: 'TMB', url: '/tmb-transactions', icon: Wallet },
+  { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook },
   { title: 'Metas', url: '/goals', icon: Target },
   { title: 'Configurações', url: '/settings', icon: Settings },
 ];

@@ -12,6 +12,7 @@ import TmbTransactions from "./pages/TmbTransactions";
 import ComparativeDashboard from "./pages/ComparativeDashboard";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
+import WebhookLogs from "./pages/WebhookLogs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/comparative" element={<ComparativeDashboard />} />
             <Route path="/goals" element={<Goals />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/webhook-logs" element={<WebhookLogs />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
