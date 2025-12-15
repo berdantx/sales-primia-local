@@ -37,10 +37,13 @@ function Transactions() {
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: transactions, isLoading } = useTransactions({
+  const { data: transactions, isLoading, error } = useTransactions({
     startDate: subDays(new Date(), 365),
     endDate: new Date(),
   });
+
+  // Debug logging
+  console.log('Transactions state:', { isLoading, count: transactions?.length, error });
 
   // Get unique currencies and countries for filters
   const { currencies, countries } = useMemo(() => {
