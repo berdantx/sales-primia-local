@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Database, FileText, AlertTriangle } from 'lucide-react';
+import { Trash2, Database, FileText, AlertTriangle, Store, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,13 +19,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface DataStats {
-  transactions: number;
+  hotmartTransactions: number;
+  tmbTransactions: number;
   imports: number;
 }
 
 export function DataManagement() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<DataStats>({ transactions: 0, imports: 0 });
+  const [stats, setStats] = useState<DataStats>({ hotmartTransactions: 0, tmbTransactions: 0, imports: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -33,13 +35,15 @@ export function DataManagement() {
     
     setIsLoading(true);
     try {
-      const [transactionsResult, importsResult] = await Promise.all([
+      const [hotmartResult, tmbResult, importsResult] = await Promise.all([
         supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('tmb_transactions').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('imports').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
       ]);
 
       setStats({
-        transactions: transactionsResult.count || 0,
+        hotmartTransactions: hotmartResult.count || 0,
+        tmbTransactions: tmbResult.count || 0,
         imports: importsResult.count || 0,
       });
     } catch (error) {
@@ -74,9 +78,15 @@ export function DataManagement() {
           .in('import_id', importIds);
       }
 
-      // Delete all transactions
+      // Delete all transactions (Hotmart)
       await supabase
         .from('transactions')
+        .delete()
+        .eq('user_id', user.id);
+
+      // Delete all TMB transactions
+      await supabase
+        .from('tmb_transactions')
         .delete()
         .eq('user_id', user.id);
 
@@ -96,7 +106,9 @@ export function DataManagement() {
     }
   };
 
-  if (stats.transactions === 0 && stats.imports === 0 && !isLoading) {
+  const totalTransactions = stats.hotmartTransactions + stats.tmbTransactions;
+
+  if (totalTransactions === 0 && stats.imports === 0 && !isLoading) {
     return null;
   }
 
@@ -112,62 +124,83 @@ export function DataManagement() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-between">
-          <div className="flex gap-6">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Transações:</span>
-              <span className="font-semibold">
-                {isLoading ? '...' : stats.transactions.toLocaleString('pt-BR')}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-4">
+            {stats.hotmartTransactions > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 rounded-lg">
+                <FileSpreadsheet className="h-4 w-4 text-primary" />
+                <span className="text-sm text-muted-foreground">Hotmart:</span>
+                <Badge variant="secondary" className="font-semibold">
+                  {isLoading ? '...' : stats.hotmartTransactions.toLocaleString('pt-BR')}
+                </Badge>
+              </div>
+            )}
+            {stats.tmbTransactions > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-success/5 rounded-lg">
+                <Store className="h-4 w-4 text-success" />
+                <span className="text-sm text-muted-foreground">TMB:</span>
+                <Badge variant="secondary" className="font-semibold bg-success/10">
+                  {isLoading ? '...' : stats.tmbTransactions.toLocaleString('pt-BR')}
+                </Badge>
+              </div>
+            )}
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
               <Database className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Importações:</span>
-              <span className="font-semibold">
+              <Badge variant="outline" className="font-semibold">
                 {isLoading ? '...' : stats.imports.toLocaleString('pt-BR')}
-              </span>
+              </Badge>
             </div>
           </div>
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                disabled={isLoading || isDeleting || (stats.transactions === 0 && stats.imports === 0)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Limpar Todos os Dados
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                  Confirmar exclusão
-                </AlertDialogTitle>
-                <AlertDialogDescription className="space-y-2">
-                  <p>
-                    Você está prestes a excluir <strong>todas as {stats.transactions.toLocaleString('pt-BR')} transações</strong> e 
-                    <strong> {stats.imports} importações</strong>.
-                  </p>
-                  <p className="text-destructive font-medium">
-                    Esta ação é irreversível!
-                  </p>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleClearAllData}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          <div className="flex justify-end">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  disabled={isLoading || isDeleting || (totalTransactions === 0 && stats.imports === 0)}
                 >
-                  {isDeleting ? 'Excluindo...' : 'Sim, excluir tudo'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Limpar Todos os Dados
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    Confirmar exclusão
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>
+                      Você está prestes a excluir:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1">
+                      {stats.hotmartTransactions > 0 && (
+                        <li><strong>{stats.hotmartTransactions.toLocaleString('pt-BR')}</strong> transações Hotmart</li>
+                      )}
+                      {stats.tmbTransactions > 0 && (
+                        <li><strong>{stats.tmbTransactions.toLocaleString('pt-BR')}</strong> transações TMB</li>
+                      )}
+                      <li><strong>{stats.imports}</strong> registros de importação</li>
+                    </ul>
+                    <p className="text-destructive font-medium">
+                      Esta ação é irreversível!
+                    </p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleClearAllData}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? 'Excluindo...' : 'Sim, excluir tudo'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </CardContent>
     </Card>
