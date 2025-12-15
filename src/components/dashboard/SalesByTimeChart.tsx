@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -25,10 +25,9 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
         ...values,
       }))
       .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(-30); // Last 30 days
+      .slice(-30);
   }, [data]);
 
-  // Calculate totals and growth
   const totals = useMemo(() => {
     const result: Record<string, { total: number; growth: number }> = {};
     
@@ -36,7 +35,6 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
       const values = chartData.map((d) => (d[currency] as number) || 0);
       const total = values.reduce((sum, v) => sum + v, 0);
       
-      // Calculate growth (last 15 days vs first 15 days)
       const midPoint = Math.floor(values.length / 2);
       const firstHalf = values.slice(0, midPoint).reduce((sum, v) => sum + v, 0);
       const secondHalf = values.slice(midPoint).reduce((sum, v) => sum + v, 0);
@@ -74,43 +72,43 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
       transition={{ delay: 0.3 }}
       className="h-full"
     >
-      <Card className="h-full flex flex-col">
-        <CardHeader className="pb-2">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <Card className="h-full flex flex-col min-h-[400px]">
+        <CardHeader className="pb-2 space-y-3">
+          <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Evolução do Faturamento</CardTitle>
-              <p className="text-sm text-muted-foreground">Últimos 30 dias</p>
-            </div>
-            
-            {/* Totals with growth indicator */}
-            <div className="flex flex-wrap gap-4">
-              {currencies.map((currency) => {
-                const { total, growth } = totals[currency] || { total: 0, growth: 0 };
-                const isPositive = growth >= 0;
-                
-                return (
-                  <div key={currency} className="text-right">
-                    <p className="text-lg font-bold" style={{ color: COLORS[currency] }}>
-                      {formatCurrencyValue(total, currency)}
-                    </p>
-                    <div className={`flex items-center justify-end gap-1 text-xs ${isPositive ? 'text-success' : 'text-destructive'}`}>
-                      {isPositive ? (
-                        <TrendingUp className="h-3 w-3" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3" />
-                      )}
-                      <span>{isPositive ? '+' : ''}{growth.toFixed(1)}%</span>
-                    </div>
-                  </div>
-                );
-              })}
+              <CardTitle className="text-base font-semibold">Evolução do Faturamento</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Últimos 30 dias</p>
             </div>
           </div>
+          
+          {/* Compact totals */}
+          <div className="flex flex-wrap gap-3">
+            {currencies.map((currency) => {
+              const { total, growth } = totals[currency] || { total: 0, growth: 0 };
+              const isPositive = growth >= 0;
+              
+              return (
+                <div key={currency} className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/50 rounded-lg">
+                  <span className="text-sm font-bold" style={{ color: COLORS[currency] }}>
+                    {formatCurrencyValue(total, currency)}
+                  </span>
+                  <div className={`flex items-center gap-0.5 text-[10px] font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                    {isPositive ? (
+                      <TrendingUp className="h-2.5 w-2.5" />
+                    ) : (
+                      <TrendingDown className="h-2.5 w-2.5" />
+                    )}
+                    <span>{isPositive ? '+' : ''}{growth.toFixed(0)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardHeader>
-        <CardContent className="flex-1">
-          <div className="h-full min-h-[350px]">
+        <CardContent className="flex-1 pb-4">
+          <div className="h-full min-h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                 <defs>
                   {currencies.map((currency, index) => (
                     <linearGradient key={currency} id={`color${currency}`} x1="0" y1="0" x2="0" y2="1">
@@ -119,23 +117,28 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
                     </linearGradient>
                   ))}
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis 
                   dataKey="date" 
                   tickFormatter={(value) => format(parseISO(value), 'dd/MM', { locale: ptBR })}
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
                 />
                 <YAxis 
                   tickFormatter={formatValue}
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
                 />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
+                    fontSize: '12px',
                   }}
                   labelFormatter={(value) => format(parseISO(value as string), "dd 'de' MMMM", { locale: ptBR })}
                   formatter={(value: number, name: string) => [
@@ -143,7 +146,6 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
                     name
                   ]}
                 />
-                <Legend />
                 {currencies.map((currency, index) => (
                   <Area
                     key={currency}

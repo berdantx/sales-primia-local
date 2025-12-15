@@ -37,7 +37,7 @@ export function PlatformSharePieChart({ hotmartTotal, tmbTotal }: PlatformShareP
     if (percent < 0.05) return null;
 
     return (
-      <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={14} fontWeight="bold">
+      <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight="bold">
         {`${(percent * 100).toFixed(0)}%`}
       </text>
     );
@@ -47,15 +47,16 @@ export function PlatformSharePieChart({ hotmartTotal, tmbTotal }: PlatformShareP
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.5 }}
+      transition={{ delay: 0.4 }}
+      className="h-full"
     >
-      <Card>
+      <Card className="h-full flex flex-col min-h-[400px]">
         <CardHeader className="pb-2">
-          <CardTitle>Participação por Plataforma</CardTitle>
-          <p className="text-sm text-muted-foreground">Distribuição do faturamento total</p>
+          <CardTitle className="text-base font-semibold">Participação por Plataforma</CardTitle>
+          <p className="text-xs text-muted-foreground">Distribuição do faturamento</p>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
+        <CardContent className="flex-1 flex flex-col">
+          <div className="flex-1 min-h-[240px]">
             {data.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -65,9 +66,11 @@ export function PlatformSharePieChart({ hotmartTotal, tmbTotal }: PlatformShareP
                     cy="50%"
                     labelLine={false}
                     label={renderCustomLabel}
-                    outerRadius={100}
+                    innerRadius="30%"
+                    outerRadius="70%"
                     fill="#8884d8"
                     dataKey="value"
+                    paddingAngle={2}
                   >
                     {data.map((entry) => (
                       <Cell key={`cell-${entry.name}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
@@ -78,10 +81,12 @@ export function PlatformSharePieChart({ hotmartTotal, tmbTotal }: PlatformShareP
                       backgroundColor: 'hsl(var(--card))',
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px',
+                      fontSize: '12px',
                     }}
                     formatter={(value: number) => [formatCurrency(value, 'BRL'), 'Total']}
                   />
                   <Legend 
+                    wrapperStyle={{ fontSize: '12px' }}
                     formatter={(value) => (
                       <span style={{ color: 'hsl(var(--foreground))' }}>{value}</span>
                     )}
@@ -89,16 +94,16 @@ export function PlatformSharePieChart({ hotmartTotal, tmbTotal }: PlatformShareP
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                 Sem dados para exibir
               </div>
             )}
           </div>
           
           {total > 0 && (
-            <div className="mt-4 text-center">
-              <p className="text-sm text-muted-foreground">Total Combinado</p>
-              <p className="text-2xl font-bold">{formatCurrency(total, 'BRL')}</p>
+            <div className="pt-3 mt-auto border-t text-center">
+              <p className="text-xs text-muted-foreground">Total Combinado</p>
+              <p className="text-lg font-bold">{formatCurrency(total, 'BRL')}</p>
             </div>
           )}
         </CardContent>

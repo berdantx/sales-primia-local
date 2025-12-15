@@ -27,22 +27,23 @@ export function CountryDistribution({ data }: CountryDistributionProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.4 }}
+      transition={{ delay: 0.5 }}
       className="h-full"
     >
-      <Card className="h-full flex flex-col">
-        <CardHeader>
-          <CardTitle>Distribuição por País</CardTitle>
+      <Card className="h-full flex flex-col min-h-[400px]">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-semibold">Distribuição por País</CardTitle>
+          <p className="text-xs text-muted-foreground">Top 6 países por transações</p>
         </CardHeader>
         <CardContent className="flex-1">
-          <div className="h-full min-h-[250px]">
+          <div className="h-full min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={chartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius="40%"
+                  innerRadius="30%"
                   outerRadius="70%"
                   paddingAngle={2}
                   dataKey="value"
@@ -56,14 +57,16 @@ export function CountryDistribution({ data }: CountryDistributionProps) {
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px',
+                    fontSize: '12px',
                   }}
                   formatter={(value: number) => [
-                    `${((value / total) * 100).toFixed(1)}%`,
-                    'Participação'
+                    `${value} (${((value / total) * 100).toFixed(1)}%)`,
+                    'Transações'
                   ]}
                 />
                 <Legend 
-                  formatter={(value) => <span className="text-sm">{value}</span>}
+                  wrapperStyle={{ fontSize: '11px' }}
+                  formatter={(value) => <span className="text-foreground">{value}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>
