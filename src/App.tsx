@@ -14,6 +14,7 @@ import ComparativeDashboard from "./pages/ComparativeDashboard";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import WebhookLogs from "./pages/WebhookLogs";
+import WebhookConfig from "./pages/WebhookConfig";
 import Users from "./pages/Users";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
@@ -51,6 +52,11 @@ const App = () => (
             <Route path="/webhook-logs" element={
               <ProtectedRoute allowedRoles={['master', 'admin']}>
                 <WebhookLogs />
+              </ProtectedRoute>
+            } />
+            <Route path="/webhook-config" element={
+              <ProtectedRoute allowedRoles={['master', 'admin']}>
+                <WebhookConfig />
               </ProtectedRoute>
             } />
             <Route path="/users" element={

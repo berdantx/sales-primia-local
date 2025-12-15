@@ -28,6 +28,7 @@ import {
   GitCompare,
   Webhook,
   Users,
+  Send,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -45,6 +46,7 @@ const menuItems: MenuItem[] = [
   { title: 'Hotmart', url: '/transactions', icon: FileText, roles: ['master', 'admin', 'user'] },
   { title: 'TMB', url: '/tmb-transactions', icon: Wallet, roles: ['master', 'admin', 'user'] },
   { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook, roles: ['master', 'admin'] },
+  { title: 'Webhooks Externos', url: '/webhook-config', icon: Send, roles: ['master', 'admin'] },
   { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin', 'user'] },
   { title: 'Usuários', url: '/users', icon: Users, roles: ['master'] },
   { title: 'Configurações', url: '/settings', icon: Settings, roles: ['master', 'admin'] },

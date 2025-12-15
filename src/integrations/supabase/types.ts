@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      external_webhooks: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          name: string
+          schedule: string | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name: string
+          schedule?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name?: string
+          schedule?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       filter_views: {
         Row: {
           billing_type: string | null
@@ -450,6 +486,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      webhook_dispatch_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          payload: Json | null
+          response_code: number | null
+          status: string
+          user_id: string
+          webhook_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          response_code?: number | null
+          status: string
+          user_id: string
+          webhook_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          response_code?: number | null
+          status?: string
+          user_id?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_dispatch_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "external_webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_logs: {
         Row: {
