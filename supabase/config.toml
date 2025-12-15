@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.send-invitation]
 verify_jwt = false
+
+[functions.tmb-webhook]
+verify_jwt = false
