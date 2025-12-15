@@ -1,4 +1,4 @@
-import { useState, useMemo, forwardRef } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useTransactions } from '@/hooks/useTransactions';
@@ -31,7 +31,7 @@ import {
 
 const ITEMS_PER_PAGE = 20;
 
-const Transactions = forwardRef<HTMLDivElement, object>((_props, ref) => {
+function Transactions() {
   const [search, setSearch] = useState('');
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
@@ -129,7 +129,7 @@ const Transactions = forwardRef<HTMLDivElement, object>((_props, ref) => {
 
   return (
     <MainLayout>
-      <div ref={ref} className="space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -321,7 +321,6 @@ const Transactions = forwardRef<HTMLDivElement, object>((_props, ref) => {
       </div>
     </MainLayout>
   );
-});
+}
 
-Transactions.displayName = 'Transactions';
 export default Transactions;
