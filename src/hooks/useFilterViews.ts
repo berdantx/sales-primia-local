@@ -13,6 +13,7 @@ export interface FilterView {
   billing_type: string | null;
   payment_method: string | null;
   sck_code: string | null;
+  product: string | null;
   is_favorite: boolean;
   created_at: string;
   updated_at: string;
@@ -26,6 +27,7 @@ export interface FilterViewInput {
   billing_type?: string | null;
   payment_method?: string | null;
   sck_code?: string | null;
+  product?: string | null;
   is_favorite?: boolean;
 }
 
@@ -70,6 +72,7 @@ export function useSaveFilterView() {
           billing_type: input.billing_type || null,
           payment_method: input.payment_method || null,
           sck_code: input.sck_code || null,
+          product: input.product || null,
           is_favorite: input.is_favorite || false,
         })
         .select()
@@ -107,6 +110,7 @@ export function useUpdateFilterView() {
       if (input.billing_type !== undefined) updateData.billing_type = input.billing_type;
       if (input.payment_method !== undefined) updateData.payment_method = input.payment_method;
       if (input.sck_code !== undefined) updateData.sck_code = input.sck_code;
+      if (input.product !== undefined) updateData.product = input.product;
       if (input.is_favorite !== undefined) updateData.is_favorite = input.is_favorite;
 
       const { data, error } = await supabase

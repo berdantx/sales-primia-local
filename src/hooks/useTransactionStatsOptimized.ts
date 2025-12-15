@@ -8,6 +8,7 @@ export interface TransactionFilters {
   billingType?: string | null;
   paymentMethod?: string | null;
   sckCode?: string | null;
+  product?: string | null;
 }
 
 export interface CountryCurrencyStats {
@@ -49,6 +50,7 @@ export function useTransactionStatsOptimized(filters?: TransactionFilters) {
       filters?.billingType,
       filters?.paymentMethod,
       filters?.sckCode,
+      filters?.product,
     ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_transaction_stats', {
@@ -57,6 +59,7 @@ export function useTransactionStatsOptimized(filters?: TransactionFilters) {
         p_billing_type: filters?.billingType || null,
         p_payment_method: filters?.paymentMethod || null,
         p_sck_code: filters?.sckCode || null,
+        p_product: filters?.product || null,
       });
 
       if (error) throw error;
@@ -93,6 +96,7 @@ export function useTopCustomersOptimized(filters?: TransactionFilters) {
       filters?.billingType,
       filters?.paymentMethod,
       filters?.sckCode,
+      filters?.product,
     ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_top_customers', {
@@ -102,6 +106,7 @@ export function useTopCustomersOptimized(filters?: TransactionFilters) {
         p_billing_type: filters?.billingType || null,
         p_payment_method: filters?.paymentMethod || null,
         p_sck_code: filters?.sckCode || null,
+        p_product: filters?.product || null,
       });
 
       if (error) throw error;
@@ -123,6 +128,7 @@ export function useSalesByDateOptimized(filters?: TransactionFilters) {
       filters?.billingType,
       filters?.paymentMethod,
       filters?.sckCode,
+      filters?.product,
     ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_sales_by_date', {
@@ -131,6 +137,7 @@ export function useSalesByDateOptimized(filters?: TransactionFilters) {
         p_billing_type: filters?.billingType || null,
         p_payment_method: filters?.paymentMethod || null,
         p_sck_code: filters?.sckCode || null,
+        p_product: filters?.product || null,
       });
 
       if (error) throw error;

@@ -1,4 +1,4 @@
-import { Filter, X } from 'lucide-react';
+import { Filter, X, ShoppingCart, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -14,30 +14,37 @@ interface AdvancedFiltersProps {
   billingType: string | null;
   paymentMethod: string | null;
   sckCode: string | null;
+  product: string | null;
   onBillingTypeChange: (value: string | null) => void;
   onPaymentMethodChange: (value: string | null) => void;
   onSckCodeChange: (value: string | null) => void;
+  onProductChange: (value: string | null) => void;
+  totalFilteredTransactions?: number;
 }
 
 export function AdvancedFilters({
   billingType,
   paymentMethod,
   sckCode,
+  product,
   onBillingTypeChange,
   onPaymentMethodChange,
   onSckCodeChange,
+  onProductChange,
+  totalFilteredTransactions,
 }: AdvancedFiltersProps) {
   const { data: filterOptions, isLoading } = useFilterOptions();
 
-  const hasActiveFilters = billingType || paymentMethod || sckCode;
+  const hasActiveFilters = billingType || paymentMethod || sckCode || product;
 
   const clearAllFilters = () => {
     onBillingTypeChange(null);
     onPaymentMethodChange(null);
     onSckCodeChange(null);
+    onProductChange(null);
   };
 
-  const activeFiltersCount = [billingType, paymentMethod, sckCode].filter(Boolean).length;
+  const activeFiltersCount = [billingType, paymentMethod, sckCode, product].filter(Boolean).length;
 
   return (
     <div className="space-y-3">
@@ -110,6 +117,28 @@ export function AdvancedFilters({
           </SelectContent>
         </Select>
 
+        <Select
+          value={product || 'all'}
+          onValueChange={(value) => onProductChange(value === 'all' ? null : value)}
+          disabled={isLoading}
+        >
+          <SelectTrigger className="w-[200px] h-9 bg-background">
+            <Package className="h-4 w-4 mr-2 text-muted-foreground" />
+            <SelectValue placeholder="Produto" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover z-50 max-h-[300px]">
+            <SelectItem value="all">Todos os produtos</SelectItem>
+            {filterOptions?.products.map((option) => (
+              <SelectItem key={option.value} value={option.value} className="text-xs">
+                <span className="flex items-center justify-between w-full gap-2">
+                  <span className="truncate">{option.value.length > 30 ? `${option.value.slice(0, 30)}...` : option.value}</span>
+                  <span className="text-muted-foreground">({option.count})</span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         {hasActiveFilters && (
           <Button
             variant="ghost"
@@ -159,8 +188,30 @@ export function AdvancedFilters({
               </button>
             </Badge>
           )}
+          {product && (
+            <Badge variant="secondary" className="text-xs">
+              Produto: {product.length > 20 ? `${product.slice(0, 20)}...` : product}
+              <button
+                onClick={() => onProductChange(null)}
+                className="ml-1 hover:text-destructive"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
           <span className="text-xs text-muted-foreground">
             ({activeFiltersCount} {activeFiltersCount === 1 ? 'filtro' : 'filtros'})
+          </span>
+        </div>
+      )}
+
+      {/* Footer with filtered transactions count */}
+      {totalFilteredTransactions !== undefined && (
+        <div className="pt-3 mt-1 border-t flex items-center gap-2 text-sm">
+          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">Total filtrado:</span>
+          <span className="font-semibold">
+            {totalFilteredTransactions.toLocaleString('pt-BR')} transações
           </span>
         </div>
       )}
