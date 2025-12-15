@@ -54,6 +54,31 @@ interface HotmartWebhookEvent {
   };
 }
 
+// Helper function to log webhook events
+async function logWebhookEvent(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string,
+  eventType: string,
+  transactionCode: string | null,
+  status: 'processed' | 'skipped' | 'error',
+  payload: unknown,
+  errorMessage?: string
+) {
+  try {
+    await supabase.from('webhook_logs').insert({
+      user_id: userId,
+      event_type: eventType,
+      transaction_code: transactionCode,
+      status,
+      payload,
+      error_message: errorMessage || null,
+    });
+  } catch (logError) {
+    console.error('Failed to log webhook event:', logError);
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -99,13 +124,26 @@ serve(async (req) => {
     };
 
     for (const event of events) {
+      const eventType = event.event || 'unknown';
+      const transactionCode = event.data?.purchase?.transaction || null;
+
       try {
         // Only process PURCHASE_APPROVED events
-        const eventType = event.event || '';
         if (eventType !== 'PURCHASE_APPROVED') {
           console.log(`Skipping event type: ${eventType}`);
           results.skipped++;
           results.details.push(`Skipped: ${eventType || 'unknown event'}`);
+          
+          // Log skipped event
+          await logWebhookEvent(
+            supabase,
+            webhookUserId,
+            eventType,
+            transactionCode,
+            'skipped',
+            event,
+            `Event type "${eventType}" is not PURCHASE_APPROVED`
+          );
           continue;
         }
 
@@ -117,6 +155,17 @@ serve(async (req) => {
           console.log('Missing transaction code, skipping');
           results.skipped++;
           results.details.push('Skipped: missing transaction code');
+          
+          // Log skipped event
+          await logWebhookEvent(
+            supabase,
+            webhookUserId,
+            eventType,
+            null,
+            'skipped',
+            event,
+            'Missing transaction code'
+          );
           continue;
         }
 
@@ -165,15 +214,48 @@ serve(async (req) => {
           console.error('Error inserting transaction:', error);
           results.errors++;
           results.details.push(`Error: ${purchase.transaction} - ${error.message}`);
+          
+          // Log error
+          await logWebhookEvent(
+            supabase,
+            webhookUserId,
+            eventType,
+            purchase.transaction,
+            'error',
+            event,
+            error.message
+          );
         } else {
           console.log(`Transaction processed: ${purchase.transaction}`);
           results.processed++;
           results.details.push(`Processed: ${purchase.transaction}`);
+          
+          // Log success
+          await logWebhookEvent(
+            supabase,
+            webhookUserId,
+            eventType,
+            purchase.transaction,
+            'processed',
+            event
+          );
         }
       } catch (eventError) {
         console.error('Error processing event:', eventError);
         results.errors++;
-        results.details.push(`Error: ${eventError instanceof Error ? eventError.message : 'Unknown error'}`);
+        const errorMsg = eventError instanceof Error ? eventError.message : 'Unknown error';
+        results.details.push(`Error: ${errorMsg}`);
+        
+        // Log error
+        await logWebhookEvent(
+          supabase,
+          webhookUserId,
+          eventType,
+          transactionCode,
+          'error',
+          event,
+          errorMsg
+        );
       }
     }
 
