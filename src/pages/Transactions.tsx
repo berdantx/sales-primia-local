@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +46,9 @@ function Transactions() {
   }), []);
 
   const { data: transactions, isLoading, error } = useTransactions(filters);
+  
+  // Use the same optimized stats as the Dashboard for consistent KPI values
+  const { data: statsFromDB, isLoading: isLoadingStats } = useTransactionStatsOptimized(filters);
 
   // Debug logging
   console.log('Transactions state:', { isLoading, count: transactions?.length, error });
@@ -93,22 +97,23 @@ function Transactions() {
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
 
-  // Summary stats for KPI cards
+  // Summary stats for KPI cards - using deduplicated values from DB for consistency with Dashboard
   const summaryStats = useMemo(() => {
-    if (!filteredTransactions.length) {
-      return { totalBRL: 0, totalUSD: 0, countBRL: 0, countUSD: 0 };
-    }
-
+    // Use deduplicated totals from DB (same as Dashboard)
+    const totalBRL = statsFromDB?.totalByCurrency?.['BRL'] || 0;
+    const totalUSD = statsFromDB?.totalByCurrency?.['USD'] || 0;
+    
+    // Keep counts from filtered transactions for display reference
     const brlTransactions = filteredTransactions.filter(t => t.currency === 'BRL');
     const usdTransactions = filteredTransactions.filter(t => t.currency === 'USD');
 
     return {
-      totalBRL: brlTransactions.reduce((sum, t) => sum + Number(t.computed_value), 0),
-      totalUSD: usdTransactions.reduce((sum, t) => sum + Number(t.computed_value), 0),
+      totalBRL,
+      totalUSD,
       countBRL: brlTransactions.length,
       countUSD: usdTransactions.length,
     };
-  }, [filteredTransactions]);
+  }, [statsFromDB, filteredTransactions]);
 
   const handleExportCSV = () => {
     const headers = ['Código', 'Produto', 'Comprador', 'Email', 'Moeda', 'País', 'Valor', 'Data'];
@@ -141,7 +146,7 @@ function Transactions() {
 
   const hasActiveFilters = search || currencyFilter !== 'all' || countryFilter !== 'all';
 
-  if (isLoading) {
+  if (isLoading || isLoadingStats) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-[60vh]">
