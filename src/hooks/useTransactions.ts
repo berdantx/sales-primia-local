@@ -43,30 +43,46 @@ export function useTransactions(filters?: TransactionFilters) {
   return useQuery({
     queryKey: ['transactions', user?.id, filterKey],
     queryFn: async () => {
-      let query = supabase
-        .from('transactions')
-        .select('*', { count: 'exact' })
-        .order('purchase_date', { ascending: false, nullsFirst: false })
-        .range(0, 50000);
+      const PAGE_SIZE = 1000;
+      let allData: Transaction[] = [];
+      let from = 0;
+      let hasMore = true;
 
-      // Only apply date filters if both dates are provided
-      if (filters?.startDate && filters?.endDate) {
-        query = query.gte('purchase_date', filters.startDate.toISOString());
-        query = query.lte('purchase_date', filters.endDate.toISOString());
-      }
-      if (filters?.currency) {
-        query = query.eq('currency', filters.currency);
-      }
-      if (filters?.country) {
-        query = query.eq('country', filters.country);
-      }
-      if (filters?.search) {
-        query = query.or(`product.ilike.%${filters.search}%,buyer_name.ilike.%${filters.search}%,buyer_email.ilike.%${filters.search}%`);
+      while (hasMore) {
+        let query = supabase
+          .from('transactions')
+          .select('*')
+          .order('purchase_date', { ascending: false, nullsFirst: false })
+          .range(from, from + PAGE_SIZE - 1);
+
+        // Apply filters
+        if (filters?.startDate && filters?.endDate) {
+          query = query.gte('purchase_date', filters.startDate.toISOString());
+          query = query.lte('purchase_date', filters.endDate.toISOString());
+        }
+        if (filters?.currency) {
+          query = query.eq('currency', filters.currency);
+        }
+        if (filters?.country) {
+          query = query.eq('country', filters.country);
+        }
+        if (filters?.search) {
+          query = query.or(`product.ilike.%${filters.search}%,buyer_name.ilike.%${filters.search}%,buyer_email.ilike.%${filters.search}%`);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allData = [...allData, ...data];
+          from += PAGE_SIZE;
+          hasMore = data.length === PAGE_SIZE;
+        } else {
+          hasMore = false;
+        }
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Transaction[];
+      return allData as Transaction[];
     },
     enabled: !!user,
   });
