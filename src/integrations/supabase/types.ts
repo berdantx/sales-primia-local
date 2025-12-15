@@ -258,6 +258,71 @@ export type Database = {
         }
         Relationships: []
       }
+      tmb_transactions: {
+        Row: {
+          buyer_email: string | null
+          buyer_name: string | null
+          created_at: string | null
+          currency: string | null
+          effective_date: string | null
+          id: string
+          import_id: string | null
+          order_id: string
+          product: string | null
+          source: string | null
+          ticket_value: number
+          user_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          buyer_email?: string | null
+          buyer_name?: string | null
+          created_at?: string | null
+          currency?: string | null
+          effective_date?: string | null
+          id?: string
+          import_id?: string | null
+          order_id: string
+          product?: string | null
+          source?: string | null
+          ticket_value?: number
+          user_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          buyer_email?: string | null
+          buyer_name?: string | null
+          created_at?: string | null
+          currency?: string | null
+          effective_date?: string | null
+          id?: string
+          import_id?: string | null
+          order_id?: string
+          product?: string | null
+          source?: string | null
+          ticket_value?: number
+          user_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tmb_transactions_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           billing_type: string | null
@@ -274,6 +339,7 @@ export type Database = {
           product: string | null
           purchase_date: string | null
           sck_code: string | null
+          source: string | null
           total_installments: number | null
           transaction_code: string
           user_id: string
@@ -293,6 +359,7 @@ export type Database = {
           product?: string | null
           purchase_date?: string | null
           sck_code?: string | null
+          source?: string | null
           total_installments?: number | null
           transaction_code: string
           user_id: string
@@ -312,6 +379,7 @@ export type Database = {
           product?: string | null
           purchase_date?: string | null
           sck_code?: string | null
+          source?: string | null
           total_installments?: number | null
           transaction_code?: string
           user_id?: string
