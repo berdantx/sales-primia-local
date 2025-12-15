@@ -282,72 +282,72 @@ export default function Dashboard() {
         ) : (
           <>
             {/* Goal Summary Section (when goal is active) */}
-            {primaryGoal ? (
+            {primaryGoal && (
               <GoalSummarySection 
                 goal={primaryGoal} 
                 totalSold={primaryGoalSales}
               />
-            ) : (
-              /* No active goal - show traditional KPI cards */
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Cards by Currency */}
-                  {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
-                    .sort(([, a], [, b]) => b - a)
-                    .map(([currency, total], index) => (
-                      <KPICard
-                        key={currency}
-                        title={currency === 'BRL' ? 'Vendas em Reais' : 'Vendas em Dólares'}
-                        value={formatCurrency(total, currency)}
-                        icon={DollarSign}
-                        delay={index}
-                      />
-                    ))
-                  }
+            )}
 
-                  {/* Total Transactions */}
+            {/* Currency and Transaction KPI Cards - ALWAYS show */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Cards by Currency */}
+              {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
+                .sort(([, a], [, b]) => b - a)
+                .map(([currency, total], index) => (
                   <KPICard
-                    title="Total Transações"
-                    value={formatNumber(stats.totalTransactions)}
-                    icon={ShoppingCart}
-                    delay={Object.keys(stats.totalByCurrency || {}).length}
+                    key={currency}
+                    title={currency === 'BRL' ? 'Vendas em Reais' : 'Vendas em Dólares'}
+                    value={formatCurrency(total, currency)}
+                    icon={DollarSign}
+                    delay={index}
                   />
+                ))
+              }
 
-                  {/* Top Customer */}
-                  {topCustomer && (
-                    <KPICard
-                      title="Top Cliente"
-                      value={topCustomer.name}
-                      subtitle={`${formatCurrency(topCustomer.totalValue, topCustomer.currency)} • ${topCustomer.totalPurchases} compras`}
-                      icon={Users}
-                      delay={Object.keys(stats.totalByCurrency || {}).length + 1}
-                    />
-                  )}
-                </div>
+              {/* Total Transactions */}
+              <KPICard
+                title="Total Transações"
+                value={formatNumber(stats.totalTransactions)}
+                icon={ShoppingCart}
+                delay={Object.keys(stats.totalByCurrency || {}).length}
+              />
 
-                {/* Call to action for creating a goal */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      <Target className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Crie uma meta de faturamento</p>
-                      <p className="text-sm text-muted-foreground">
-                        Acompanhe seu progresso com cards coloridos e projeções automáticas
-                      </p>
-                    </div>
+              {/* Top Customer */}
+              {topCustomer && (
+                <KPICard
+                  title="Top Cliente"
+                  value={topCustomer.name}
+                  subtitle={`${formatCurrency(topCustomer.totalValue, topCustomer.currency)} • ${topCustomer.totalPurchases} compras`}
+                  icon={Users}
+                  delay={Object.keys(stats.totalByCurrency || {}).length + 1}
+                />
+              )}
+            </div>
+
+            {/* Call to action for creating a goal - only when no goal exists */}
+            {!primaryGoal && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-primary/5 border border-primary/20 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-full">
+                    <Target className="h-5 w-5 text-primary" />
                   </div>
-                  <Button onClick={() => navigate('/goals')}>
-                    <Target className="h-4 w-4 mr-2" />
-                    Criar Meta
-                  </Button>
-                </motion.div>
-              </>
+                  <div>
+                    <p className="font-medium">Crie uma meta de faturamento</p>
+                    <p className="text-sm text-muted-foreground">
+                      Acompanhe seu progresso com cards coloridos e projeções automáticas
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={() => navigate('/goals')}>
+                  <Target className="h-4 w-4 mr-2" />
+                  Criar Meta
+                </Button>
+              </motion.div>
             )}
 
             {/* Charts Row */}
