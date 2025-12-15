@@ -31,8 +31,17 @@ export interface TransactionFilters {
 export function useTransactions(filters?: TransactionFilters) {
   const { user } = useAuth();
 
+  // Serialize filters to prevent reference issues with queryKey
+  const filterKey = filters ? {
+    startDate: filters.startDate?.toISOString(),
+    endDate: filters.endDate?.toISOString(),
+    currency: filters.currency,
+    country: filters.country,
+    search: filters.search,
+  } : null;
+
   return useQuery({
-    queryKey: ['transactions', user?.id, filters],
+    queryKey: ['transactions', user?.id, filterKey],
     queryFn: async () => {
       let query = supabase
         .from('transactions')
