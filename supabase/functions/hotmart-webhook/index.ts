@@ -19,39 +19,55 @@ const PAYMENT_TYPE_MAP: Record<string, string> = {
   'CASH_PAYMENT': 'Pagamento em Dinheiro',
 };
 
+// Common structures used in both payload formats
+interface PurchaseData {
+  transaction?: string;
+  approved_date?: number;
+  order_date?: number;
+  status?: string;
+  price?: {
+    value?: number;
+    currency_value?: string;
+  };
+  full_price?: {
+    value?: number;
+  };
+  payment?: {
+    type?: string;
+    installments_number?: number;
+  };
+  checkout_country?: {
+    name?: string;
+  };
+  origin?: {
+    sck?: string;
+  };
+}
+
+interface ProductData {
+  name?: string;
+}
+
+interface BuyerData {
+  email?: string;
+  name?: string;
+}
+
+// Hotmart webhook can come in two formats:
+// Format v2: { event: "PURCHASE_APPROVED", data: { purchase, product, buyer } }
+// Format v1: { purchase: { status: "APPROVED", ... }, product, buyer }
 interface HotmartWebhookEvent {
+  // v2 format fields
   event?: string;
   data?: {
-    purchase?: {
-      transaction?: string;
-      approved_date?: number;
-      order_date?: number;
-      price?: {
-        value?: number;
-        currency_value?: string;
-      };
-      full_price?: {
-        value?: number;
-      };
-      payment?: {
-        type?: string;
-        installments_number?: number;
-      };
-      checkout_country?: {
-        name?: string;
-      };
-      origin?: {
-        sck?: string;
-      };
-    };
-    product?: {
-      name?: string;
-    };
-    buyer?: {
-      email?: string;
-      name?: string;
-    };
+    purchase?: PurchaseData;
+    product?: ProductData;
+    buyer?: BuyerData;
   };
+  // v1 format fields (at root level)
+  purchase?: PurchaseData;
+  product?: ProductData;
+  buyer?: BuyerData;
 }
 
 // Helper function to log webhook events
@@ -124,8 +140,33 @@ serve(async (req) => {
     };
 
     for (const event of events) {
-      const eventType = event.event || 'unknown';
-      const transactionCode = event.data?.purchase?.transaction || null;
+      // Detect event format and extract data accordingly
+      let eventType: string;
+      let purchase: PurchaseData | undefined;
+      let product: ProductData | undefined;
+      let buyer: BuyerData | undefined;
+
+      if (event.event && event.data) {
+        // Format v2: { event: "PURCHASE_APPROVED", data: { purchase, product, buyer } }
+        eventType = event.event;
+        purchase = event.data.purchase;
+        product = event.data.product;
+        buyer = event.data.buyer;
+        console.log('Detected v2 format with event:', eventType);
+      } else if (event.purchase) {
+        // Format v1: { purchase: { status: "APPROVED", ... }, product, buyer }
+        const status = event.purchase.status;
+        eventType = status === 'APPROVED' ? 'PURCHASE_APPROVED' : status || 'unknown';
+        purchase = event.purchase;
+        product = event.product;
+        buyer = event.buyer;
+        console.log('Detected v1 format with status:', status, '-> eventType:', eventType);
+      } else {
+        eventType = 'unknown';
+        console.log('Unknown payload format');
+      }
+
+      const transactionCode = purchase?.transaction || null;
 
       try {
         // Only process PURCHASE_APPROVED events
@@ -146,10 +187,6 @@ serve(async (req) => {
           );
           continue;
         }
-
-        const purchase = event.data?.purchase;
-        const product = event.data?.product;
-        const buyer = event.data?.buyer;
 
         if (!purchase?.transaction) {
           console.log('Missing transaction code, skipping');
