@@ -30,7 +30,7 @@ export function CountryDistribution({ data }: CountryDistributionProps) {
       transition={{ delay: 0.5 }}
       className="h-full"
     >
-      <Card className="h-full flex flex-col min-h-[400px]">
+      <Card className="h-full flex flex-col flex-1 min-h-[200px]">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">Distribuição por País</CardTitle>
           <p className="text-xs text-muted-foreground">Top 6 países por transações</p>
