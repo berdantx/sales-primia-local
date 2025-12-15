@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -10,7 +10,7 @@ interface MainLayoutProps {
   children: ReactNode;
 }
 
-export function MainLayout({ children }: MainLayoutProps) {
+export const MainLayout = forwardRef<HTMLDivElement, MainLayoutProps>(({ children }, ref) => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -34,7 +34,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div ref={ref} className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
           <Header />
@@ -45,4 +45,6 @@ export function MainLayout({ children }: MainLayoutProps) {
       </div>
     </SidebarProvider>
   );
-}
+});
+
+MainLayout.displayName = 'MainLayout';
