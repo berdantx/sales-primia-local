@@ -294,39 +294,50 @@ export default function Dashboard() {
             )}
 
             {/* Currency and Transaction KPI Cards - ALWAYS show */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
-              {/* Cards by Currency */}
-              {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
-                .sort(([, a], [, b]) => b - a)
-                .map(([currency, total], index) => {
-                  const isUSD = currency === 'USD';
-                  const convertedValue = isUSD && dollarRate ? total * dollarRate.rate : null;
-                  
-                  return (
+            {(() => {
+              const brlTotal = stats?.totalByCurrency?.['BRL'] || 0;
+              const usdTotal = stats?.totalByCurrency?.['USD'] || 0;
+              const usdConvertedToBRL = dollarRate ? usdTotal * dollarRate.rate : 0;
+              const totalCombinedBRL = brlTotal + usdConvertedToBRL;
+              
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
+                  {/* Faturamento Total em BRL (BRL + USD convertido) */}
+                  <KPICard
+                    title="Faturamento Total (BRL)"
+                    value={formatCurrency(totalCombinedBRL, 'BRL')}
+                    subtitle={usdTotal > 0 && dollarRate ? 
+                      `Inclui ${formatCurrency(usdTotal, 'USD')} convertidos (R$ ${dollarRate.rate.toFixed(2)})` : 
+                      undefined
+                    }
+                    icon={DollarSign}
+                    delay={0}
+                  />
+
+                  {/* Vendas em Dólares (original) */}
+                  {usdTotal > 0 && (
                     <KPICard
-                      key={currency}
-                      title={currency === 'BRL' ? 'Vendas em Reais' : 'Vendas em Dólares'}
-                      value={formatCurrency(total, currency)}
-                      subtitle={isUSD && convertedValue && dollarRate ? 
-                        `≈ ${formatCurrency(convertedValue, 'BRL')} (cotação: R$ ${dollarRate.rate.toFixed(2)})` : 
+                      title="Vendas em Dólares"
+                      value={formatCurrency(usdTotal, 'USD')}
+                      subtitle={dollarRate ? 
+                        `≈ ${formatCurrency(usdConvertedToBRL, 'BRL')} (cotação: R$ ${dollarRate.rate.toFixed(2)})` : 
                         undefined
                       }
                       icon={DollarSign}
-                      delay={index}
+                      delay={1}
                     />
-                  );
-                })
-              }
+                  )}
 
-              {/* Total Transactions */}
-              <KPICard
-                title="Total Transações"
-                value={formatNumber(stats.totalTransactions)}
-                icon={ShoppingCart}
-                delay={Object.keys(stats.totalByCurrency || {}).length}
-              />
-
-            </div>
+                  {/* Total Transactions */}
+                  <KPICard
+                    title="Total Transações"
+                    value={formatNumber(stats.totalTransactions)}
+                    icon={ShoppingCart}
+                    delay={2}
+                  />
+                </div>
+              );
+            })()}
 
             {/* Call to action for creating a goal - only when no goal exists */}
             {!primaryGoal && (
