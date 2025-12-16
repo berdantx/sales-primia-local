@@ -126,7 +126,16 @@ export default function Dashboard() {
   
   // Get the first active goal for the summary section
   const primaryGoal = activeGoals[0];
-  const primaryGoalSales = primaryGoal ? (stats?.totalByCurrency?.[primaryGoal.currency] || 0) : 0;
+  // For BRL goals, include USD sales converted at current rate
+  const primaryGoalSales = useMemo(() => {
+    if (!primaryGoal) return 0;
+    const baseSales = stats?.totalByCurrency?.[primaryGoal.currency] || 0;
+    if (primaryGoal.currency === 'BRL' && dollarRate) {
+      const usdSales = stats?.totalByCurrency?.['USD'] || 0;
+      return baseSales + (usdSales * dollarRate.rate);
+    }
+    return baseSales;
+  }, [primaryGoal, stats, dollarRate]);
 
   if (isLoading) {
     return (

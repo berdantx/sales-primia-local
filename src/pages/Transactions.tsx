@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
+import { useDollarRate } from '@/hooks/useDollarRate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -77,6 +78,9 @@ function Transactions() {
   
   // Use the same optimized stats as the Dashboard for consistent KPI values
   const { data: statsFromDB, isLoading: isLoadingStats } = useTransactionStatsOptimized(filters);
+  
+  // Dollar rate for USD → BRL conversion
+  const { data: dollarRate } = useDollarRate();
 
   // Debug logging
   console.log('Transactions state:', { isLoading, count: transactions?.length, error });
@@ -131,6 +135,10 @@ function Transactions() {
     const totalBRL = statsFromDB?.totalByCurrency?.['BRL'] || 0;
     const totalUSD = statsFromDB?.totalByCurrency?.['USD'] || 0;
     
+    // Convert USD to BRL using current rate
+    const usdConvertedToBRL = dollarRate ? totalUSD * dollarRate.rate : 0;
+    const totalCombinedBRL = totalBRL + usdConvertedToBRL;
+    
     // Keep counts from filtered transactions for display reference
     const brlTransactions = filteredTransactions.filter(t => t.currency === 'BRL');
     const usdTransactions = filteredTransactions.filter(t => t.currency === 'USD');
@@ -138,10 +146,12 @@ function Transactions() {
     return {
       totalBRL,
       totalUSD,
+      totalCombinedBRL,
+      usdConvertedToBRL,
       countBRL: brlTransactions.length,
       countUSD: usdTransactions.length,
     };
-  }, [statsFromDB, filteredTransactions]);
+  }, [statsFromDB, filteredTransactions, dollarRate]);
 
   const handleExportCSV = () => {
     const headers = ['Código', 'Produto', 'Comprador', 'Email', 'Moeda', 'País', 'Valor', 'Data'];
@@ -213,23 +223,31 @@ function Transactions() {
           className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4"
         >
           <ColoredKPICard
-            title="Total em Reais"
-            value={formatCurrency(summaryStats.totalBRL, 'BRL')}
-            subtitle={`${summaryStats.countBRL} transações`}
+            title="Faturamento Total (BRL)"
+            value={formatCurrency(summaryStats.totalCombinedBRL, 'BRL')}
+            subtitle={summaryStats.totalUSD > 0 && dollarRate 
+              ? `Inclui ${formatCurrency(summaryStats.totalUSD, 'USD')} convertidos (R$ ${dollarRate.rate.toFixed(2)})`
+              : `${summaryStats.countBRL} transações`
+            }
             icon={DollarSign}
             variant="green"
             delay={0}
             className="text-sm sm:text-base"
           />
-          <ColoredKPICard
-            title="Total em Dólares"
-            value={formatCurrency(summaryStats.totalUSD, 'USD')}
-            subtitle={`${summaryStats.countUSD} transações`}
-            icon={DollarSign}
-            variant="blue"
-            delay={1}
-            className="text-sm sm:text-base"
-          />
+          {summaryStats.totalUSD > 0 && (
+            <ColoredKPICard
+              title="Vendas em Dólares"
+              value={formatCurrency(summaryStats.totalUSD, 'USD')}
+              subtitle={dollarRate 
+                ? `≈ ${formatCurrency(summaryStats.usdConvertedToBRL, 'BRL')} (R$ ${dollarRate.rate.toFixed(2)})`
+                : `${summaryStats.countUSD} transações`
+              }
+              icon={DollarSign}
+              variant="blue"
+              delay={1}
+              className="text-sm sm:text-base"
+            />
+          )}
           <ColoredKPICard
             title="Total de Transações"
             value={filteredTransactions.length.toString()}
@@ -237,7 +255,7 @@ function Transactions() {
             icon={Receipt}
             variant="purple"
             delay={2}
-            className="col-span-2 sm:col-span-1 text-sm sm:text-base"
+            className={summaryStats.totalUSD > 0 ? "text-sm sm:text-base" : "col-span-2 sm:col-span-1 text-sm sm:text-base"}
           />
         </motion.div>
 

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal, Goal } from '@/hooks/useGoals';
 import { useTransactionStats } from '@/hooks/useTransactions';
+import { useDollarRate } from '@/hooks/useDollarRate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ const CURRENCIES = ['BRL', 'USD', 'EUR'];
 export default function Goals() {
   const { data: goals, isLoading } = useGoals();
   const { stats } = useTransactionStats();
+  const { data: dollarRate } = useDollarRate();
   const createGoal = useCreateGoal();
   const updateGoal = useUpdateGoal();
   const deleteGoal = useDeleteGoal();
@@ -247,7 +249,11 @@ export default function Goals() {
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {activeGoals.map((goal, index) => {
-                const totalSold = stats?.totalByCurrency[goal.currency] || 0;
+                // For BRL goals, include USD sales converted at current rate
+                const baseTotalSold = stats?.totalByCurrency[goal.currency] || 0;
+                const totalSold = goal.currency === 'BRL' && dollarRate
+                  ? baseTotalSold + ((stats?.totalByCurrency['USD'] || 0) * dollarRate.rate)
+                  : baseTotalSold;
                 const progress = calculateGoalProgress(goal, totalSold);
 
                 return (
