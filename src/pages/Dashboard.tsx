@@ -219,6 +219,14 @@ export default function Dashboard() {
           
         </motion.div>
 
+        {/* Goal Summary Section (when goal is active) - Above filters */}
+        {primaryGoal && hasData && (
+          <GoalSummarySection 
+            goal={primaryGoal} 
+            totalSold={primaryGoalSales}
+          />
+        )}
+
         {/* Saved Filter Views */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -298,14 +306,6 @@ export default function Dashboard() {
           </motion.div>
         ) : (
           <>
-            {/* Goal Summary Section (when goal is active) */}
-            {primaryGoal && (
-              <GoalSummarySection 
-                goal={primaryGoal} 
-                totalSold={primaryGoalSales}
-              />
-            )}
-
             {/* Currency and Transaction KPI Cards - respect currencyView toggle */}
             {(() => {
               const brlTotal = stats?.totalByCurrency?.['BRL'] || 0;
