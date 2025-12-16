@@ -3,11 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface DollarRateResponse {
   rate: number;
-  ask: number;
-  high: number;
-  low: number;
   source: string;
   timestamp: string;
+  warning?: string;
 }
 
 export function useDollarRate() {
@@ -26,8 +24,10 @@ export function useDollarRate() {
       
       return data as DollarRateResponse;
     },
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 30, // Cache for 30 minutes (rate doesn't change that often)
+    gcTime: 1000 * 60 * 60, // Keep in cache for 1 hour
     refetchOnWindowFocus: false,
-    retry: 2,
+    refetchOnMount: false,
+    retry: 1,
   });
 }
