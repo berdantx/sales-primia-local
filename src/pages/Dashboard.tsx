@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { DateRange } from 'react-day-picker';
 import { useCombinedStats, PlatformType } from '@/hooks/useCombinedStats';
 import { useActiveGoals } from '@/hooks/useGoals';
+import { useDollarRate } from '@/hooks/useDollarRate';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
@@ -111,6 +112,9 @@ export default function Dashboard() {
 
   // Use combined stats hook that handles platform switching
   const { stats, topCustomers, salesByDate, currencies, isLoading, hotmartStats, tmbStats } = useCombinedStats(filters, platform);
+  
+  // Fetch dollar rate for USD conversion
+  const { data: dollarRate } = useDollarRate();
   
   // Calculate platform totals for pie chart
   const hotmartTotalBRL = hotmartStats?.totalByCurrency?.['BRL'] || 0;
@@ -294,15 +298,24 @@ export default function Dashboard() {
               {/* Cards by Currency */}
               {stats.totalByCurrency && Object.entries(stats.totalByCurrency)
                 .sort(([, a], [, b]) => b - a)
-                .map(([currency, total], index) => (
-                  <KPICard
-                    key={currency}
-                    title={currency === 'BRL' ? 'Vendas em Reais' : 'Vendas em Dólares'}
-                    value={formatCurrency(total, currency)}
-                    icon={DollarSign}
-                    delay={index}
-                  />
-                ))
+                .map(([currency, total], index) => {
+                  const isUSD = currency === 'USD';
+                  const convertedValue = isUSD && dollarRate ? total * dollarRate.rate : null;
+                  
+                  return (
+                    <KPICard
+                      key={currency}
+                      title={currency === 'BRL' ? 'Vendas em Reais' : 'Vendas em Dólares'}
+                      value={formatCurrency(total, currency)}
+                      subtitle={isUSD && convertedValue && dollarRate ? 
+                        `≈ ${formatCurrency(convertedValue, 'BRL')} (cotação: R$ ${dollarRate.rate.toFixed(2)})` : 
+                        undefined
+                      }
+                      icon={DollarSign}
+                      delay={index}
+                    />
+                  );
+                })
               }
 
               {/* Total Transactions */}
