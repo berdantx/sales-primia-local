@@ -6,6 +6,9 @@ import { ComparisonChart } from '@/components/dashboard/ComparisonChart';
 import { PlatformSharePieChart } from '@/components/dashboard/PlatformSharePieChart';
 import { ExportReportDialog } from '@/components/export/ExportReportDialog';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
+import { CurrencyViewToggle, CurrencyView } from '@/components/dashboard/CurrencyViewToggle';
+import { DollarRateIndicator } from '@/components/dashboard/DollarRateIndicator';
+import { useDollarRate } from '@/hooks/useDollarRate';
 import { 
   useTransactionStatsOptimized, 
   useSalesByDateOptimized 
@@ -31,6 +34,7 @@ type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 function ComparativeDashboard() {
   const [period, setPeriod] = useState<PeriodFilter>('all');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [currencyView, setCurrencyView] = useState<CurrencyView>('combined');
 
   const dateRange = useMemo(() => {
     if (period === 'all') {
@@ -60,6 +64,9 @@ function ComparativeDashboard() {
   const { data: tmbStats, isLoading: loadingTmbStats } = useTmbTransactionStatsOptimized(dateRange);
   const { data: tmbSales, isLoading: loadingTmbSales } = useTmbSalesByDateOptimized(dateRange);
 
+  // Dollar rate
+  const { data: dollarRate, isLoading: isLoadingRate, isError: isRateError } = useDollarRate();
+
   const isLoading = loadingHotmartStats || loadingHotmartSales || loadingTmbStats || loadingTmbSales;
 
   const hotmartPlatformStats = useMemo(() => {
@@ -78,6 +85,14 @@ function ComparativeDashboard() {
       totalTransactions: tmbStats.totalTransactions || 0,
     };
   }, [tmbStats]);
+
+  // Calculate pie chart totals with currency conversion
+  const hotmartTotalForPie = useMemo(() => {
+    const brl = hotmartPlatformStats?.totalBRL || 0;
+    const usd = hotmartPlatformStats?.totalUSD || 0;
+    if (currencyView === 'brl-only') return brl;
+    return brl + (dollarRate ? usd * dollarRate.rate : 0);
+  }, [hotmartPlatformStats, dollarRate, currencyView]);
 
   if (isLoading) {
     return (
@@ -150,13 +165,24 @@ function ComparativeDashboard() {
                 className="w-[260px]"
               />
             )}
+            
+            <div className="h-6 w-px bg-border hidden sm:block" />
+            
+            <CurrencyViewToggle value={currencyView} onChange={setCurrencyView} />
+            
+            <DollarRateIndicator 
+              rate={dollarRate?.rate}
+              source={dollarRate?.source}
+              isLoading={isLoadingRate}
+              isError={isRateError}
+            />
           </div>
         </motion.div>
 
         {/* Platform Comparison Cards */}
         <PlatformComparisonCards 
           hotmartStats={hotmartPlatformStats} 
-          tmbStats={tmbPlatformStats} 
+          tmbStats={tmbPlatformStats}
         />
 
         {/* Charts Row */}
@@ -169,7 +195,7 @@ function ComparativeDashboard() {
           </div>
           <div>
             <PlatformSharePieChart 
-              hotmartTotal={hotmartPlatformStats?.totalBRL || 0} 
+              hotmartTotal={hotmartTotalForPie} 
               tmbTotal={tmbPlatformStats?.totalBRL || 0} 
             />
           </div>
