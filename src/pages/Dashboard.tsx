@@ -217,22 +217,6 @@ export default function Dashboard() {
             />
           </div>
           
-          {/* Action buttons - Mobile: largura total */}
-          <div className="flex w-full gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/transactions')} className="flex-1 h-8 sm:h-9 text-xs sm:text-sm">
-              <History className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden xs:inline">Histórico</span>
-              <span className="xs:hidden">Hist.</span>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate('/goals')} className="flex-1 h-8 sm:h-9 text-xs sm:text-sm">
-              <Target className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Metas
-            </Button>
-            <Button size="sm" onClick={() => navigate('/upload')} className="flex-1 h-8 sm:h-9 text-xs sm:text-sm">
-              <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              Importar
-            </Button>
-          </div>
         </motion.div>
 
         {/* Saved Filter Views */}
