@@ -2,7 +2,6 @@ import { ReactNode, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import { FilterProvider } from '@/contexts/FilterContext';
 import { AppSidebar } from './AppSidebar';
 import { Header } from './Header';
 import { Loader2 } from 'lucide-react';
@@ -34,18 +33,16 @@ export function MainLayout({ children }: MainLayoutProps) {
   }
 
   return (
-    <FilterProvider>
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full bg-background">
-          <AppSidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <Header />
-            <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto">
-              {children}
-            </main>
-          </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <Header />
+          <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto">
+            {children}
+          </main>
         </div>
-      </SidebarProvider>
-    </FilterProvider>
+      </div>
+    </SidebarProvider>
   );
 }
