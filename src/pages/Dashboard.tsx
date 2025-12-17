@@ -4,6 +4,7 @@ import { DateRange } from 'react-day-picker';
 import { useCombinedStats, PlatformType } from '@/hooks/useCombinedStats';
 import { useActiveGoals } from '@/hooks/useGoals';
 import { useDollarRate } from '@/hooks/useDollarRate';
+import { useFilter } from '@/contexts/FilterContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
@@ -12,7 +13,6 @@ import { TopCustomers } from '@/components/dashboard/TopCustomers';
 
 import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
-import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
 import { SavedFilterViews } from '@/components/dashboard/SavedFilterViews';
 import { PlatformFilter } from '@/components/dashboard/PlatformFilter';
 import { PlatformSharePieChart } from '@/components/dashboard/PlatformSharePieChart';
@@ -29,7 +29,6 @@ import {
   Loader2,
   Calendar,
   AlertTriangle,
-  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -50,11 +49,8 @@ export default function Dashboard() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [platform, setPlatform] = useState<PlatformType>('all');
   
-  // Advanced filters
-  const [billingType, setBillingType] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
-  const [sckCode, setSckCode] = useState<string | null>(null);
-  const [product, setProduct] = useState<string | null>(null);
+  // Get filters from global context
+  const { billingType, paymentMethod, sckCode, product, setBillingType, setPaymentMethod, setSckCode, setProduct } = useFilter();
   
   // Selected view
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
@@ -339,28 +335,6 @@ export default function Dashboard() {
             onClearView={handleClearView}
           />
         </motion.div>
-
-        {/* Advanced Filters - only show for Hotmart/All */}
-        {platform !== 'tmb' && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="p-2 sm:p-4 bg-muted/30 rounded-lg border overflow-x-auto"
-          >
-            <AdvancedFilters
-              billingType={billingType}
-              paymentMethod={paymentMethod}
-              sckCode={sckCode}
-              product={product}
-              onBillingTypeChange={setBillingType}
-              onPaymentMethodChange={setPaymentMethod}
-              onSckCodeChange={setSckCode}
-              onProductChange={setProduct}
-              totalFilteredTransactions={stats?.totalTransactions}
-            />
-          </motion.div>
-        )}
 
         {/* Warning for transactions without date */}
         {period !== 'all' && stats && stats.transactionsWithoutDate > 0 && (

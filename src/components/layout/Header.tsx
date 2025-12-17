@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Bell, History, Target, Upload } from 'lucide-react';
+import { HeaderFilters } from './HeaderFilters';
 
 export function Header() {
   const navigate = useNavigate();
@@ -42,6 +43,9 @@ export function Header() {
         </div>
 
         <div className="flex-1" />
+
+        {/* Advanced Filters */}
+        <HeaderFilters />
 
         <div className="flex items-center gap-2 sm:gap-4">
           <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-10 sm:w-10">
