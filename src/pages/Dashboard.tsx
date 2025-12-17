@@ -227,6 +227,100 @@ export default function Dashboard() {
           />
         )}
 
+        {/* Currency and Transaction KPI Cards - right below goal cards */}
+        {hasData && (() => {
+          const brlTotal = stats?.totalByCurrency?.['BRL'] || 0;
+          const usdTotal = stats?.totalByCurrency?.['USD'] || 0;
+          const usdConvertedToBRL = dollarRate ? usdTotal * dollarRate.rate : 0;
+          const totalCombinedBRL = brlTotal + usdConvertedToBRL;
+          
+          // Combined view: single card with BRL + USD converted
+          if (currencyView === 'combined') {
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
+                <KPICard
+                  title="Faturamento Total (BRL)"
+                  value={formatCurrency(totalCombinedBRL, 'BRL')}
+                  subtitle={usdTotal > 0 && dollarRate ? 
+                    `Inclui ${formatCurrency(usdTotal, 'USD')} (R$ ${dollarRate.rate.toFixed(2)})` : 
+                    undefined
+                  }
+                  icon={DollarSign}
+                  delay={0}
+                />
+                {usdTotal > 0 && (
+                  <KPICard
+                    title="Vendas em Dólares"
+                    value={formatCurrency(usdTotal, 'USD')}
+                    subtitle={dollarRate ? 
+                      `≈ ${formatCurrency(usdConvertedToBRL, 'BRL')}` : 
+                      undefined
+                    }
+                    icon={DollarSign}
+                    delay={1}
+                  />
+                )}
+                <KPICard
+                  title="Total Transações"
+                  value={formatNumber(stats.totalTransactions)}
+                  icon={ShoppingCart}
+                  delay={2}
+                />
+              </div>
+            );
+          }
+          
+          // BRL-only view: single card with just BRL
+          if (currencyView === 'brl-only') {
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                <KPICard
+                  title="Vendas em Reais"
+                  value={formatCurrency(brlTotal, 'BRL')}
+                  icon={DollarSign}
+                  delay={0}
+                />
+                <KPICard
+                  title="Total Transações"
+                  value={formatNumber(stats.totalTransactions)}
+                  icon={ShoppingCart}
+                  delay={1}
+                />
+              </div>
+            );
+          }
+          
+          // Separated view: separate cards for each currency
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
+              <KPICard
+                title="Vendas em Reais"
+                value={formatCurrency(brlTotal, 'BRL')}
+                icon={DollarSign}
+                delay={0}
+              />
+              {usdTotal > 0 && (
+                <KPICard
+                  title="Vendas em Dólares"
+                  value={formatCurrency(usdTotal, 'USD')}
+                  subtitle={dollarRate ? 
+                    `≈ ${formatCurrency(usdConvertedToBRL, 'BRL')}` : 
+                    undefined
+                  }
+                  icon={DollarSign}
+                  delay={1}
+                />
+              )}
+              <KPICard
+                title="Total Transações"
+                value={formatNumber(stats.totalTransactions)}
+                icon={ShoppingCart}
+                delay={2}
+              />
+            </div>
+          );
+        })()}
+
         {/* Saved Filter Views */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -306,100 +400,6 @@ export default function Dashboard() {
           </motion.div>
         ) : (
           <>
-            {/* Currency and Transaction KPI Cards - respect currencyView toggle */}
-            {(() => {
-              const brlTotal = stats?.totalByCurrency?.['BRL'] || 0;
-              const usdTotal = stats?.totalByCurrency?.['USD'] || 0;
-              const usdConvertedToBRL = dollarRate ? usdTotal * dollarRate.rate : 0;
-              const totalCombinedBRL = brlTotal + usdConvertedToBRL;
-              
-              // Combined view: single card with BRL + USD converted
-              if (currencyView === 'combined') {
-                return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
-                    <KPICard
-                      title="Faturamento Total (BRL)"
-                      value={formatCurrency(totalCombinedBRL, 'BRL')}
-                      subtitle={usdTotal > 0 && dollarRate ? 
-                        `Inclui ${formatCurrency(usdTotal, 'USD')} (R$ ${dollarRate.rate.toFixed(2)})` : 
-                        undefined
-                      }
-                      icon={DollarSign}
-                      delay={0}
-                    />
-                    {usdTotal > 0 && (
-                      <KPICard
-                        title="Vendas em Dólares"
-                        value={formatCurrency(usdTotal, 'USD')}
-                        subtitle={dollarRate ? 
-                          `≈ ${formatCurrency(usdConvertedToBRL, 'BRL')}` : 
-                          undefined
-                        }
-                        icon={DollarSign}
-                        delay={1}
-                      />
-                    )}
-                    <KPICard
-                      title="Total Transações"
-                      value={formatNumber(stats.totalTransactions)}
-                      icon={ShoppingCart}
-                      delay={2}
-                    />
-                  </div>
-                );
-              }
-              
-              // BRL-only view: single card with just BRL
-              if (currencyView === 'brl-only') {
-                return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
-                    <KPICard
-                      title="Vendas em Reais"
-                      value={formatCurrency(brlTotal, 'BRL')}
-                      icon={DollarSign}
-                      delay={0}
-                    />
-                    <KPICard
-                      title="Total Transações"
-                      value={formatNumber(stats.totalTransactions)}
-                      icon={ShoppingCart}
-                      delay={1}
-                    />
-                  </div>
-                );
-              }
-              
-              // Separated view: separate cards for each currency
-              return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
-                  <KPICard
-                    title="Vendas em Reais"
-                    value={formatCurrency(brlTotal, 'BRL')}
-                    icon={DollarSign}
-                    delay={0}
-                  />
-                  {usdTotal > 0 && (
-                    <KPICard
-                      title="Vendas em Dólares"
-                      value={formatCurrency(usdTotal, 'USD')}
-                      subtitle={dollarRate ? 
-                        `≈ ${formatCurrency(usdConvertedToBRL, 'BRL')}` : 
-                        undefined
-                      }
-                      icon={DollarSign}
-                      delay={1}
-                    />
-                  )}
-                  <KPICard
-                    title="Total Transações"
-                    value={formatNumber(stats.totalTransactions)}
-                    icon={ShoppingCart}
-                    delay={2}
-                  />
-                </div>
-              );
-            })()}
-
             {/* Call to action for creating a goal - only when no goal exists */}
             {!primaryGoal && (
               <motion.div
