@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { Goal } from '@/hooks/useGoals';
-import { calculateGoalProgress, formatCurrency, formatPercent, GoalProgress } from '@/lib/calculations/goalCalculations';
+import { calculateGoalProgress, formatCurrency, formatPercent } from '@/lib/calculations/goalCalculations';
 import { ColoredKPICard } from './ColoredKPICard';
+import { GoalProgressBar } from './GoalProgressBar';
+import { ProjectionCards } from './ProjectionCards';
 import { Target, TrendingUp, AlertCircle, Percent } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
@@ -10,16 +12,10 @@ import { ptBR } from 'date-fns/locale';
 interface GoalSummarySectionProps {
   goal: Goal;
   totalSold: number;
-  onProgressCalculated?: (progress: GoalProgress) => void;
 }
 
-export function GoalSummarySection({ goal, totalSold, onProgressCalculated }: GoalSummarySectionProps) {
+export function GoalSummarySection({ goal, totalSold }: GoalSummarySectionProps) {
   const progress = calculateGoalProgress(goal, totalSold);
-  
-  // Notify parent of calculated progress
-  if (onProgressCalculated) {
-    onProgressCalculated(progress);
-  }
   
   const statusText = progress.progressPercent >= 100 
     ? 'Meta atingida!' 
@@ -82,6 +78,14 @@ export function GoalSummarySection({ goal, totalSold, onProgressCalculated }: Go
           delay={3}
         />
       </div>
+
+      {/* Progress Bar */}
+      <GoalProgressBar goal={goal} progress={progress} />
+
+      {/* Projection Cards */}
+      {progress.remaining > 0 && (
+        <ProjectionCards progress={progress} currency={goal.currency} />
+      )}
     </div>
   );
 }

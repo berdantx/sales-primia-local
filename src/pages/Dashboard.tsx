@@ -8,10 +8,10 @@ import { useFilter } from '@/contexts/FilterContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
+
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
+
 import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
-import { GoalProgressBar } from '@/components/dashboard/GoalProgressBar';
-import { ProjectionCards } from '@/components/dashboard/ProjectionCards';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { SavedFilterViews } from '@/components/dashboard/SavedFilterViews';
 import { PlatformFilter } from '@/components/dashboard/PlatformFilter';
@@ -20,7 +20,7 @@ import { CurrencyViewToggle, CurrencyView } from '@/components/dashboard/Currenc
 import { DollarRateIndicator } from '@/components/dashboard/DollarRateIndicator';
 import { FilterView } from '@/hooks/useFilterViews';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { formatCurrency, formatNumber, GoalProgress, calculateGoalProgress } from '@/lib/calculations/goalCalculations';
+import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
 import { 
   DollarSign, 
   ShoppingCart, 
@@ -215,7 +215,7 @@ export default function Dashboard() {
           
         </motion.div>
 
-        {/* Goal Summary Section (only colored cards + period info) */}
+        {/* Goal Summary Section (when goal is active) - Above filters */}
         {primaryGoal && hasData && (
           <GoalSummarySection 
             goal={primaryGoal} 
@@ -314,19 +314,6 @@ export default function Dashboard() {
                 delay={2}
               />
             </div>
-          );
-        })()}
-
-        {/* Goal Progress Bar - after white KPI cards */}
-        {primaryGoal && hasData && (() => {
-          const progress = calculateGoalProgress(primaryGoal, primaryGoalSales);
-          return (
-            <>
-              <GoalProgressBar goal={primaryGoal} progress={progress} />
-              {progress.remaining > 0 && (
-                <ProjectionCards progress={progress} currency={primaryGoal.currency} />
-              )}
-            </>
           );
         })()}
 
