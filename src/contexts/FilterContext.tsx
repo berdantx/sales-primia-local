@@ -1,3 +1,4 @@
+// Global filter context for advanced filters in header
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface FilterContextType {
