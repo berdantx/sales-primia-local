@@ -203,14 +203,16 @@ export default function Dashboard() {
             
             <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
             
-            <CurrencyViewToggle value={currencyView} onChange={setCurrencyView} />
-            
-            <DollarRateIndicator 
-              rate={dollarRate?.rate}
-              source={dollarRate?.source}
-              isLoading={isLoadingRate}
-              isError={isRateError}
-            />
+            <div className="flex items-center gap-2">
+              <CurrencyViewToggle value={currencyView} onChange={setCurrencyView} />
+              
+              <DollarRateIndicator 
+                rate={dollarRate?.rate}
+                source={dollarRate?.source}
+                isLoading={isLoadingRate}
+                isError={isRateError}
+              />
+            </div>
           </div>
           
         </motion.div>
