@@ -69,6 +69,44 @@ function formatPercent(value: number): string {
   return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 }
 
+// ============= Dollar Rate Function =============
+
+async function getDollarRate(): Promise<number> {
+  const FALLBACK_RATE = 6.10;
+  
+  try {
+    // Try AwesomeAPI first
+    const awesomeResponse = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL');
+    if (awesomeResponse.ok) {
+      const data = await awesomeResponse.json();
+      if (data.USDBRL?.bid) {
+        const rate = parseFloat(data.USDBRL.bid);
+        console.log(`[send-sales-summary] Dollar rate from AwesomeAPI: ${rate}`);
+        return rate;
+      }
+    }
+    
+    // Fallback to BCB API
+    const today = new Date().toISOString().split('T')[0].replace(/-/g, '-');
+    const formattedDate = today.split('-').reverse().join('-'); // DD-MM-YYYY
+    const bcbUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${formattedDate}'&$format=json`;
+    const bcbResponse = await fetch(bcbUrl);
+    if (bcbResponse.ok) {
+      const data = await bcbResponse.json();
+      if (data.value?.[0]?.cotacaoCompra) {
+        const rate = data.value[0].cotacaoCompra;
+        console.log(`[send-sales-summary] Dollar rate from BCB: ${rate}`);
+        return rate;
+      }
+    }
+  } catch (error) {
+    console.error('[send-sales-summary] Error fetching dollar rate:', error);
+  }
+  
+  console.log(`[send-sales-summary] Using fallback dollar rate: ${FALLBACK_RATE}`);
+  return FALLBACK_RATE;
+}
+
 // ============= Dynamic Variables =============
 
 function replaceVariables(text: string, variables: Record<string, string>): string {
@@ -301,8 +339,16 @@ serve(async (req) => {
       let currentProgress = 0;
       if (activeGoal.currency === 'BRL') {
         const hotmartBrlProgress = hotmartStats?.total_by_currency?.BRL || 0;
+        const hotmartUsdProgress = hotmartStats?.total_by_currency?.USD || 0;
         const tmbBrlProgress = tmbStats?.total_brl || 0;
-        currentProgress = hotmartBrlProgress + tmbBrlProgress;
+        
+        // Fetch dollar rate and convert USD to BRL
+        const dollarRate = await getDollarRate();
+        const usdConvertedToBrl = hotmartUsdProgress * dollarRate;
+        
+        currentProgress = hotmartBrlProgress + usdConvertedToBrl + tmbBrlProgress;
+        
+        console.log(`[send-sales-summary] Goal progress: BRL ${hotmartBrlProgress} + USD ${hotmartUsdProgress} × ${dollarRate} = ${usdConvertedToBrl} + TMB ${tmbBrlProgress} = ${currentProgress}`);
       } else if (activeGoal.currency === 'USD') {
         currentProgress = hotmartStats?.total_by_currency?.USD || 0;
       }
