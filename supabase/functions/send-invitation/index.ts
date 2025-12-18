@@ -20,7 +20,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       Authorization: `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: "Sales Analytics <onboarding@resend.dev>",
+      from: "Sales Analytics <noreply@sales.primia.ai>",
       to: [to],
       subject,
       html,
