@@ -14,8 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_users: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          is_owner: boolean | null
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          is_owner?: boolean | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          is_owner?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       external_webhooks: {
         Row: {
+          client_id: string | null
           created_at: string
           custom_text_end: string | null
           custom_text_start: string | null
@@ -29,6 +92,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           custom_text_end?: string | null
           custom_text_start?: string | null
@@ -42,6 +106,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           custom_text_end?: string | null
           custom_text_start?: string | null
@@ -54,11 +119,20 @@ export type Database = {
           url?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "external_webhooks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       filter_views: {
         Row: {
           billing_type: string | null
+          client_id: string | null
           created_at: string | null
           custom_date_end: string | null
           custom_date_start: string | null
@@ -74,6 +148,7 @@ export type Database = {
         }
         Insert: {
           billing_type?: string | null
+          client_id?: string | null
           created_at?: string | null
           custom_date_end?: string | null
           custom_date_start?: string | null
@@ -89,6 +164,7 @@ export type Database = {
         }
         Update: {
           billing_type?: string | null
+          client_id?: string | null
           created_at?: string | null
           custom_date_end?: string | null
           custom_date_start?: string | null
@@ -102,7 +178,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "filter_views_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       goal_history: {
         Row: {
@@ -144,6 +228,7 @@ export type Database = {
       }
       goals: {
         Row: {
+          client_id: string | null
           created_at: string
           currency: string
           end_date: string
@@ -156,6 +241,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           currency?: string
           end_date: string
@@ -168,6 +254,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           currency?: string
           end_date?: string
@@ -179,7 +266,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "goals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       import_errors: {
         Row: {
@@ -221,6 +316,7 @@ export type Database = {
       }
       imports: {
         Row: {
+          client_id: string | null
           completed_at: string | null
           created_at: string
           duplicate_rows: number | null
@@ -236,6 +332,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           completed_at?: string | null
           created_at?: string
           duplicate_rows?: number | null
@@ -251,6 +348,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_id?: string | null
           completed_at?: string | null
           created_at?: string
           duplicate_rows?: number | null
@@ -265,11 +363,20 @@ export type Database = {
           total_rows?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "imports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invitations: {
         Row: {
           accepted_at: string | null
+          client_id: string | null
           created_at: string
           email: string
           expires_at: string
@@ -281,6 +388,7 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          client_id?: string | null
           created_at?: string
           email: string
           expires_at?: string
@@ -292,6 +400,7 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          client_id?: string | null
           created_at?: string
           email?: string
           expires_at?: string
@@ -301,7 +410,15 @@ export type Database = {
           status?: string
           token?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "invitations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       llm_integrations: {
         Row: {
@@ -376,6 +493,7 @@ export type Database = {
         Row: {
           buyer_email: string | null
           buyer_name: string | null
+          client_id: string | null
           created_at: string | null
           currency: string | null
           effective_date: string | null
@@ -394,6 +512,7 @@ export type Database = {
         Insert: {
           buyer_email?: string | null
           buyer_name?: string | null
+          client_id?: string | null
           created_at?: string | null
           currency?: string | null
           effective_date?: string | null
@@ -412,6 +531,7 @@ export type Database = {
         Update: {
           buyer_email?: string | null
           buyer_name?: string | null
+          client_id?: string | null
           created_at?: string | null
           currency?: string | null
           effective_date?: string | null
@@ -429,6 +549,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "tmb_transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tmb_transactions_import_id_fkey"
             columns: ["import_id"]
             isOneToOne: false
@@ -442,6 +569,7 @@ export type Database = {
           billing_type: string | null
           buyer_email: string | null
           buyer_name: string | null
+          client_id: string | null
           computed_value: number
           country: string | null
           created_at: string
@@ -462,6 +590,7 @@ export type Database = {
           billing_type?: string | null
           buyer_email?: string | null
           buyer_name?: string | null
+          client_id?: string | null
           computed_value?: number
           country?: string | null
           created_at?: string
@@ -482,6 +611,7 @@ export type Database = {
           billing_type?: string | null
           buyer_email?: string | null
           buyer_name?: string | null
+          client_id?: string | null
           computed_value?: number
           country?: string | null
           created_at?: string
@@ -499,6 +629,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_import_id_fkey"
             columns: ["import_id"]
@@ -531,6 +668,7 @@ export type Database = {
       }
       webhook_dispatch_logs: {
         Row: {
+          client_id: string | null
           created_at: string
           error_message: string | null
           id: string
@@ -541,6 +679,7 @@ export type Database = {
           webhook_id: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           error_message?: string | null
           id?: string
@@ -551,6 +690,7 @@ export type Database = {
           webhook_id: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           error_message?: string | null
           id?: string
@@ -562,6 +702,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "webhook_dispatch_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "webhook_dispatch_logs_webhook_id_fkey"
             columns: ["webhook_id"]
             isOneToOne: false
@@ -572,6 +719,7 @@ export type Database = {
       }
       webhook_logs: {
         Row: {
+          client_id: string | null
           created_at: string
           error_message: string | null
           event_type: string
@@ -582,6 +730,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           created_at?: string
           error_message?: string | null
           event_type: string
@@ -592,6 +741,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_id?: string | null
           created_at?: string
           error_message?: string | null
           event_type?: string
@@ -601,15 +751,37 @@ export type Database = {
           transaction_code?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_filter_options_with_counts: { Args: never; Returns: Json }
+      get_filter_options_with_counts:
+        | { Args: never; Returns: Json }
+        | { Args: { p_client_id?: string }; Returns: Json }
       get_sales_by_date:
+        | {
+            Args: {
+              p_billing_type?: string
+              p_client_id?: string
+              p_end_date?: string
+              p_payment_method?: string
+              p_product?: string
+              p_sck_code?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
         | {
             Args: { p_end_date?: string; p_start_date?: string }
             Returns: Json
@@ -635,24 +807,71 @@ export type Database = {
             }
             Returns: Json
           }
-      get_tmb_filter_options: { Args: never; Returns: Json }
-      get_tmb_sales_by_date: {
-        Args: { p_end_date?: string; p_start_date?: string }
-        Returns: Json
-      }
-      get_tmb_top_customers: {
-        Args: { p_end_date?: string; p_limit?: number; p_start_date?: string }
-        Returns: Json
-      }
-      get_tmb_transaction_stats: {
-        Args: { p_end_date?: string; p_start_date?: string }
-        Returns: Json
-      }
+      get_tmb_filter_options:
+        | { Args: never; Returns: Json }
+        | { Args: { p_client_id?: string }; Returns: Json }
+      get_tmb_sales_by_date:
+        | {
+            Args: {
+              p_client_id?: string
+              p_end_date?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: { p_end_date?: string; p_start_date?: string }
+            Returns: Json
+          }
+      get_tmb_top_customers:
+        | {
+            Args: {
+              p_client_id?: string
+              p_end_date?: string
+              p_limit?: number
+              p_start_date?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_end_date?: string
+              p_limit?: number
+              p_start_date?: string
+            }
+            Returns: Json
+          }
+      get_tmb_transaction_stats:
+        | {
+            Args: {
+              p_client_id?: string
+              p_end_date?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: { p_end_date?: string; p_start_date?: string }
+            Returns: Json
+          }
       get_tmb_transaction_stats_by_user: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
       }
       get_top_customers:
+        | {
+            Args: {
+              p_billing_type?: string
+              p_client_id?: string
+              p_end_date?: string
+              p_limit?: number
+              p_payment_method?: string
+              p_product?: string
+              p_sck_code?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
         | {
             Args: {
               p_end_date?: string
@@ -684,8 +903,22 @@ export type Database = {
             }
             Returns: Json
           }
-      get_transaction_date_range: { Args: never; Returns: Json }
+      get_transaction_date_range:
+        | { Args: never; Returns: Json }
+        | { Args: { p_client_id?: string }; Returns: Json }
       get_transaction_stats:
+        | {
+            Args: {
+              p_billing_type?: string
+              p_client_id?: string
+              p_end_date?: string
+              p_payment_method?: string
+              p_product?: string
+              p_sck_code?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
         | {
             Args: { p_end_date?: string; p_start_date?: string }
             Returns: Json
@@ -715,6 +948,24 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
       }
+      get_user_clients: {
+        Args: never
+        Returns: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          slug: string
+          updated_at: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "clients"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -722,6 +973,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_has_client_access: { Args: { _client_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user" | "master"
