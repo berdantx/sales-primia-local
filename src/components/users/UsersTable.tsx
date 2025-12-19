@@ -7,11 +7,25 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { RoleSelector } from './RoleSelector';
 import { AppRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
+import { useForceLogout } from '@/hooks/useAccessLogs';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Power, Loader2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface User {
   id: string;
@@ -30,6 +44,7 @@ interface UsersTableProps {
 
 export function UsersTable({ users, isLoading, onRoleChange, isUpdating }: UsersTableProps) {
   const { user: currentUser } = useAuth();
+  const { forceLogout, isLoggingOut } = useForceLogout();
 
   if (isLoading) {
     return (
@@ -56,6 +71,7 @@ export function UsersTable({ users, isLoading, onRoleChange, isUpdating }: Users
           <TableHead>Nome</TableHead>
           <TableHead>Nível de Acesso</TableHead>
           <TableHead>Data de Cadastro</TableHead>
+          <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -64,7 +80,7 @@ export function UsersTable({ users, isLoading, onRoleChange, isUpdating }: Users
             <TableCell>
               <div>
                 <p className="font-medium">{user.full_name || 'Sem nome'}</p>
-                <p className="text-sm text-muted-foreground">{user.id}</p>
+                <p className="text-sm text-muted-foreground">{user.email}</p>
               </div>
             </TableCell>
             <TableCell>
@@ -77,6 +93,46 @@ export function UsersTable({ users, isLoading, onRoleChange, isUpdating }: Users
             </TableCell>
             <TableCell className="text-muted-foreground">
               {format(new Date(user.created_at), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </TableCell>
+            <TableCell className="text-right">
+              {user.id !== currentUser?.id && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1 text-destructive hover:text-destructive"
+                      disabled={isLoggingOut}
+                    >
+                      {isLoggingOut ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Power className="h-4 w-4" />
+                      )}
+                      <span className="hidden sm:inline">Desconectar</span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Desconectar usuário?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Isso irá encerrar todas as sessões ativas de{' '}
+                        <strong>{user.full_name || user.email}</strong>. O usuário precisará 
+                        fazer login novamente para acessar o sistema.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => forceLogout(user.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Desconectar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </TableCell>
           </TableRow>
         ))}

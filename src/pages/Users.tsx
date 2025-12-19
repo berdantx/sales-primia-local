@@ -3,13 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UsersTable } from '@/components/users/UsersTable';
 import { InvitationsTable } from '@/components/users/InvitationsTable';
+import { AccessLogsTable } from '@/components/users/AccessLogsTable';
 import { InviteUserDialog } from '@/components/users/InviteUserDialog';
 import { useUsers, useInvitations } from '@/hooks/useUsers';
-import { Users as UsersIcon, Mail } from 'lucide-react';
+import { useAccessLogs } from '@/hooks/useAccessLogs';
+import { Users as UsersIcon, Mail, Shield } from 'lucide-react';
 
 export default function Users() {
   const { users, isLoading: usersLoading, updateRole, isUpdating } = useUsers();
   const { invitations, isLoading: invitationsLoading } = useInvitations();
+  const { logs, isLoading: logsLoading } = useAccessLogs();
 
   return (
     <MainLayout>
@@ -33,6 +36,10 @@ export default function Users() {
             <TabsTrigger value="invitations" className="gap-2">
               <Mail className="h-4 w-4" />
               Convites ({invitations?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="access-logs" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Logs de Acesso
             </TabsTrigger>
           </TabsList>
 
@@ -67,6 +74,23 @@ export default function Users() {
                 <InvitationsTable
                   invitations={invitations}
                   isLoading={invitationsLoading}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="access-logs">
+            <Card>
+              <CardHeader>
+                <CardTitle>Logs de Acesso</CardTitle>
+                <CardDescription>
+                  Histórico de eventos de autenticação (logins, logouts, alterações de senha)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AccessLogsTable
+                  logs={logs}
+                  isLoading={logsLoading}
                 />
               </CardContent>
             </Card>
