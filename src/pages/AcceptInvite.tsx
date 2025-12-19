@@ -70,55 +70,30 @@ export default function AcceptInvite() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!invitation || !password || !fullName) return;
+    if (!invitation || !password || !fullName || !token) return;
 
     setIsSubmitting(true);
 
     try {
-      // Create user account
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: invitation.email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: fullName,
-          },
+      // Call edge function to handle invitation acceptance
+      const { data, error: fnError } = await supabase.functions.invoke('accept-invitation', {
+        body: {
+          token,
+          password,
+          fullName,
         },
       });
 
-      if (signUpError) {
-        if (signUpError.message.includes('already registered')) {
-          toast.error('Este email já está cadastrado. Faça login.');
-          navigate('/auth');
-          return;
-        }
-        throw signUpError;
+      if (fnError) {
+        console.error('Edge function error:', fnError);
+        throw new Error(fnError.message || 'Erro ao criar conta');
       }
 
-      // Update invitation status
-      await supabase
-        .from('invitations')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-        .eq('id', invitation.id);
-
-      // If there's a client_id and user was created, associate the user with the client
-      if (invitation.client_id && signUpData.user) {
-        const { error: clientUserError } = await supabase
-          .from('client_users')
-          .insert({
-            user_id: signUpData.user.id,
-            client_id: invitation.client_id,
-            is_owner: false,
-          });
-
-        if (clientUserError) {
-          console.error('Error associating user to client:', clientUserError);
-          // Don't fail the whole flow if this fails, the user can be associated later
-        }
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
-      toast.success('Conta criada com sucesso! Verifique seu email para confirmar.');
+      toast.success('Conta criada com sucesso! Faça login para continuar.');
       navigate('/auth');
     } catch (err: any) {
       console.error('Error creating account:', err);
