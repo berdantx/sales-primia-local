@@ -26,6 +26,7 @@ export interface TransactionFilters {
   currency?: string;
   country?: string;
   search?: string;
+  clientId?: string | null;
 }
 
 export function useTransactions(filters?: TransactionFilters) {
@@ -38,6 +39,7 @@ export function useTransactions(filters?: TransactionFilters) {
     currency: filters.currency,
     country: filters.country,
     search: filters.search,
+    clientId: filters.clientId,
   } : null;
 
   return useQuery({
@@ -56,6 +58,9 @@ export function useTransactions(filters?: TransactionFilters) {
           .range(from, from + PAGE_SIZE - 1);
 
         // Apply filters
+        if (filters?.clientId) {
+          query = query.eq('client_id', filters.clientId);
+        }
         if (filters?.startDate && filters?.endDate) {
           query = query.gte('purchase_date', filters.startDate.toISOString());
           query = query.lte('purchase_date', filters.endDate.toISOString());

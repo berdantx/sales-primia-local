@@ -29,6 +29,7 @@ import {
   Webhook,
   Users,
   Send,
+  Building2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -48,6 +49,7 @@ const menuItems: MenuItem[] = [
   { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook, roles: ['master', 'admin'] },
   { title: 'Webhooks Externos', url: '/webhook-config', icon: Send, roles: ['master', 'admin'] },
   { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin', 'user'] },
+  { title: 'Clientes', url: '/clients', icon: Building2, roles: ['master'] },
   { title: 'Usuários', url: '/users', icon: Users, roles: ['master'] },
   { title: 'Configurações', url: '/settings', icon: Settings, roles: ['master', 'admin'] },
 ];
