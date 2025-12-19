@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { DropZone } from '@/components/upload/DropZone';
 import { ImportPreview } from '@/components/upload/ImportPreview';
 import { TmbImportPreview } from '@/components/upload/TmbImportPreview';
@@ -14,7 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useFilter } from '@/contexts/FilterContext';
 import { useUserRole } from '@/hooks/useUserRole';
-import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { parseFile, HotmartTransaction, ParseError } from '@/lib/parsers/hotmartParser';
 import { parseTmbFile, TmbTransaction, TmbParseError } from '@/lib/parsers/tmbParser';
@@ -299,26 +299,19 @@ export default function UploadPage() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
-          <div>
-            <h1 className="text-3xl font-bold">Importar Vendas</h1>
-            <p className="text-muted-foreground">
-              {step === 'platform' 
-                ? 'Selecione a plataforma de origem dos dados'
-                : `Faça upload da sua planilha de vendas ${platform?.toUpperCase() || ''}`
-              }
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {isMaster && (
-              <ClientSelector value={clientId} onChange={setClientId} />
-            )}
-            {platform && (
-              <Badge variant="outline" className="gap-2">
-                {getPlatformIcon()}
-                Template: {getPlatformLabel()}
-              </Badge>
-            )}
-          </div>
+          <ClientContextHeader 
+            title="Importar Vendas"
+            description={step === 'platform' 
+              ? 'Selecione a plataforma de origem dos dados'
+              : `Faça upload da sua planilha de vendas ${platform?.toUpperCase() || ''}`
+            }
+          />
+          {platform && (
+            <Badge variant="outline" className="gap-2">
+              {getPlatformIcon()}
+              Template: {getPlatformLabel()}
+            </Badge>
+          )}
         </motion.div>
 
         {/* Steps */}

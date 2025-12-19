@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useFilter } from '@/contexts/FilterContext';
 import { useUserRole } from '@/hooks/useUserRole';
-import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { 
   useExternalWebhooks, 
   useWebhookDispatchLogs, 
@@ -211,22 +211,16 @@ export default function WebhookConfig() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Webhooks Externos</h1>
-            <p className="text-muted-foreground mt-1">
-              Configure webhooks para enviar resumos de vendas automaticamente
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {isMaster && (
-              <ClientSelector value={clientId} onChange={setClientId} />
-            )}
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={handleOpenCreate}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Webhook
-                </Button>
+          <ClientContextHeader 
+            title="Webhooks Externos"
+            description="Configure webhooks para enviar resumos de vendas automaticamente"
+          />
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleOpenCreate}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Webhook
+              </Button>
               </DialogTrigger>
               <DialogContent>
               <DialogHeader>
@@ -350,7 +344,6 @@ export default function WebhookConfig() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          </div>
         </div>
 
         <Tabs defaultValue="webhooks" className="space-y-4">

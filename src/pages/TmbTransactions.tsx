@@ -2,12 +2,12 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { DateRange } from 'react-day-picker';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useTmbTransactions } from '@/hooks/useTmbTransactions';
 import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsOptimized';
 import { useFilter } from '@/contexts/FilterContext';
 import { TmbAdvancedFilters } from '@/components/dashboard/TmbAdvancedFilters';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
-import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -198,19 +198,14 @@ function TmbTransactions() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Transações TMB</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
-              {filteredTransactions.length} transações encontradas
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-            <ClientSelector value={clientId} onChange={setClientId} />
-            <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar CSV
-            </Button>
-          </div>
+          <ClientContextHeader 
+            title="Transações TMB"
+            description={`${filteredTransactions.length} transações encontradas`}
+          />
+          <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
         </motion.div>
 
         {/* Summary KPIs */}
