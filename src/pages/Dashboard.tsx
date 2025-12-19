@@ -206,6 +206,9 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <CurrencyViewToggle value={currencyView} onChange={setCurrencyView} />
               
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                Cotação do dólar hoje:
+              </span>
               <DollarRateIndicator 
                 rate={dollarRate?.rate}
                 source={dollarRate?.source}
