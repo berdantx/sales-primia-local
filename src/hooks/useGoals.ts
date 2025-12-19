@@ -21,19 +21,25 @@ export interface CreateGoalInput {
   currency: string;
   start_date: string;
   end_date: string;
+  client_id?: string | null;
 }
 
-export function useGoals() {
+export function useGoals(clientId?: string | null) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['goals', user?.id],
+    queryKey: ['goals', user?.id, clientId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('goals')
         .select('*')
         .order('created_at', { ascending: false });
       
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Goal[];
     },
@@ -57,7 +63,12 @@ export function useCreateGoal() {
       const { data, error } = await supabase
         .from('goals')
         .insert({
-          ...input,
+          name: input.name,
+          target_value: input.target_value,
+          currency: input.currency,
+          start_date: input.start_date,
+          end_date: input.end_date,
+          client_id: input.client_id || null,
           user_id: user!.id,
         })
         .select()

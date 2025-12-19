@@ -4,6 +4,9 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal, Goal } from '@/hooks/useGoals';
 import { useTransactionStats } from '@/hooks/useTransactions';
 import { useDollarRate } from '@/hooks/useDollarRate';
+import { useFilter } from '@/contexts/FilterContext';
+import { useUserRole } from '@/hooks/useUserRole';
+import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -31,7 +34,9 @@ import {
 const CURRENCIES = ['BRL', 'USD', 'EUR'];
 
 export default function Goals() {
-  const { data: goals, isLoading } = useGoals();
+  const { clientId, setClientId } = useFilter();
+  const { isMaster } = useUserRole();
+  const { data: goals, isLoading } = useGoals(clientId);
   const { stats } = useTransactionStats();
   const { data: dollarRate } = useDollarRate();
   const createGoal = useCreateGoal();
@@ -84,6 +89,7 @@ export default function Goals() {
       currency: formData.currency,
       start_date: formData.start_date,
       end_date: formData.end_date,
+      client_id: clientId,
     };
 
     if (editingGoal) {
@@ -127,7 +133,7 @@ export default function Goals() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div>
             <h1 className="text-3xl font-bold">Metas de Vendas</h1>
@@ -135,109 +141,114 @@ export default function Goals() {
               Defina e acompanhe suas metas de vendas
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Meta
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingGoal ? 'Editar Meta' : 'Nova Meta'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingGoal 
-                    ? 'Atualize os dados da sua meta de vendas'
-                    : 'Crie uma nova meta para acompanhar seu progresso'
-                  }
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome da Meta</Label>
-                  <Input
-                    id="name"
-                    placeholder="Ex: Meta Q1 2024"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center gap-3">
+            {isMaster && (
+              <ClientSelector value={clientId} onChange={setClientId} />
+            )}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Meta
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingGoal ? 'Editar Meta' : 'Nova Meta'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingGoal 
+                      ? 'Atualize os dados da sua meta de vendas'
+                      : 'Crie uma nova meta para acompanhar seu progresso'
+                    }
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="target_value">Valor Alvo</Label>
+                    <Label htmlFor="name">Nome da Meta</Label>
                     <Input
-                      id="target_value"
-                      type="number"
-                      step="0.01"
-                      placeholder="10000.00"
-                      value={formData.target_value}
-                      onChange={(e) => setFormData({ ...formData, target_value: e.target.value })}
+                      id="name"
+                      placeholder="Ex: Meta Q1 2024"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="currency">Moeda</Label>
-                    <Select
-                      value={formData.currency}
-                      onValueChange={(value) => setFormData({ ...formData, currency: value })}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="target_value">Valor Alvo</Label>
+                      <Input
+                        id="target_value"
+                        type="number"
+                        step="0.01"
+                        placeholder="10000.00"
+                        value={formData.target_value}
+                        onChange={(e) => setFormData({ ...formData, target_value: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="currency">Moeda</Label>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CURRENCIES.map((c) => (
+                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="start_date">Data Início</Label>
+                      <Input
+                        id="start_date"
+                        type="date"
+                        value={formData.start_date}
+                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="end_date">Data Fim</Label>
+                      <Input
+                        id="end_date"
+                        type="date"
+                        value={formData.end_date}
+                        onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsDialogOpen(false)}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CURRENCIES.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={createGoal.isPending || updateGoal.isPending}>
+                      {(createGoal.isPending || updateGoal.isPending) && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
+                      {editingGoal ? 'Salvar' : 'Criar Meta'}
+                    </Button>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="start_date">Data Início</Label>
-                    <Input
-                      id="start_date"
-                      type="date"
-                      value={formData.start_date}
-                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end_date">Data Fim</Label>
-                    <Input
-                      id="end_date"
-                      type="date"
-                      value={formData.end_date}
-                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createGoal.isPending || updateGoal.isPending}>
-                    {(createGoal.isPending || updateGoal.isPending) && (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    )}
-                    {editingGoal ? 'Salvar' : 'Criar Meta'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </motion.div>
 
         {/* Active Goals */}

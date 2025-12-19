@@ -18,6 +18,7 @@ export interface WebhookLogsFilters {
   startDate?: Date;
   endDate?: Date;
   search?: string;
+  clientId?: string | null;
 }
 
 export interface WebhookStats {
@@ -38,8 +39,11 @@ export function useWebhookLogs(filters: WebhookLogsFilters = {}) {
       let query = supabase
         .from('webhook_logs')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
+
+      if (filters.clientId) {
+        query = query.eq('client_id', filters.clientId);
+      }
 
       if (filters.status && filters.status !== 'all') {
         query = query.eq('status', filters.status);
@@ -82,8 +86,11 @@ export function useWebhookStats(filters: WebhookLogsFilters = {}) {
 
       let query = supabase
         .from('webhook_logs')
-        .select('status', { count: 'exact' })
-        .eq('user_id', user.id);
+        .select('status', { count: 'exact' });
+
+      if (filters.clientId) {
+        query = query.eq('client_id', filters.clientId);
+      }
 
       if (filters.startDate) {
         query = query.gte('created_at', filters.startDate.toISOString());

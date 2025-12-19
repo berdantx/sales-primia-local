@@ -12,6 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useFilter } from '@/contexts/FilterContext';
+import { useUserRole } from '@/hooks/useUserRole';
+import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { parseFile, HotmartTransaction, ParseError } from '@/lib/parsers/hotmartParser';
 import { parseTmbFile, TmbTransaction, TmbParseError } from '@/lib/parsers/tmbParser';
@@ -24,6 +27,8 @@ export default function UploadPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { clientId, setClientId } = useFilter();
+  const { isMaster } = useUserRole();
 
   const [step, setStep] = useState<UploadStep>('platform');
   const [platform, setPlatform] = useState<UploadPlatform>(null);
@@ -115,6 +120,7 @@ export default function UploadPage() {
           template_type: platform || 'hotmart',
           status: 'processing',
           total_rows: totalRows,
+          client_id: clientId,
         })
         .select()
         .single();
@@ -149,6 +155,7 @@ export default function UploadPage() {
             buyer_email: t.buyer_email,
             purchase_date: t.purchase_date?.toISOString() || null,
             source: 'hotmart',
+            client_id: clientId,
           }));
 
           const { error: insertError } = await supabase
@@ -200,6 +207,7 @@ export default function UploadPage() {
             utm_campaign: t.utm_campaign || null,
             utm_content: t.utm_content || null,
             source: 'tmb',
+            client_id: clientId,
           }));
 
           const { error: insertError } = await supabase
@@ -289,7 +297,7 @@ export default function UploadPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
           <div>
             <h1 className="text-3xl font-bold">Importar Vendas</h1>
@@ -300,12 +308,17 @@ export default function UploadPage() {
               }
             </p>
           </div>
-          {platform && (
-            <Badge variant="outline" className="gap-2">
-              {getPlatformIcon()}
-              Template: {getPlatformLabel()}
-            </Badge>
-          )}
+          <div className="flex items-center gap-3">
+            {isMaster && (
+              <ClientSelector value={clientId} onChange={setClientId} />
+            )}
+            {platform && (
+              <Badge variant="outline" className="gap-2">
+                {getPlatformIcon()}
+                Template: {getPlatformLabel()}
+              </Badge>
+            )}
+          </div>
         </motion.div>
 
         {/* Steps */}

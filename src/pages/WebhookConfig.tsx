@@ -12,6 +12,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useFilter } from '@/contexts/FilterContext';
+import { useUserRole } from '@/hooks/useUserRole';
+import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { 
   useExternalWebhooks, 
   useWebhookDispatchLogs, 
@@ -80,6 +83,8 @@ function parseCronExpression(cron: string | null): ScheduleConfig {
 }
 
 export default function WebhookConfig() {
+  const { clientId, setClientId } = useFilter();
+  const { isMaster } = useUserRole();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<ExternalWebhook | null>(null);
   const [selectedWebhookForLogs, setSelectedWebhookForLogs] = useState<string | undefined>();
@@ -98,7 +103,7 @@ export default function WebhookConfig() {
     monthDay: '1',
   });
 
-  const { data: webhooks, isLoading: isLoadingWebhooks } = useExternalWebhooks();
+  const { data: webhooks, isLoading: isLoadingWebhooks } = useExternalWebhooks(clientId);
   const { data: dispatchLogs, isLoading: isLoadingLogs } = useWebhookDispatchLogs(selectedWebhookForLogs);
   const createWebhook = useCreateWebhook();
   const updateWebhook = useUpdateWebhook();
@@ -144,12 +149,13 @@ export default function WebhookConfig() {
           custom_text_end: formData.custom_text_end || null,
         });
       } else {
-        await createWebhook.mutateAsync({
+      await createWebhook.mutateAsync({
           name: formData.name,
           url: formData.url,
           schedule,
           custom_text_start: formData.custom_text_start || null,
           custom_text_end: formData.custom_text_end || null,
+          client_id: clientId,
         });
       }
       setIsCreateDialogOpen(false);
@@ -211,14 +217,18 @@ export default function WebhookConfig() {
               Configure webhooks para enviar resumos de vendas automaticamente
             </p>
           </div>
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleOpenCreate}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Webhook
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
+          <div className="flex items-center gap-3">
+            {isMaster && (
+              <ClientSelector value={clientId} onChange={setClientId} />
+            )}
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={handleOpenCreate}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Webhook
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
               <DialogHeader>
                 <DialogTitle>{editingWebhook ? 'Editar Webhook' : 'Novo Webhook'}</DialogTitle>
                 <DialogDescription>
