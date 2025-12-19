@@ -350,6 +350,7 @@ export default function WebhookConfig() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Tabs defaultValue="webhooks" className="space-y-4">
