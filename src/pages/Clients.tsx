@@ -5,6 +5,7 @@ import { useClients, Client } from '@/hooks/useClients';
 import { useClientManagement } from '@/hooks/useClientManagement';
 import { ClientsTable } from '@/components/clients/ClientsTable';
 import { ClientFormDialog } from '@/components/clients/ClientFormDialog';
+import { ClientUsersDialog } from '@/components/clients/ClientUsersDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,8 @@ function Clients() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [usersDialogOpen, setUsersDialogOpen] = useState(false);
+  const [managingUsersClient, setManagingUsersClient] = useState<Client | null>(null);
 
   const { data: clients, isLoading } = useClients();
   const { createClient, updateClient, toggleClientStatus } = useClientManagement();
@@ -31,6 +34,11 @@ function Clients() {
   const handleOpenEdit = (client: Client) => {
     setEditingClient(client);
     setDialogOpen(true);
+  };
+
+  const handleManageUsers = (client: Client) => {
+    setManagingUsersClient(client);
+    setUsersDialogOpen(true);
   };
 
   const handleSubmit = async (data: { name: string; slug: string; logo_url?: string }) => {
@@ -112,6 +120,7 @@ function Clients() {
               clients={filteredClients}
               onEdit={handleOpenEdit}
               onToggleStatus={handleToggleStatus}
+              onManageUsers={handleManageUsers}
               isToggling={toggleClientStatus.isPending}
             />
           </CardContent>
@@ -127,6 +136,15 @@ function Clients() {
         client={editingClient}
         onSubmit={handleSubmit}
         isLoading={createClient.isPending || updateClient.isPending}
+      />
+
+      <ClientUsersDialog
+        open={usersDialogOpen}
+        onOpenChange={(open) => {
+          setUsersDialogOpen(open);
+          if (!open) setManagingUsersClient(null);
+        }}
+        client={managingUsersClient}
       />
     </MainLayout>
   );

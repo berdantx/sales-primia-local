@@ -31,21 +31,25 @@ export interface FilterViewInput {
   is_favorite?: boolean;
 }
 
-export function useFilterViews() {
+export function useFilterViews(clientId?: string | null) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['filter-views', user?.id],
+    queryKey: ['filter-views', user?.id, clientId],
     queryFn: async () => {
       if (!user) return [];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('filter_views')
         .select('*')
-        .eq('user_id', user.id)
         .order('is_favorite', { ascending: false })
         .order('name', { ascending: true });
 
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as FilterView[];
     },

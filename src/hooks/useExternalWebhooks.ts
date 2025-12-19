@@ -34,22 +34,27 @@ export interface CreateWebhookInput {
   schedule?: string | null;
   custom_text_start?: string | null;
   custom_text_end?: string | null;
+  client_id?: string | null;
 }
 
-export function useExternalWebhooks() {
+export function useExternalWebhooks(clientId?: string | null) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['external-webhooks', user?.id],
+    queryKey: ['external-webhooks', user?.id, clientId],
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('external_webhooks')
         .select('*')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as ExternalWebhook[];
     },
@@ -103,6 +108,7 @@ export function useCreateWebhook() {
           schedule: input.schedule || null,
           custom_text_start: input.custom_text_start || null,
           custom_text_end: input.custom_text_end || null,
+          client_id: input.client_id || null,
         })
         .select()
         .single();

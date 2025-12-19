@@ -4,6 +4,9 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useFilter } from '@/contexts/FilterContext';
+import { useUserRole } from '@/hooks/useUserRole';
+import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { useWebhookLogs, useWebhookStats, type WebhookLogsFilters, type WebhookLog } from '@/hooks/useWebhookLogs';
 import { WebhookStatusCards } from '@/components/webhook/WebhookStatusCards';
 import { WebhookLogsTable } from '@/components/webhook/WebhookLogsTable';
@@ -15,12 +18,14 @@ const TMB_WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/t
 
 export default function WebhookLogs() {
   const { toast } = useToast();
-  const [filters, setFilters] = useState<WebhookLogsFilters>({});
+  const { clientId, setClientId } = useFilter();
+  const { isMaster } = useUserRole();
+  const [filters, setFilters] = useState<WebhookLogsFilters>({ clientId });
   const [selectedLog, setSelectedLog] = useState<WebhookLog | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
-  const { data: logs, isLoading: logsLoading, refetch: refetchLogs } = useWebhookLogs(filters);
-  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useWebhookStats(filters);
+  const { data: logs, isLoading: logsLoading, refetch: refetchLogs } = useWebhookLogs({ ...filters, clientId });
+  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useWebhookStats({ ...filters, clientId });
 
   const handleRefresh = () => {
     refetchLogs();
@@ -55,10 +60,15 @@ export default function WebhookLogs() {
               Monitore os eventos recebidos via webhook
             </p>
           </div>
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-3">
+            {isMaster && (
+              <ClientSelector value={clientId} onChange={setClientId} />
+            )}
+            <Button onClick={handleRefresh} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {/* Webhook URLs */}

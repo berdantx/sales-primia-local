@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Pencil, Power, PowerOff } from 'lucide-react';
+import { Pencil, Power, PowerOff, Users } from 'lucide-react';
 import { Client } from '@/hooks/useClients';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -18,10 +18,11 @@ interface ClientsTableProps {
   clients: Client[];
   onEdit: (client: Client) => void;
   onToggleStatus: (client: Client) => void;
+  onManageUsers?: (client: Client) => void;
   isToggling?: boolean;
 }
 
-export function ClientsTable({ clients, onEdit, onToggleStatus, isToggling }: ClientsTableProps) {
+export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, isToggling }: ClientsTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -62,6 +63,16 @@ export function ClientsTable({ clients, onEdit, onToggleStatus, isToggling }: Cl
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
+                {onManageUsers && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onManageUsers(client)}
+                    title="Gerenciar usuários"
+                  >
+                    <Users className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
