@@ -33,6 +33,7 @@ interface ExportOptions {
   includeSummary: boolean;
   includeCombined: boolean;
   dateRange: { start: Date; end: Date } | null;
+  clientName?: string;
 }
 
 interface ExportData {
@@ -48,9 +49,23 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
 
   // Summary Sheet
   if (options.includeSummary) {
-    const summaryData = [
+    const summaryData: (string | number)[][] = [
       ['RELATÓRIO CONSOLIDADO DE VENDAS'],
       ['Data de Geração:', format(new Date(), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR })],
+    ];
+
+    // Add client info if available
+    if (options.clientName) {
+      summaryData.push(['Cliente:', options.clientName]);
+    }
+
+    // Add period info if available
+    if (options.dateRange?.start && options.dateRange?.end) {
+      const periodStr = `${format(options.dateRange.start, 'dd/MM/yyyy', { locale: ptBR })} - ${format(options.dateRange.end, 'dd/MM/yyyy', { locale: ptBR })}`;
+      summaryData.push(['Período:', periodStr]);
+    }
+
+    summaryData.push(
       [''],
       ['RESUMO GERAL'],
       ['Plataforma', 'Total BRL', 'Total USD', 'Transações', 'Ticket Médio'],
@@ -76,15 +91,15 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
       ['TOTAL COMBINADO'],
       ['Total BRL:', data.hotmartStats.totalBRL + data.tmbStats.totalBRL],
       ['Total USD:', data.hotmartStats.totalUSD],
-      ['Total Transações:', data.hotmartStats.totalTransactions + data.tmbStats.totalTransactions],
-    ];
+      ['Total Transações:', data.hotmartStats.totalTransactions + data.tmbStats.totalTransactions]
+    );
 
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     
     // Set column widths
     summarySheet['!cols'] = [
       { wch: 20 },
-      { wch: 20 },
+      { wch: 40 },
       { wch: 15 },
       { wch: 15 },
       { wch: 15 },
@@ -247,7 +262,17 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
     XLSX.utils.book_append_sheet(workbook, combinedSheet, 'Consolidado');
   }
 
-  // Generate and download
-  const fileName = `relatorio-vendas-${dateStr}.xlsx`;
+  // Generate filename with client and period
+  let fileName = 'relatorio-vendas';
+  if (options.clientName) {
+    fileName += `-${options.clientName.toLowerCase().replace(/\s+/g, '-')}`;
+  }
+  if (options.dateRange?.start && options.dateRange?.end) {
+    const startStr = format(options.dateRange.start, 'ddMMyyyy');
+    const endStr = format(options.dateRange.end, 'ddMMyyyy');
+    fileName += `-${startStr}-${endStr}`;
+  }
+  fileName += `-${dateStr}.xlsx`;
+
   XLSX.writeFile(workbook, fileName);
 }

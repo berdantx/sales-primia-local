@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,23 +9,75 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Download, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Download, FileSpreadsheet, FileText, Loader2, CalendarIcon, Building2 } from 'lucide-react';
 import { generateExcelReport } from '@/lib/export/generateExcelReport';
+import { generateCsvReport } from '@/lib/export/generateCsvReport';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useTmbTransactions } from '@/hooks/useTmbTransactions';
-import { 
-  useTransactionStatsOptimized 
-} from '@/hooks/useTransactionStatsOptimized';
+import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
 import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsOptimized';
+import { useClients } from '@/hooks/useClients';
+import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
+import { format, subDays, subMonths, subYears, startOfDay, endOfDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { DateRange } from 'react-day-picker';
 
 interface ExportReportDialogProps {
   trigger?: React.ReactNode;
+  defaultClientId?: string | null;
 }
 
-export function ExportReportDialog({ trigger }: ExportReportDialogProps) {
+type PeriodOption = 'all' | '7days' | '30days' | '90days' | '1year' | 'custom';
+type ExportFormat = 'excel' | 'csv';
+
+const PERIOD_OPTIONS = [
+  { value: 'all', label: 'Todo o período' },
+  { value: '7days', label: 'Últimos 7 dias' },
+  { value: '30days', label: 'Últimos 30 dias' },
+  { value: '90days', label: 'Últimos 90 dias' },
+  { value: '1year', label: 'Último ano' },
+  { value: 'custom', label: 'Personalizado' },
+] as const;
+
+function getPeriodDates(period: PeriodOption): { start: Date; end: Date } | null {
+  const now = new Date();
+  const end = endOfDay(now);
+
+  switch (period) {
+    case '7days':
+      return { start: startOfDay(subDays(now, 7)), end };
+    case '30days':
+      return { start: startOfDay(subDays(now, 30)), end };
+    case '90days':
+      return { start: startOfDay(subDays(now, 90)), end };
+    case '1year':
+      return { start: startOfDay(subYears(now, 1)), end };
+    case 'all':
+    case 'custom':
+    default:
+      return null;
+  }
+}
+
+export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDialogProps) {
   const [open, setOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(defaultClientId || null);
+  const [period, setPeriod] = useState<PeriodOption>('all');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('excel');
   const [options, setOptions] = useState({
     includeHotmart: true,
     includeTmb: true,
@@ -33,39 +85,69 @@ export function ExportReportDialog({ trigger }: ExportReportDialogProps) {
     includeCombined: true,
   });
 
-  // Fetch all data
-  const { data: hotmartTransactions, isLoading: loadingHotmart } = useTransactions({});
-  const { data: tmbTransactions, isLoading: loadingTmb } = useTmbTransactions({});
-  const { data: hotmartStats, isLoading: loadingHotmartStats } = useTransactionStatsOptimized({});
-  const { data: tmbStats, isLoading: loadingTmbStats } = useTmbTransactionStatsOptimized({});
+  const { data: clients } = useClients();
+  const { isMaster } = useUserRole();
+
+  // Calculate date range based on selection
+  const dateRange = useMemo(() => {
+    if (period === 'custom' && customDateRange?.from) {
+      return {
+        start: startOfDay(customDateRange.from),
+        end: customDateRange.to ? endOfDay(customDateRange.to) : endOfDay(customDateRange.from),
+      };
+    }
+    return getPeriodDates(period);
+  }, [period, customDateRange]);
+
+  // Build filters for hooks
+  const filters = useMemo(() => ({
+    clientId: selectedClientId || undefined,
+    startDate: dateRange?.start,
+    endDate: dateRange?.end,
+  }), [selectedClientId, dateRange]);
+
+  // Fetch data with filters
+  const { data: hotmartTransactions, isLoading: loadingHotmart } = useTransactions(filters);
+  const { data: tmbTransactions, isLoading: loadingTmb } = useTmbTransactions(filters);
+  const { data: hotmartStats, isLoading: loadingHotmartStats } = useTransactionStatsOptimized(filters);
+  const { data: tmbStats, isLoading: loadingTmbStats } = useTmbTransactionStatsOptimized(filters);
 
   const isLoading = loadingHotmart || loadingTmb || loadingHotmartStats || loadingTmbStats;
+
+  const selectedClient = clients?.find((c) => c.id === selectedClientId);
+  const transactionCount = (hotmartTransactions?.length || 0) + (tmbTransactions?.length || 0);
 
   const handleExport = async () => {
     try {
       setIsExporting(true);
 
-      generateExcelReport(
-        {
-          hotmartTransactions: hotmartTransactions || [],
-          tmbTransactions: tmbTransactions || [],
-          hotmartStats: {
-            totalBRL: hotmartStats?.totalByCurrency?.BRL || 0,
-            totalUSD: hotmartStats?.totalByCurrency?.USD || 0,
-            totalTransactions: hotmartStats?.totalTransactions || 0,
-          },
-          tmbStats: {
-            totalBRL: tmbStats?.totalBRL || 0,
-            totalTransactions: tmbStats?.totalTransactions || 0,
-          },
+      const exportData = {
+        hotmartTransactions: hotmartTransactions || [],
+        tmbTransactions: tmbTransactions || [],
+        hotmartStats: {
+          totalBRL: hotmartStats?.totalByCurrency?.BRL || 0,
+          totalUSD: hotmartStats?.totalByCurrency?.USD || 0,
+          totalTransactions: hotmartStats?.totalTransactions || 0,
         },
-        {
-          ...options,
-          dateRange: null,
-        }
-      );
+        tmbStats: {
+          totalBRL: tmbStats?.totalBRL || 0,
+          totalTransactions: tmbStats?.totalTransactions || 0,
+        },
+      };
 
-      toast.success('Relatório exportado com sucesso!');
+      const exportOptions = {
+        ...options,
+        dateRange,
+        clientName: selectedClient?.name,
+      };
+
+      if (exportFormat === 'excel') {
+        generateExcelReport(exportData, exportOptions);
+      } else {
+        generateCsvReport(exportData, exportOptions);
+      }
+
+      toast.success(`Relatório ${exportFormat.toUpperCase()} exportado com sucesso!`);
       setOpen(false);
     } catch (error) {
       console.error('Error exporting report:', error);
@@ -79,7 +161,21 @@ export function ExportReportDialog({ trigger }: ExportReportDialogProps) {
     setOptions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const hasAnySelected = Object.values(options).some(Boolean);
+  const hasAnySelected = exportFormat === 'excel' 
+    ? Object.values(options).some(Boolean)
+    : options.includeHotmart || options.includeTmb || options.includeCombined;
+
+  const formatPeriodDisplay = () => {
+    if (period === 'all') return 'Todo o período';
+    if (period === 'custom' && customDateRange?.from) {
+      const from = format(customDateRange.from, 'dd/MM/yyyy', { locale: ptBR });
+      const to = customDateRange.to 
+        ? format(customDateRange.to, 'dd/MM/yyyy', { locale: ptBR })
+        : from;
+      return `${from} - ${to}`;
+    }
+    return PERIOD_OPTIONS.find((p) => p.value === period)?.label || '';
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -91,21 +187,135 @@ export function ExportReportDialog({ trigger }: ExportReportDialogProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
-            Exportar Relatório Excel
+            Exportar Relatório
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Selecione as seções que deseja incluir no relatório:
-            </p>
+        <div className="space-y-5 py-4">
+          {/* Client Selection - Only for masters */}
+          {isMaster && clients && clients.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Cliente
+              </Label>
+              <Select
+                value={selectedClientId || 'all'}
+                onValueChange={(value) => setSelectedClientId(value === 'all' ? null : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os clientes</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-            <div className="space-y-3">
+          {/* Period Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4" />
+              Período
+            </Label>
+            <Select
+              value={period}
+              onValueChange={(value) => setPeriod(value as PeriodOption)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PERIOD_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Custom Date Range Picker */}
+            {period === 'custom' && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !customDateRange && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customDateRange?.from ? (
+                      customDateRange.to ? (
+                        <>
+                          {format(customDateRange.from, 'dd/MM/yyyy', { locale: ptBR })} -{' '}
+                          {format(customDateRange.to, 'dd/MM/yyyy', { locale: ptBR })}
+                        </>
+                      ) : (
+                        format(customDateRange.from, 'dd/MM/yyyy', { locale: ptBR })
+                      )
+                    ) : (
+                      <span>Selecione o período</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={customDateRange?.from}
+                    selected={customDateRange}
+                    onSelect={setCustomDateRange}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+          </div>
+
+          {/* Format Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Formato</Label>
+            <RadioGroup
+              value={exportFormat}
+              onValueChange={(value) => setExportFormat(value as ExportFormat)}
+              className="flex gap-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="excel" id="format-excel" />
+                <Label htmlFor="format-excel" className="flex items-center gap-2 cursor-pointer">
+                  <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                  Excel (.xlsx)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="csv" id="format-csv" />
+                <Label htmlFor="format-csv" className="flex items-center gap-2 cursor-pointer">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  CSV
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Section Selection */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Seções a incluir</Label>
+            
+            {exportFormat === 'excel' && (
               <div className="flex items-center space-x-3">
                 <Checkbox
                   id="summary"
@@ -116,55 +326,56 @@ export function ExportReportDialog({ trigger }: ExportReportDialogProps) {
                   Resumo de KPIs
                 </Label>
               </div>
+            )}
 
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="hotmart"
-                  checked={options.includeHotmart}
-                  onCheckedChange={() => toggleOption('includeHotmart')}
-                />
-                <Label htmlFor="hotmart" className="cursor-pointer">
-                  Transações Hotmart
-                </Label>
-              </div>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="hotmart"
+                checked={options.includeHotmart}
+                onCheckedChange={() => toggleOption('includeHotmart')}
+              />
+              <Label htmlFor="hotmart" className="cursor-pointer">
+                Transações Hotmart
+              </Label>
+            </div>
 
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="tmb"
-                  checked={options.includeTmb}
-                  onCheckedChange={() => toggleOption('includeTmb')}
-                />
-                <Label htmlFor="tmb" className="cursor-pointer">
-                  Transações TMB
-                </Label>
-              </div>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="tmb"
+                checked={options.includeTmb}
+                onCheckedChange={() => toggleOption('includeTmb')}
+              />
+              <Label htmlFor="tmb" className="cursor-pointer">
+                Transações TMB
+              </Label>
+            </div>
 
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="combined"
-                  checked={options.includeCombined}
-                  onCheckedChange={() => toggleOption('includeCombined')}
-                />
-                <Label htmlFor="combined" className="cursor-pointer">
-                  Transações Consolidadas
-                </Label>
-              </div>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="combined"
+                checked={options.includeCombined}
+                onCheckedChange={() => toggleOption('includeCombined')}
+              />
+              <Label htmlFor="combined" className="cursor-pointer">
+                Transações Consolidadas
+              </Label>
             </div>
           </div>
 
-          <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
-            <p className="font-medium mb-1">O arquivo Excel incluirá:</p>
-            <ul className="list-disc list-inside space-y-0.5">
-              {options.includeSummary && <li>Aba "Resumo" com KPIs consolidados</li>}
-              {options.includeHotmart && <li>Aba "Hotmart" com transações detalhadas</li>}
-              {options.includeTmb && <li>Aba "TMB" com transações detalhadas</li>}
-              {options.includeCombined && <li>Aba "Consolidado" com todas as transações</li>}
-            </ul>
+          {/* Preview Info */}
+          <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg space-y-1">
+            <p className="font-medium mb-2">Resumo da exportação:</p>
+            {selectedClient && (
+              <p>📋 Cliente: <span className="font-medium">{selectedClient.name}</span></p>
+            )}
+            <p>📅 Período: <span className="font-medium">{formatPeriodDisplay()}</span></p>
+            <p>📊 Transações: <span className="font-medium">{isLoading ? '...' : transactionCount}</span></p>
+            <p>📁 Formato: <span className="font-medium">{exportFormat.toUpperCase()}</span></p>
           </div>
 
           <Button
             onClick={handleExport}
-            disabled={isLoading || isExporting || !hasAnySelected}
+            disabled={isLoading || isExporting || !hasAnySelected || (period === 'custom' && !customDateRange?.from)}
             className="w-full"
           >
             {isExporting || isLoading ? (
@@ -175,7 +386,7 @@ export function ExportReportDialog({ trigger }: ExportReportDialogProps) {
             ) : (
               <>
                 <Download className="h-4 w-4 mr-2" />
-                Baixar Relatório Excel
+                Baixar Relatório {exportFormat === 'excel' ? 'Excel' : 'CSV'}
               </>
             )}
           </Button>
