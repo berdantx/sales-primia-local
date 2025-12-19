@@ -10,6 +10,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
+
+type PasswordStrength = 'weak' | 'medium' | 'strong';
+
+const calculatePasswordStrength = (password: string): { strength: PasswordStrength; score: number } => {
+  let score = 0;
+  
+  if (password.length >= 6) score++;
+  if (password.length >= 8) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^a-zA-Z0-9]/.test(password)) score++;
+  
+  let strength: PasswordStrength = 'weak';
+  if (score >= 5) strength = 'strong';
+  else if (score >= 3) strength = 'medium';
+  
+  return { strength, score };
+};
 
 const passwordSchema = z.object({
   newPassword: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
@@ -32,10 +52,14 @@ export function ChangePasswordCard() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
   });
+
+  const watchedPassword = watch('newPassword', '');
+  const passwordStrength = calculatePasswordStrength(watchedPassword);
 
   const onSubmit = async (data: PasswordFormData) => {
     setIsLoading(true);
@@ -112,7 +136,39 @@ export function ChangePasswordCard() {
               {errors.newPassword && (
                 <p className="text-sm text-destructive">{errors.newPassword.message}</p>
               )}
-              <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
+              {watchedPassword && (
+                <div className="space-y-1.5">
+                  <div className="flex gap-1">
+                    {[1, 2, 3].map((segment) => {
+                      const filledSegments = passwordStrength.strength === 'weak' ? 1 : passwordStrength.strength === 'medium' ? 2 : 3;
+                      return (
+                        <div
+                          key={segment}
+                          className={cn(
+                            "h-1.5 flex-1 rounded-full transition-colors",
+                            segment <= filledSegments
+                              ? passwordStrength.strength === 'weak' ? 'bg-red-500'
+                              : passwordStrength.strength === 'medium' ? 'bg-yellow-500'
+                              : 'bg-green-500'
+                              : 'bg-muted'
+                          )}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p className={cn(
+                    "text-xs font-medium",
+                    passwordStrength.strength === 'weak' && 'text-red-500',
+                    passwordStrength.strength === 'medium' && 'text-yellow-600',
+                    passwordStrength.strength === 'strong' && 'text-green-600',
+                  )}>
+                    Senha {passwordStrength.strength === 'weak' ? 'fraca' : passwordStrength.strength === 'medium' ? 'média' : 'forte'}
+                  </p>
+                </div>
+              )}
+              {!watchedPassword && (
+                <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
+              )}
             </div>
 
             <div className="space-y-2">
