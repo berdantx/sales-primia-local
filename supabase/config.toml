@@ -29,3 +29,6 @@ verify_jwt = true
 
 [functions.security-alert]
 verify_jwt = false
+
+[functions.accept-invitation]
+verify_jwt = false
