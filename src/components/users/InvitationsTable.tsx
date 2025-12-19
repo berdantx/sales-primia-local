@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Building2 } from 'lucide-react';
 
 interface Invitation {
   id: string;
@@ -19,6 +19,8 @@ interface Invitation {
   role: string;
   created_at: string;
   expires_at: string;
+  client_id: string | null;
+  clients: { name: string } | null;
 }
 
 interface InvitationsTableProps {
@@ -79,6 +81,7 @@ export function InvitationsTable({ invitations, isLoading }: InvitationsTablePro
       <TableHeader>
         <TableRow>
           <TableHead>Email</TableHead>
+          <TableHead>Cliente</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Enviado em</TableHead>
           <TableHead>Expira em</TableHead>
@@ -88,6 +91,16 @@ export function InvitationsTable({ invitations, isLoading }: InvitationsTablePro
         {invitations.map((invitation) => (
           <TableRow key={invitation.id}>
             <TableCell className="font-medium">{invitation.email}</TableCell>
+            <TableCell>
+              {invitation.clients?.name ? (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Building2 className="h-3.5 w-3.5" />
+                  {invitation.clients.name}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              )}
+            </TableCell>
             <TableCell>
               {getStatusBadge(invitation.status, invitation.expires_at)}
             </TableCell>

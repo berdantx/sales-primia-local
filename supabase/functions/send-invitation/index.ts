@@ -10,6 +10,7 @@ const corsHeaders = {
 
 interface InvitationRequest {
   email: string;
+  clientId?: string;
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
@@ -81,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { email }: InvitationRequest = await req.json();
+    const { email, clientId }: InvitationRequest = await req.json();
 
     if (!email) {
       return new Response(
@@ -120,6 +121,7 @@ const handler = async (req: Request): Promise<Response> => {
         token,
         status: "pending",
         role: "user",
+        client_id: clientId || null,
       })
       .select()
       .single();
@@ -132,11 +134,27 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Get client name if clientId is provided
+    let clientName = "";
+    if (clientId) {
+      const { data: clientData } = await supabaseAdmin
+        .from("clients")
+        .select("name")
+        .eq("id", clientId)
+        .single();
+      
+      if (clientData) {
+        clientName = clientData.name;
+      }
+    }
+
     // Get the app URL from request origin or use default
     const origin = req.headers.get("origin") || "https://vvuhqqvjtozhwideqdnn.lovableproject.com";
     const inviteLink = `${origin}/invite/${token}`;
 
     // Send email
+    const clientInfo = clientName ? `<p style="color: #6B7280; text-align: center; margin-bottom: 10px;">Você terá acesso à conta: <strong>${clientName}</strong></p>` : '';
+    
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -157,12 +175,14 @@ const handler = async (req: Request): Promise<Response> => {
           Você foi convidado! 🎉
         </h1>
         
-        <p style="color: #6B7280; text-align: center; margin-bottom: 30px;">
+        <p style="color: #6B7280; text-align: center; margin-bottom: 10px;">
           Você recebeu um convite para acessar o <strong>Sales Analytics</strong>, 
           uma plataforma de análise de vendas.
         </p>
         
-        <div style="text-align: center; margin-bottom: 30px;">
+        ${clientInfo}
+        
+        <div style="text-align: center; margin: 30px 0;">
           <a href="${inviteLink}" style="display: inline-block; background: #0066FF; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">
             Aceitar Convite
           </a>
