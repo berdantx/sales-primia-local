@@ -19,6 +19,7 @@ export interface CombinedFilters {
   paymentMethod?: string | null;
   sckCode?: string | null;
   product?: string | null;
+  clientId?: string | null;
 }
 
 export function useCombinedStats(filters: CombinedFilters, platform: PlatformType) {
@@ -34,7 +35,7 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
   );
 
   // TMB stats (simplified filters, no advanced filters for TMB)
-  const tmbFilters = { startDate: filters.startDate, endDate: filters.endDate };
+  const tmbFilters = { startDate: filters.startDate, endDate: filters.endDate, clientId: filters.clientId };
   const { data: tmbStats, isLoading: tmbLoading } = useTmbTransactionStatsOptimized(
     platform !== 'hotmart' ? tmbFilters : { startDate: undefined, endDate: undefined }
   );
