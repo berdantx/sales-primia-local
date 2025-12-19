@@ -1,18 +1,36 @@
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UsersTable } from '@/components/users/UsersTable';
 import { InvitationsTable } from '@/components/users/InvitationsTable';
 import { AccessLogsTable } from '@/components/users/AccessLogsTable';
+import { AccessLogsFilters } from '@/components/users/AccessLogsFilters';
 import { InviteUserDialog } from '@/components/users/InviteUserDialog';
 import { useUsers, useInvitations } from '@/hooks/useUsers';
-import { useAccessLogs } from '@/hooks/useAccessLogs';
+import { useAccessLogs, AccessLogsFilters as FiltersType } from '@/hooks/useAccessLogs';
 import { Users as UsersIcon, Mail, Shield } from 'lucide-react';
+
+const PAGE_SIZE = 20;
 
 export default function Users() {
   const { users, isLoading: usersLoading, updateRole, isUpdating } = useUsers();
   const { invitations, isLoading: invitationsLoading } = useInvitations();
-  const { logs, isLoading: logsLoading } = useAccessLogs();
+  
+  // Access logs state
+  const [filters, setFilters] = useState<FiltersType>({});
+  const [page, setPage] = useState(0);
+  
+  const { logs, totalCount, isLoading: logsLoading } = useAccessLogs(
+    filters,
+    { page, pageSize: PAGE_SIZE }
+  );
+
+  // Reset page when filters change
+  const handleFiltersChange = (newFilters: FiltersType) => {
+    setFilters(newFilters);
+    setPage(0);
+  };
 
   return (
     <MainLayout>
@@ -88,9 +106,17 @@ export default function Users() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                <AccessLogsFilters 
+                  filters={filters} 
+                  onFiltersChange={handleFiltersChange} 
+                />
                 <AccessLogsTable
                   logs={logs}
                   isLoading={logsLoading}
+                  totalCount={totalCount}
+                  page={page}
+                  pageSize={PAGE_SIZE}
+                  onPageChange={setPage}
                 />
               </CardContent>
             </Card>
