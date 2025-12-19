@@ -15,6 +15,7 @@ import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { SavedFilterViews } from '@/components/dashboard/SavedFilterViews';
 import { PlatformFilter } from '@/components/dashboard/PlatformFilter';
+import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { PlatformSharePieChart } from '@/components/dashboard/PlatformSharePieChart';
 import { CurrencyViewToggle, CurrencyView } from '@/components/dashboard/CurrencyViewToggle';
 import { DollarRateIndicator } from '@/components/dashboard/DollarRateIndicator';
@@ -50,7 +51,7 @@ export default function Dashboard() {
   const [platform, setPlatform] = useState<PlatformType>('all');
   
   // Get filters from global context
-  const { billingType, paymentMethod, sckCode, product, setBillingType, setPaymentMethod, setSckCode, setProduct } = useFilter();
+  const { billingType, paymentMethod, sckCode, product, clientId, setClientId, setBillingType, setPaymentMethod, setSckCode, setProduct } = useFilter();
   
   // Selected view
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
@@ -109,7 +110,8 @@ export default function Dashboard() {
     paymentMethod,
     sckCode,
     product,
-  }), [dateRange, billingType, paymentMethod, sckCode, product]);
+    clientId,
+  }), [dateRange, billingType, paymentMethod, sckCode, product, clientId]);
 
   // Use combined stats hook that handles platform switching
   const { stats, topCustomers, salesByDate, currencies, isLoading, hotmartStats, tmbStats } = useCombinedStats(filters, platform);
@@ -200,6 +202,8 @@ export default function Dashboard() {
             <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
             
             <PlatformFilter value={platform} onChange={setPlatform} />
+            
+            <ClientSelector value={clientId} onChange={setClientId} />
             
             <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
             

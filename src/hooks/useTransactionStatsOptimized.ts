@@ -9,6 +9,7 @@ export interface TransactionFilters {
   paymentMethod?: string | null;
   sckCode?: string | null;
   product?: string | null;
+  clientId?: string | null;
 }
 
 export interface CountryCurrencyStats {
@@ -51,9 +52,11 @@ export function useTransactionStatsOptimized(filters?: TransactionFilters) {
       filters?.paymentMethod,
       filters?.sckCode,
       filters?.product,
+      filters?.clientId,
     ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_transaction_stats', {
+        p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
         p_billing_type: filters?.billingType || null,
@@ -97,9 +100,11 @@ export function useTopCustomersOptimized(filters?: TransactionFilters) {
       filters?.paymentMethod,
       filters?.sckCode,
       filters?.product,
+      filters?.clientId,
     ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_top_customers', {
+        p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
         p_limit: 10,
@@ -129,9 +134,11 @@ export function useSalesByDateOptimized(filters?: TransactionFilters) {
       filters?.paymentMethod,
       filters?.sckCode,
       filters?.product,
+      filters?.clientId,
     ],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_sales_by_date', {
+        p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
         p_billing_type: filters?.billingType || null,
@@ -147,13 +154,15 @@ export function useSalesByDateOptimized(filters?: TransactionFilters) {
   });
 }
 
-export function useTransactionDateRange() {
+export function useTransactionDateRange(clientId?: string | null) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['transaction-date-range', user?.id],
+    queryKey: ['transaction-date-range', user?.id, clientId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_transaction_date_range');
+      const { data, error } = await supabase.rpc('get_transaction_date_range', {
+        p_client_id: clientId || null,
+      });
 
       if (error) throw error;
       return (data as unknown as DateRange) || { min_date: null, max_date: null };

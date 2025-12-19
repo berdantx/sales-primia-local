@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 export interface TmbTransactionFilters {
   startDate?: Date;
   endDate?: Date;
+  clientId?: string | null;
 }
 
 export interface TmbStats {
@@ -25,9 +26,10 @@ export function useTmbTransactionStatsOptimized(filters?: TmbTransactionFilters)
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['tmb-transaction-stats', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString()],
+    queryKey: ['tmb-transaction-stats', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString(), filters?.clientId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_tmb_transaction_stats', {
+        p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
       });
@@ -57,9 +59,10 @@ export function useTmbTopCustomersOptimized(filters?: TmbTransactionFilters, lim
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['tmb-top-customers', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString(), limit],
+    queryKey: ['tmb-top-customers', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString(), filters?.clientId, limit],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_tmb_top_customers', {
+        p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
         p_limit: limit,
@@ -80,9 +83,10 @@ export function useTmbSalesByDateOptimized(filters?: TmbTransactionFilters) {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['tmb-sales-by-date', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString()],
+    queryKey: ['tmb-sales-by-date', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString(), filters?.clientId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_tmb_sales_by_date', {
+        p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
       });
