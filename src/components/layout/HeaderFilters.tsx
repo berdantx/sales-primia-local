@@ -1,8 +1,9 @@
-import { Filter, SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FilterSheet } from '@/components/filters/FilterSheet';
 import { ActiveFiltersDisplay } from '@/components/filters/ActiveFiltersDisplay';
+import { SalesIndicator } from '@/components/filters/SalesIndicator';
 import { useFilter } from '@/contexts/FilterContext';
 
 export function HeaderFilters() {
@@ -10,6 +11,9 @@ export function HeaderFilters() {
 
   return (
     <div className="flex items-center gap-2">
+      {/* Sales indicator */}
+      <SalesIndicator />
+
       {/* Active filters badges - desktop only */}
       <div className="hidden md:block">
         <ActiveFiltersDisplay showClearAll={true} />
