@@ -17,6 +17,7 @@ import Settings from "./pages/Settings";
 import WebhookLogs from "./pages/WebhookLogs";
 import WebhookConfig from "./pages/WebhookConfig";
 import Users from "./pages/Users";
+import Clients from "./pages/Clients";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
@@ -64,6 +65,11 @@ const App = () => (
             <Route path="/users" element={
               <ProtectedRoute allowedRoles={['master']}>
                 <Users />
+              </ProtectedRoute>
+            } />
+            <Route path="/clients" element={
+              <ProtectedRoute allowedRoles={['master']}>
+                <Clients />
               </ProtectedRoute>
             } />
             <Route path="/invite/:token" element={<AcceptInvite />} />

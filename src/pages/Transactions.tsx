@@ -4,6 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
 import { useDollarRate } from '@/hooks/useDollarRate';
+import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,6 +33,7 @@ import {
   Receipt
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
+import { ClientSelector } from '@/components/dashboard/ClientSelector';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -68,16 +70,19 @@ function Transactions() {
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  
+  const { clientId, setClientId } = useFilter();
 
   const filters = useMemo(() => ({
     startDate: subDays(new Date(), 365),
     endDate: new Date(),
-  }), []);
+    clientId,
+  }), [clientId]);
 
   const { data: transactions, isLoading, error } = useTransactions(filters);
   
   // Use the same optimized stats as the Dashboard for consistent KPI values
-  const { data: statsFromDB, isLoading: isLoadingStats } = useTransactionStatsOptimized(filters);
+  const { data: statsFromDB, isLoading: isLoadingStats } = useTransactionStatsOptimized({ ...filters, clientId });
   
   // Dollar rate for USD → BRL conversion
   const { data: dollarRate } = useDollarRate();
@@ -209,10 +214,13 @@ function Transactions() {
               {filteredTransactions.length} transações encontradas
             </p>
           </div>
-          <Button variant="outline" onClick={handleExportCSV} size="sm" className="w-full sm:w-auto">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <ClientSelector value={clientId} onChange={setClientId} />
+            <Button variant="outline" onClick={handleExportCSV} size="sm" className="w-full sm:w-auto">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </div>
         </motion.div>
 
         {/* Summary KPIs */}

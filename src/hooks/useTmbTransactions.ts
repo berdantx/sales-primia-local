@@ -23,6 +23,7 @@ export interface TmbTransactionFilters {
   startDate?: Date;
   endDate?: Date;
   search?: string;
+  clientId?: string | null;
 }
 
 export function useTmbTransactions(filters?: TmbTransactionFilters) {
@@ -42,11 +43,13 @@ export function useTmbTransactions(filters?: TmbTransactionFilters) {
         let query = supabase
           .from('tmb_transactions')
           .select('*')
-          .eq('user_id', user.id)
           .order('effective_date', { ascending: false })
           .range(from, from + PAGE_SIZE - 1);
 
         // Apply filters
+        if (filters?.clientId) {
+          query = query.eq('client_id', filters.clientId);
+        }
         if (filters?.startDate) {
           query = query.gte('effective_date', filters.startDate.toISOString());
         }

@@ -4,8 +4,10 @@ import { DateRange } from 'react-day-picker';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useTmbTransactions } from '@/hooks/useTmbTransactions';
 import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsOptimized';
+import { useFilter } from '@/contexts/FilterContext';
 import { TmbAdvancedFilters } from '@/components/dashboard/TmbAdvancedFilters';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
+import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -59,6 +61,8 @@ function TmbTransactions() {
   const [utmMediumFilter, setUtmMediumFilter] = useState<string | null>(null);
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string | null>(null);
 
+  const { clientId, setClientId } = useFilter();
+
   const dateRange = useMemo(() => {
     if (period === 'all') {
       return { startDate: undefined, endDate: undefined };
@@ -77,12 +81,14 @@ function TmbTransactions() {
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
     search: search || undefined,
-  }), [dateRange, search]);
+    clientId,
+  }), [dateRange, search, clientId]);
 
   const { data: transactions, isLoading, error } = useTmbTransactions(filters);
   const { data: stats, isLoading: isLoadingStats } = useTmbTransactionStatsOptimized({
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
+    clientId,
   });
 
   // Get top product
@@ -198,10 +204,13 @@ function TmbTransactions() {
               {filteredTransactions.length} transações encontradas
             </p>
           </div>
-          <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <ClientSelector value={clientId} onChange={setClientId} />
+            <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </div>
         </motion.div>
 
         {/* Summary KPIs */}

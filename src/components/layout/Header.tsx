@@ -3,6 +3,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Bell, History, Target, Upload } from 'lucide-react';
 import { HeaderFilters } from './HeaderFilters';
+import { ClientIndicator } from './ClientIndicator';
 
 export function Header() {
   const navigate = useNavigate();
@@ -43,6 +44,9 @@ export function Header() {
         </div>
 
         <div className="flex-1" />
+
+        {/* Client Indicator */}
+        <ClientIndicator />
 
         {/* Advanced Filters */}
         <HeaderFilters />
