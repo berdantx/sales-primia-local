@@ -88,6 +88,13 @@ interface Invitation {
   role: AppRole;
   created_at: string;
   expires_at: string;
+  client_id: string | null;
+  clients: { name: string } | null;
+}
+
+interface SendInviteData {
+  email: string;
+  clientId?: string;
 }
 
 export function useInvitations() {
@@ -99,7 +106,7 @@ export function useInvitations() {
     queryFn: async (): Promise<Invitation[]> => {
       const { data, error } = await supabase
         .from('invitations')
-        .select('*')
+        .select('*, clients(name)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -109,9 +116,9 @@ export function useInvitations() {
   });
 
   const sendInviteMutation = useMutation({
-    mutationFn: async (email: string) => {
+    mutationFn: async ({ email, clientId }: SendInviteData) => {
       const { data, error } = await supabase.functions.invoke('send-invitation', {
-        body: { email },
+        body: { email, clientId },
       });
 
       if (error) throw error;

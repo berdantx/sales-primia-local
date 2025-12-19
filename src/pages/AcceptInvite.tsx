@@ -13,6 +13,8 @@ interface InvitationData {
   email: string;
   status: string;
   expires_at: string;
+  client_id: string | null;
+  clients: { name: string } | null;
 }
 
 export default function AcceptInvite() {
@@ -35,7 +37,7 @@ export default function AcceptInvite() {
 
       const { data, error } = await supabase
         .from('invitations')
-        .select('*')
+        .select('*, clients(name)')
         .eq('token', token)
         .single();
 
@@ -74,7 +76,7 @@ export default function AcceptInvite() {
 
     try {
       // Create user account
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: invitation.email,
         password,
         options: {
@@ -99,6 +101,22 @@ export default function AcceptInvite() {
         .from('invitations')
         .update({ status: 'accepted', accepted_at: new Date().toISOString() })
         .eq('id', invitation.id);
+
+      // If there's a client_id and user was created, associate the user with the client
+      if (invitation.client_id && signUpData.user) {
+        const { error: clientUserError } = await supabase
+          .from('client_users')
+          .insert({
+            user_id: signUpData.user.id,
+            client_id: invitation.client_id,
+            is_owner: false,
+          });
+
+        if (clientUserError) {
+          console.error('Error associating user to client:', clientUserError);
+          // Don't fail the whole flow if this fails, the user can be associated later
+        }
+      }
 
       toast.success('Conta criada com sucesso! Verifique seu email para confirmar.');
       navigate('/auth');
@@ -149,6 +167,11 @@ export default function AcceptInvite() {
           <CardTitle>Criar sua Conta</CardTitle>
           <CardDescription>
             Você foi convidado para o Sales Analytics
+            {invitation?.clients?.name && (
+              <span className="block mt-1 font-medium text-foreground">
+                Conta: {invitation.clients.name}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
