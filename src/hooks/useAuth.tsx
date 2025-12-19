@@ -15,6 +15,27 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to log access events (non-blocking)
+const logAccessEvent = async (
+  eventType: 'login_success' | 'login_failed' | 'logout' | 'password_changed',
+  email: string,
+  userId?: string,
+  metadata?: Record<string, unknown>
+) => {
+  try {
+    await supabase.functions.invoke('log-access', {
+      body: {
+        event_type: eventType,
+        email,
+        user_id: userId,
+        metadata,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to log access event:', error);
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -41,10 +62,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    // Log the event (non-blocking)
+    logAccessEvent(
+      error ? 'login_failed' : 'login_success',
+      email,
+      data?.user?.id,
+      error ? { error_message: error.message } : undefined
+    );
+
     return { error };
   };
 
@@ -65,13 +95,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    const currentEmail = user?.email;
+    const currentUserId = user?.id;
+    
     await supabase.auth.signOut();
+    
+    // Log the event (non-blocking)
+    if (currentEmail) {
+      logAccessEvent('logout', currentEmail, currentUserId);
+    }
   };
 
   const updatePassword = async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });
+
+    // Log the event (non-blocking)
+    if (!error && user?.email) {
+      logAccessEvent('password_changed', user.email, user.id);
+    }
+
     return { error };
   };
 
