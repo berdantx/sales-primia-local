@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.force-logout]
 verify_jwt = true
+
+[functions.security-alert]
+verify_jwt = false

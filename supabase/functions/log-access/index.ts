@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Security alert configuration
+const FAILED_LOGIN_THRESHOLD = 3;
+const FAILED_LOGIN_WINDOW_MINUTES = 15;
+
 interface LogAccessRequest {
   event_type: 'login_success' | 'login_failed' | 'logout' | 'password_changed' | 'session_revoked';
   email: string;
@@ -20,9 +24,12 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      supabaseUrl,
+      supabaseServiceKey,
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
@@ -86,6 +93,51 @@ serve(async (req) => {
     }
 
     console.log(`Access log recorded: ${event_type} for ${email} from ${ip_address}`);
+
+    // Check for multiple failed login attempts and trigger security alert
+    if (event_type === 'login_failed') {
+      const windowStart = new Date(Date.now() - FAILED_LOGIN_WINDOW_MINUTES * 60 * 1000).toISOString();
+      
+      const { count, error: countError } = await supabaseAdmin
+        .from('access_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('email', email.toLowerCase())
+        .eq('event_type', 'login_failed')
+        .gte('created_at', windowStart);
+
+      if (countError) {
+        console.error('Error counting failed attempts:', countError);
+      } else if (count && count >= FAILED_LOGIN_THRESHOLD) {
+        console.log(`Security alert threshold reached: ${count} failed attempts for ${email}`);
+        
+        // Call security-alert edge function
+        try {
+          const alertResponse = await fetch(`${supabaseUrl}/functions/v1/security-alert`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: email.toLowerCase(),
+              failed_attempts: count,
+              ip_address,
+              city,
+              country,
+            }),
+          });
+
+          if (!alertResponse.ok) {
+            const errorText = await alertResponse.text();
+            console.error('Security alert function failed:', errorText);
+          } else {
+            console.log('Security alert sent successfully');
+          }
+        } catch (alertError) {
+          console.error('Error calling security-alert function:', alertError);
+        }
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true }),

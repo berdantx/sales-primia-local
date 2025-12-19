@@ -15,22 +15,85 @@ export interface AccessLog {
   created_at: string;
 }
 
-export function useAccessLogs() {
-  const { data: logs, isLoading } = useQuery({
-    queryKey: ['access-logs'],
+export interface AccessLogsFilters {
+  email?: string;
+  eventType?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+export interface PaginationState {
+  page: number;
+  pageSize: number;
+}
+
+export function useAccessLogs(
+  filters: AccessLogsFilters = {},
+  pagination: PaginationState = { page: 0, pageSize: 20 }
+) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['access-logs', filters, pagination],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('access_logs')
-        .select('*')
+        .select('*', { count: 'exact' });
+
+      // Apply filters
+      if (filters.email) {
+        query = query.ilike('email', `%${filters.email}%`);
+      }
+      if (filters.eventType) {
+        query = query.eq('event_type', filters.eventType);
+      }
+      if (filters.startDate) {
+        query = query.gte('created_at', filters.startDate.toISOString());
+      }
+      if (filters.endDate) {
+        // Add 1 day to include the entire end date
+        const endDate = new Date(filters.endDate);
+        endDate.setDate(endDate.getDate() + 1);
+        query = query.lt('created_at', endDate.toISOString());
+      }
+
+      // Apply pagination
+      const from = pagination.page * pagination.pageSize;
+      const to = from + pagination.pageSize - 1;
+      
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
-        .limit(100);
+        .range(from, to);
 
       if (error) throw error;
-      return data as AccessLog[];
+      return { logs: data as AccessLog[], totalCount: count || 0 };
     },
   });
 
-  return { logs, isLoading };
+  return { 
+    logs: data?.logs, 
+    totalCount: data?.totalCount || 0,
+    isLoading 
+  };
+}
+
+export function useUniqueEmails() {
+  const { data: emails } = useQuery({
+    queryKey: ['access-logs-emails'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('access_logs')
+        .select('email')
+        .not('email', 'is', null)
+        .order('email');
+
+      if (error) throw error;
+      
+      // Get unique emails
+      const uniqueEmails = [...new Set(data.map(d => d.email).filter(Boolean))];
+      return uniqueEmails as string[];
+    },
+  });
+
+  return emails || [];
 }
 
 export function useForceLogout() {
