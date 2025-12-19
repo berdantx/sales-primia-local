@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { RefreshCw, Copy, ExternalLink } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFilter } from '@/contexts/FilterContext';
 import { useUserRole } from '@/hooks/useUserRole';
-import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { useWebhookLogs, useWebhookStats, type WebhookLogsFilters, type WebhookLog } from '@/hooks/useWebhookLogs';
 import { WebhookStatusCards } from '@/components/webhook/WebhookStatusCards';
 import { WebhookLogsTable } from '@/components/webhook/WebhookLogsTable';
@@ -54,21 +54,14 @@ export default function WebhookLogs() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Webhook Logs</h1>
-            <p className="text-muted-foreground">
-              Monitore os eventos recebidos via webhook
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {isMaster && (
-              <ClientSelector value={clientId} onChange={setClientId} />
-            )}
-            <Button onClick={handleRefresh} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Atualizar
-            </Button>
-          </div>
+          <ClientContextHeader 
+            title="Webhook Logs"
+            description="Monitore os eventos recebidos via webhook"
+          />
+          <Button onClick={handleRefresh} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
         </div>
 
         {/* Webhook URLs */}

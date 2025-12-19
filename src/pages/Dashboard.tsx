@@ -6,6 +6,7 @@ import { useActiveGoals } from '@/hooks/useGoals';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useFilter } from '@/contexts/FilterContext';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 
@@ -15,7 +16,6 @@ import { GoalSummarySection } from '@/components/dashboard/GoalSummarySection';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { SavedFilterViews } from '@/components/dashboard/SavedFilterViews';
 import { PlatformFilter } from '@/components/dashboard/PlatformFilter';
-import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { PlatformSharePieChart } from '@/components/dashboard/PlatformSharePieChart';
 import { CurrencyViewToggle, CurrencyView } from '@/components/dashboard/CurrencyViewToggle';
 import { DollarRateIndicator } from '@/components/dashboard/DollarRateIndicator';
@@ -165,12 +165,10 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col gap-3 sm:gap-4 pb-2"
         >
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Projeção de Faturamento</h1>
-            <p className="text-muted-foreground text-xs sm:text-sm">
-              Acompanhe suas metas e desempenho financeiro
-            </p>
-          </div>
+          <ClientContextHeader 
+            title="Projeção de Faturamento"
+            description="Acompanhe suas metas e desempenho financeiro"
+          />
           
           {/* Period and Platform Selectors - Mobile: acima dos botões */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/30 rounded-xl border">
@@ -202,8 +200,6 @@ export default function Dashboard() {
             <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
             
             <PlatformFilter value={platform} onChange={setPlatform} />
-            
-            <ClientSelector value={clientId} onChange={setClientId} />
             
             <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
             

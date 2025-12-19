@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
 import { useDollarRate } from '@/hooks/useDollarRate';
@@ -33,7 +34,7 @@ import {
   Receipt
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
-import { ClientSelector } from '@/components/dashboard/ClientSelector';
+
 
 const ITEMS_PER_PAGE = 20;
 
@@ -208,19 +209,14 @@ function Transactions() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
         >
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Transações</h1>
-            <p className="text-muted-foreground text-sm">
-              {filteredTransactions.length} transações encontradas
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-            <ClientSelector value={clientId} onChange={setClientId} />
-            <Button variant="outline" onClick={handleExportCSV} size="sm" className="w-full sm:w-auto">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar CSV
-            </Button>
-          </div>
+          <ClientContextHeader 
+            title="Transações"
+            description={`${filteredTransactions.length} transações encontradas`}
+          />
+          <Button variant="outline" onClick={handleExportCSV} size="sm" className="w-full sm:w-auto">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
         </motion.div>
 
         {/* Summary KPIs */}

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal, Goal } from '@/hooks/useGoals';
 import { useTransactionStats } from '@/hooks/useTransactions';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useFilter } from '@/contexts/FilterContext';
 import { useUserRole } from '@/hooks/useUserRole';
-import { ClientSelector } from '@/components/dashboard/ClientSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -135,16 +135,11 @@ export default function Goals() {
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
         >
-          <div>
-            <h1 className="text-3xl font-bold">Metas de Vendas</h1>
-            <p className="text-muted-foreground">
-              Defina e acompanhe suas metas de vendas
-            </p>
-          </div>
+          <ClientContextHeader 
+            title="Metas de Vendas"
+            description="Defina e acompanhe suas metas de vendas"
+          />
           <div className="flex items-center gap-3">
-            {isMaster && (
-              <ClientSelector value={clientId} onChange={setClientId} />
-            )}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={() => handleOpenDialog()}>
