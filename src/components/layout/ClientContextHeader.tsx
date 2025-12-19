@@ -26,7 +26,7 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
 
   return (
     <div className="space-y-1">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
           {title}
           {isMaster && (
@@ -39,13 +39,17 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
         {isMaster && clients && clients.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 shrink-0">
-                <Building2 className="h-3 w-3" />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 text-xs gap-1.5 shrink-0 border-primary/50 bg-primary/5 hover:bg-primary/10 text-primary font-medium"
+              >
+                <Building2 className="h-3.5 w-3.5" />
                 Alterar cliente
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 bg-popover">
+            <DropdownMenuContent align="end" className="w-56 bg-popover">
               <DropdownMenuItem 
                 onClick={() => setClientId(null)}
                 className={!clientId ? 'bg-accent' : ''}
