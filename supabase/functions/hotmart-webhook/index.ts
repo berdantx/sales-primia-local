@@ -114,6 +114,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const webhookUserId = Deno.env.get('WEBHOOK_USER_ID');
+    const webhookClientId = Deno.env.get('WEBHOOK_CLIENT_ID');
 
     if (!webhookUserId) {
       console.error('WEBHOOK_USER_ID not configured');
@@ -221,6 +222,7 @@ serve(async (req) => {
         // Prepare transaction record
         const transactionData = {
           user_id: webhookUserId,
+          client_id: webhookClientId || null,
           transaction_code: purchase.transaction,
           product: product?.name || null,
           buyer_email: buyer?.email || null,
