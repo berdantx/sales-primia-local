@@ -28,9 +28,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC } from '@/lib/dateUtils';
+import { format } from 'date-fns';
+import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC, formatDateTimeBR } from '@/lib/dateUtils';
 import { 
   Search, 
   Download, 
@@ -157,7 +156,7 @@ function TmbTransactions() {
       t.buyer_name || '',
       t.buyer_email || '',
       t.ticket_value,
-      t.effective_date ? format(parseISO(t.effective_date), 'dd/MM/yyyy HH:mm') : '',
+      t.effective_date ? formatDateTimeBR(t.effective_date, 'dd/MM/yyyy HH:mm') : '',
       t.utm_source || '',
       t.utm_medium || '',
       t.utm_campaign || '',
@@ -332,7 +331,7 @@ function TmbTransactions() {
                   <TableHead className="text-xs sm:text-sm">Produto</TableHead>
                   <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Cliente</TableHead>
                   <TableHead className="text-right text-xs sm:text-sm">Valor</TableHead>
-                  <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Data</TableHead>
+                  <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Data (BRT)</TableHead>
                   <TableHead className="hidden md:table-cell text-xs sm:text-sm">UTM Source</TableHead>
                 </TableRow>
               </TableHeader>
@@ -361,7 +360,7 @@ function TmbTransactions() {
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-xs sm:text-sm p-2 sm:p-4">
                       {transaction.effective_date 
-                        ? format(parseISO(transaction.effective_date), 'dd/MM/yy HH:mm', { locale: ptBR })
+                        ? formatDateTimeBR(transaction.effective_date, 'dd/MM/yy HH:mm')
                         : '-'
                       }
                     </TableCell>
