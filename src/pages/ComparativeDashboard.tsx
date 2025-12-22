@@ -26,8 +26,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Calendar, BarChart3, Download } from 'lucide-react';
-import { subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
+import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC } from '@/lib/dateUtils';
 
 type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
@@ -42,18 +42,15 @@ function ComparativeDashboard() {
     }
     if (period === 'custom' && customDateRange?.from && customDateRange?.to) {
       return {
-        startDate: customDateRange.from,
-        endDate: customDateRange.to,
+        startDate: startOfDayBrasiliaUTC(customDateRange.from),
+        endDate: endOfDayBrasiliaUTC(customDateRange.to),
       };
     }
     if (period === 'custom') {
       return { startDate: undefined, endDate: undefined };
     }
     const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
-    return {
-      startDate: subDays(new Date(), days),
-      endDate: new Date(),
-    };
+    return getDateRangeBrasiliaUTC(days);
   }, [period, customDateRange]);
 
   // Hotmart data

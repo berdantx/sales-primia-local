@@ -20,8 +20,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
-import { format, parseISO, subDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { getDateRangeBrasiliaUTC } from '@/lib/dateUtils';
 import { 
   Search, 
   Download, 
@@ -74,11 +75,14 @@ function Transactions() {
   
   const { clientId, setClientId } = useFilter();
 
-  const filters = useMemo(() => ({
-    startDate: subDays(new Date(), 365),
-    endDate: new Date(),
-    clientId,
-  }), [clientId]);
+  const filters = useMemo(() => {
+    const range = getDateRangeBrasiliaUTC(365);
+    return {
+      startDate: range.startDate,
+      endDate: range.endDate,
+      clientId,
+    };
+  }, [clientId]);
 
   const { data: transactions, isLoading, error } = useTransactions(filters);
   

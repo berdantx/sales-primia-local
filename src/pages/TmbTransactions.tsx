@@ -28,8 +28,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
-import { format, parseISO, subDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC } from '@/lib/dateUtils';
 import { 
   Search, 
   Download, 
@@ -68,13 +69,16 @@ function TmbTransactions() {
       return { startDate: undefined, endDate: undefined };
     }
     if (period === 'custom' && customDateRange?.from && customDateRange?.to) {
-      return { startDate: customDateRange.from, endDate: customDateRange.to };
+      return { 
+        startDate: startOfDayBrasiliaUTC(customDateRange.from), 
+        endDate: endOfDayBrasiliaUTC(customDateRange.to) 
+      };
     }
     if (period === 'custom') {
       return { startDate: undefined, endDate: undefined };
     }
     const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
-    return { startDate: subDays(new Date(), days), endDate: new Date() };
+    return getDateRangeBrasiliaUTC(days);
   }, [period, customDateRange]);
 
   const filters = useMemo(() => ({
