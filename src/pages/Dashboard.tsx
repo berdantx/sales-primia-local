@@ -127,7 +127,7 @@ export default function Dashboard() {
     : hotmartBRL + (dollarRate ? hotmartUSD * dollarRate.rate : 0);
   const tmbTotalBRL = tmbStats?.totalBRL || 0;
 
-  const { activeGoals } = useActiveGoals();
+  const { activeGoals } = useActiveGoals(clientId);
 
   
   

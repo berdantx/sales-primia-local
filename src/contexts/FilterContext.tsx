@@ -19,6 +19,7 @@ interface FilterContextType {
   // Common filters
   clientId: string | null;
   platform: PlatformType;
+  isReady: boolean; // Indicates if client context is ready for data fetching
   // Hotmart setters
   setBillingType: (value: string | null) => void;
   setPaymentMethod: (value: string | null) => void;
@@ -96,6 +97,11 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const hotmartFiltersCount = [billingType, paymentMethod, sckCode, product].filter(Boolean).length;
   const tmbFiltersCount = [tmbProduct, utmSource, utmMedium, utmCampaign].filter(Boolean).length;
   const activeFiltersCount = hotmartFiltersCount + tmbFiltersCount;
+  
+  // isReady indicates when client context is properly set for data fetching
+  // For master users: always ready (they can see all data)
+  // For non-master users: ready when clientId is set (they need a client context)
+  const isReady = isMaster || clientId !== null;
 
   return (
     <FilterContext.Provider
@@ -113,6 +119,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         // Common filters
         clientId,
         platform,
+        isReady,
         // Hotmart setters
         setBillingType,
         setPaymentMethod,

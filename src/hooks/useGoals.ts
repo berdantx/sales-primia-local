@@ -47,8 +47,8 @@ export function useGoals(clientId?: string | null) {
   });
 }
 
-export function useActiveGoals() {
-  const { data: goals, isLoading } = useGoals();
+export function useActiveGoals(clientId?: string | null) {
+  const { data: goals, isLoading } = useGoals(clientId);
   const activeGoals = goals?.filter(g => g.is_active) || [];
   return { activeGoals, isLoading };
 }
