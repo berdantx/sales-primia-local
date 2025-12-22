@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const webhookUserId = Deno.env.get("WEBHOOK_USER_ID")!;
+  const webhookClientId = Deno.env.get("WEBHOOK_CLIENT_ID");
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -104,6 +105,7 @@ Deno.serve(async (req) => {
     // Map TMB fields to tmb_transactions table
     const transactionData = {
       user_id: webhookUserId,
+      client_id: webhookClientId || null,
       order_id: orderId,
       product: body.lancamento || null,
       buyer_name: body.cliente || null,
