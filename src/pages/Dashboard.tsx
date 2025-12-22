@@ -33,7 +33,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { subDays, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
+import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC } from '@/lib/dateUtils';
 import {
   Select,
   SelectContent,
@@ -88,18 +89,15 @@ export default function Dashboard() {
     }
     if (period === 'custom' && customDateRange?.from && customDateRange?.to) {
       return {
-        startDate: customDateRange.from,
-        endDate: customDateRange.to,
+        startDate: startOfDayBrasiliaUTC(customDateRange.from),
+        endDate: endOfDayBrasiliaUTC(customDateRange.to),
       };
     }
     if (period === 'custom') {
       return { startDate: undefined, endDate: undefined };
     }
     const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
-    return {
-      startDate: subDays(new Date(), days),
-      endDate: new Date(),
-    };
+    return getDateRangeBrasiliaUTC(days);
   }, [period, customDateRange]);
 
   // Build complete filters object

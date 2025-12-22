@@ -1,4 +1,4 @@
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 // Offset de Brasília: -3 horas (GMT-3)
@@ -51,6 +51,35 @@ export function endOfDayBrasiliaUTC(date?: Date): Date {
     -BRASILIA_OFFSET_HOURS - 1, // +2 hours (03:00 - 1 hour) = 02:59
     59, 59, 999
   ));
+}
+
+/**
+ * Retorna o intervalo de datas para um período em dias, considerando o timezone de Brasília
+ * Útil para filtros de "Últimos X dias"
+ */
+export function getDateRangeBrasiliaUTC(days: number): { startDate: Date; endDate: Date } {
+  const now = nowBrasilia();
+  
+  // Data de início: X dias atrás, às 00:00 BRT convertido para UTC
+  const startDateBrasilia = subDays(now, days);
+  const startDate = new Date(Date.UTC(
+    startDateBrasilia.getFullYear(),
+    startDateBrasilia.getMonth(),
+    startDateBrasilia.getDate(),
+    -BRASILIA_OFFSET_HOURS, // 00:00 BRT = 03:00 UTC
+    0, 0, 0
+  ));
+  
+  // Data de fim: hoje às 23:59:59 BRT convertido para UTC
+  const endDate = new Date(Date.UTC(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + 1,
+    -BRASILIA_OFFSET_HOURS - 1, // 23:59 BRT = 02:59 UTC do dia seguinte
+    59, 59, 999
+  ));
+  
+  return { startDate, endDate };
 }
 
 /**
