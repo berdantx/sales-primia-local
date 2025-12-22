@@ -20,9 +20,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
-import { format, parseISO } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { getDateRangeBrasiliaUTC } from '@/lib/dateUtils';
+import { format } from 'date-fns';
+import { getDateRangeBrasiliaUTC, formatDateTimeBR } from '@/lib/dateUtils';
 import { 
   Search, 
   Download, 
@@ -54,7 +53,7 @@ function TransactionCard({ transaction }: { transaction: any }) {
         <div className="flex justify-between items-end">
           <div className="text-xs text-muted-foreground">
             {transaction.purchase_date 
-              ? format(parseISO(transaction.purchase_date), 'dd/MM/yy', { locale: ptBR })
+              ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
               : 'Sem data'
             }
           </div>
@@ -173,7 +172,7 @@ function Transactions() {
       t.currency,
       t.country || '',
       t.computed_value,
-      t.purchase_date ? format(parseISO(t.purchase_date), 'dd/MM/yyyy') : '',
+      t.purchase_date ? formatDateTimeBR(t.purchase_date, 'dd/MM/yyyy HH:mm') : '',
     ]);
     
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -355,7 +354,7 @@ function Transactions() {
                     <TableHead>Moeda</TableHead>
                     <TableHead className="hidden lg:table-cell">País</TableHead>
                     <TableHead className="text-right min-w-[100px]">Valor</TableHead>
-                    <TableHead className="min-w-[80px]">Data</TableHead>
+                    <TableHead className="min-w-[100px]">Data (BRT)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -384,9 +383,9 @@ function Transactions() {
                       <TableCell className="text-right font-medium">
                         {formatCurrency(Number(transaction.computed_value), transaction.currency)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-xs">
                         {transaction.purchase_date 
-                          ? format(parseISO(transaction.purchase_date), 'dd/MM/yy', { locale: ptBR })
+                          ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
                           : '-'
                         }
                       </TableCell>

@@ -91,6 +91,16 @@ export function formatDateBR(date: Date | string, formatStr: string = 'dd/MM/yyy
 }
 
 /**
+ * Formata uma data ISO (UTC do banco) para exibição no horário de Brasília
+ * Use esta função para exibir datas armazenadas em UTC convertidas para BRT
+ */
+export function formatDateTimeBR(date: Date | string, formatStr: string = 'dd/MM/yyyy HH:mm'): string {
+  const d = typeof date === 'string' ? parseISO(date) : date;
+  const brasilia = toBrasilia(d);
+  return format(brasilia, formatStr, { locale: ptBR });
+}
+
+/**
  * Formata uma data apenas com dia/mês/ano
  */
 export function formatDateOnlyBR(date: Date | string): string {
