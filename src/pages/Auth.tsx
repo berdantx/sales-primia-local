@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,15 +9,54 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { BarChart3, TrendingUp, Target, ArrowRight, Loader2 } from 'lucide-react';
+import { suggestDomainCorrection, EmailSuggestion as EmailSuggestionType } from '@/lib/emailValidator';
+import { EmailSuggestion } from '@/components/auth/EmailSuggestion';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [emailSuggestion, setEmailSuggestion] = useState<EmailSuggestionType | null>(null);
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Verifica sugestão de email com debounce
+  const checkEmailSuggestion = useCallback((value: string) => {
+    if (suggestionDismissed) return;
+    const suggestion = suggestDomainCorrection(value);
+    setEmailSuggestion(suggestion);
+  }, [suggestionDismissed]);
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setSuggestionDismissed(false);
+    
+    // Debounce para não verificar a cada tecla
+    const timeoutId = setTimeout(() => {
+      checkEmailSuggestion(value);
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  };
+
+  const acceptSuggestion = () => {
+    if (emailSuggestion) {
+      setEmail(emailSuggestion.suggestedEmail);
+      setEmailSuggestion(null);
+      toast({
+        title: 'Email corrigido',
+        description: `Email alterado para ${emailSuggestion.suggestedEmail}`,
+      });
+    }
+  };
+
+  const dismissSuggestion = () => {
+    setEmailSuggestion(null);
+    setSuggestionDismissed(true);
+  };
 
   useEffect(() => {
     if (!loading && user) {
@@ -206,9 +245,18 @@ export default function Auth() {
                         type="email"
                         placeholder="seu@email.com"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => handleEmailChange(e.target.value)}
                         disabled={isLoading}
                       />
+                      <AnimatePresence>
+                        {emailSuggestion && (
+                          <EmailSuggestion
+                            suggestion={emailSuggestion}
+                            onAccept={acceptSuggestion}
+                            onDismiss={dismissSuggestion}
+                          />
+                        )}
+                      </AnimatePresence>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="password">Senha</Label>
@@ -252,9 +300,18 @@ export default function Auth() {
                         type="email"
                         placeholder="seu@email.com"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => handleEmailChange(e.target.value)}
                         disabled={isLoading}
                       />
+                      <AnimatePresence>
+                        {emailSuggestion && (
+                          <EmailSuggestion
+                            suggestion={emailSuggestion}
+                            onAccept={acceptSuggestion}
+                            onDismiss={dismissSuggestion}
+                          />
+                        )}
+                      </AnimatePresence>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="signupPassword">Senha</Label>
