@@ -108,6 +108,15 @@ export function formatDateOnlyBR(date: Date | string): string {
 }
 
 /**
+ * Formata uma data ISO (UTC) para exibição em UTC (para tooltip técnico)
+ */
+export function formatDateTimeUTC(date: Date | string, formatStr: string = 'dd/MM/yyyy HH:mm'): string {
+  const d = typeof date === 'string' ? parseISO(date) : date;
+  // Formata diretamente em UTC
+  return format(d, formatStr, { locale: ptBR }) + ' UTC';
+}
+
+/**
  * Retorna a data atual em Brasília no formato YYYY-MM-DD (para queries SQL)
  */
 export function todayBrasiliaISO(): string {
