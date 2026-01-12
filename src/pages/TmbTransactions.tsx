@@ -29,7 +29,13 @@ import {
 } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
 import { format } from 'date-fns';
-import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC, formatDateTimeBR } from '@/lib/dateUtils';
+import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC, formatDateTimeBR, formatDateTimeUTC } from '@/lib/dateUtils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { 
   Search, 
   Download, 
@@ -359,10 +365,26 @@ function TmbTransactions() {
                       {formatCurrency(Number(transaction.ticket_value), 'BRL')}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-xs sm:text-sm p-2 sm:p-4">
-                      {transaction.effective_date 
-                        ? formatDateTimeBR(transaction.effective_date, 'dd/MM/yy HH:mm')
-                        : '-'
-                      }
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">
+                              {transaction.effective_date 
+                                ? formatDateTimeBR(transaction.effective_date, 'dd/MM/yy HH:mm')
+                                : '-'
+                              }
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">
+                              {transaction.effective_date 
+                                ? formatDateTimeUTC(transaction.effective_date, 'dd/MM/yyyy HH:mm:ss')
+                                : 'Sem data UTC'
+                              }
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                     <TableCell className="hidden md:table-cell p-2 sm:p-4">
                       {transaction.utm_source ? (

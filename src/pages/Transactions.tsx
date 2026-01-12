@@ -21,7 +21,13 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
 import { format } from 'date-fns';
-import { getDateRangeBrasiliaUTC, formatDateTimeBR } from '@/lib/dateUtils';
+import { getDateRangeBrasiliaUTC, formatDateTimeBR, formatDateTimeUTC } from '@/lib/dateUtils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { 
   Search, 
   Download, 
@@ -51,12 +57,26 @@ function TransactionCard({ transaction }: { transaction: any }) {
           <Badge variant="outline" className="ml-2 text-xs shrink-0">{transaction.currency}</Badge>
         </div>
         <div className="flex justify-between items-end">
-          <div className="text-xs text-muted-foreground">
-            {transaction.purchase_date 
-              ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
-              : 'Sem data'
-            }
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="text-xs text-muted-foreground cursor-help">
+                  {transaction.purchase_date 
+                    ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
+                    : 'Sem data'
+                  }
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  {transaction.purchase_date 
+                    ? formatDateTimeUTC(transaction.purchase_date, 'dd/MM/yyyy HH:mm:ss')
+                    : 'Sem data UTC'
+                  }
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <div className="text-sm font-semibold text-right">
             {formatCurrency(Number(transaction.computed_value), transaction.currency)}
           </div>
@@ -384,10 +404,26 @@ function Transactions() {
                         {formatCurrency(Number(transaction.computed_value), transaction.currency)}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {transaction.purchase_date 
-                          ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
-                          : '-'
-                        }
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">
+                                {transaction.purchase_date 
+                                  ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
+                                  : '-'
+                                }
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">
+                                {transaction.purchase_date 
+                                  ? formatDateTimeUTC(transaction.purchase_date, 'dd/MM/yyyy HH:mm:ss')
+                                  : 'Sem data UTC'
+                                }
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}
