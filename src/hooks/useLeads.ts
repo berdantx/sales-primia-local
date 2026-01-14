@@ -135,3 +135,39 @@ export function useLeadStats(filters?: LeadFilters) {
 
   return { stats, isLoading };
 }
+
+// Lightweight hook just for lead count (for Dashboard KPI)
+export function useLeadCount(filters?: { startDate?: Date; endDate?: Date; clientId?: string | null }) {
+  const { user } = useAuth();
+
+  const filterKey = filters ? {
+    startDate: filters.startDate?.toISOString(),
+    endDate: filters.endDate?.toISOString(),
+    clientId: filters.clientId,
+  } : null;
+
+  return useQuery({
+    queryKey: ['leads-count', user?.id, filterKey],
+    queryFn: async () => {
+      let query = supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true });
+
+      if (filters?.clientId) {
+        query = query.eq('client_id', filters.clientId);
+      }
+      if (filters?.startDate) {
+        query = query.gte('created_at', filters.startDate.toISOString());
+      }
+      if (filters?.endDate) {
+        query = query.lte('created_at', filters.endDate.toISOString());
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+
+      return count || 0;
+    },
+    enabled: !!user,
+  });
+}

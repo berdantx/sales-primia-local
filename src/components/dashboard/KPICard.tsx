@@ -3,7 +3,7 @@ import { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-interface KPICardProps {
+export interface KPICardProps {
   title: string;
   value: string;
   subtitle?: string;
@@ -14,6 +14,7 @@ interface KPICardProps {
   };
   className?: string;
   delay?: number;
+  onClick?: () => void;
 }
 
 export function KPICard({ 
@@ -23,7 +24,8 @@ export function KPICard({
   icon: Icon, 
   trend, 
   className,
-  delay = 0 
+  delay = 0,
+  onClick
 }: KPICardProps) {
   return (
     <motion.div
@@ -31,12 +33,16 @@ export function KPICard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: delay * 0.08, duration: 0.3 }}
     >
-      <Card className={cn(
-        "group relative overflow-hidden transition-all duration-300",
-        "hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
-        "border-border/50",
-        className
-      )}>
+      <Card 
+        className={cn(
+          "group relative overflow-hidden transition-all duration-300",
+          "hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5",
+          "border-border/50",
+          onClick && "cursor-pointer",
+          className
+        )}
+        onClick={onClick}
+      >
         {/* Subtle gradient overlay on hover */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Lead } from '@/hooks/useLeads';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,7 +17,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { formatDateTimeBR } from '@/lib/dateUtils';
-import { FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { LeadDetailDialog } from './LeadDetailDialog';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -46,12 +49,12 @@ function parseTags(tags: string | null): string[] {
 }
 
 // Mobile lead card component
-function LeadCard({ lead }: { lead: Lead }) {
+function LeadCard({ lead, onViewDetails }: { lead: Lead; onViewDetails: (lead: Lead) => void }) {
   const tags = parseTags(lead.tags);
   const source = lead.source || 'desconhecido';
   
   return (
-    <Card className="mb-2">
+    <Card className="mb-2 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onViewDetails(lead)}>
       <CardContent className="p-3 sm:p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1 min-w-0">
@@ -101,6 +104,14 @@ function LeadCard({ lead }: { lead: Lead }) {
 }
 
 export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  const handleViewDetails = (lead: Lead) => {
+    setSelectedLead(lead);
+    setDetailOpen(true);
+  };
+
   if (leads.length === 0) {
     return (
       <Card>
@@ -122,7 +133,7 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
       {/* Mobile: Card View */}
       <div className="md:hidden">
         {leads.map((lead) => (
-          <LeadCard key={lead.id} lead={lead} />
+          <LeadCard key={lead.id} lead={lead} onViewDetails={handleViewDetails} />
         ))}
       </div>
 
@@ -140,6 +151,7 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                   <TableHead>Fonte</TableHead>
                   <TableHead>UTM Source</TableHead>
                   <TableHead className="min-w-[150px]">Tags</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -148,7 +160,11 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                   const source = lead.source || 'desconhecido';
                   
                   return (
-                    <TableRow key={lead.id}>
+                    <TableRow 
+                      key={lead.id} 
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleViewDetails(lead)}
+                    >
                       <TableCell className="text-xs">
                         {formatDateTimeBR(lead.created_at, 'dd/MM/yy HH:mm')}
                       </TableCell>
@@ -216,6 +232,19 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetails(lead);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -224,6 +253,13 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Detail Dialog */}
+      <LeadDetailDialog 
+        lead={selectedLead} 
+        open={detailOpen} 
+        onOpenChange={setDetailOpen} 
+      />
     </>
   );
 }
