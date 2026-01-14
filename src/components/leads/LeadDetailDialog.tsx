@@ -45,9 +45,8 @@ const SOURCE_LABELS: Record<string, string> = {
 
 function parseTags(tags: string | null): string[] {
   if (!tags) return [];
-  const matches = tags.match(/\[([^\]]+)\]/g);
-  if (!matches) return [tags];
-  return matches.map(m => m.replace(/[\[\]]/g, ''));
+  // Tags são separadas por vírgula (ex: "[VSRI][ALUNO][T1], [VSRI][LEAD][T1]")
+  return tags.split(',').map(tag => tag.trim()).filter(Boolean);
 }
 
 function InfoRow({ 
