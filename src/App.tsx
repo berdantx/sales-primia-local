@@ -18,6 +18,7 @@ import WebhookLogs from "./pages/WebhookLogs";
 import WebhookConfig from "./pages/WebhookConfig";
 import Users from "./pages/Users";
 import Clients from "./pages/Clients";
+import Leads from "./pages/Leads";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
@@ -72,6 +73,7 @@ const App = () => (
                 <Clients />
               </ProtectedRoute>
             } />
+            <Route path="/leads" element={<Leads />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
