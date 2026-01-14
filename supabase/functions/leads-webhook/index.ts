@@ -241,14 +241,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Get params from query
-    const url = new URL(req.url);
-    const clientId = url.searchParams.get('client_id');
-    const querySource = url.searchParams.get('source');
-    
-    // Fallback to env vars if not in query
+    // Use environment variables for user/client (same pattern as other webhooks)
     const webhookUserId = Deno.env.get('WEBHOOK_USER_ID');
-    const webhookClientId = clientId || Deno.env.get('WEBHOOK_CLIENT_ID');
+    const webhookClientId = Deno.env.get('WEBHOOK_CLIENT_ID');
 
     if (!webhookUserId) {
       console.error('WEBHOOK_USER_ID not configured');
@@ -301,8 +296,8 @@ serve(async (req) => {
 
     console.log('Received lead payload:', JSON.stringify(rawPayload, null, 2));
 
-    // Detect source
-    const source = detectSource(bodyData, querySource);
+    // Detect source from payload (no query param needed)
+    const source = detectSource(bodyData, bodyData.source || null);
     console.log('Detected source:', source);
 
     // Parse based on source
