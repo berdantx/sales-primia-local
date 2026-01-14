@@ -30,6 +30,7 @@ import {
   Users,
   Send,
   Building2,
+  UserPlus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -46,6 +47,7 @@ const menuItems: MenuItem[] = [
   { title: 'Upload', url: '/upload', icon: Upload, roles: ['master', 'admin'] },
   { title: 'Hotmart', url: '/transactions', icon: FileText, roles: ['master', 'admin', 'user'] },
   { title: 'TMB', url: '/tmb-transactions', icon: Wallet, roles: ['master', 'admin', 'user'] },
+  { title: 'Leads', url: '/leads', icon: UserPlus, roles: ['master', 'admin', 'user'] },
   { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook, roles: ['master', 'admin'] },
   { title: 'Webhooks Externos', url: '/webhook-config', icon: Send, roles: ['master', 'admin'] },
   { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin', 'user'] },

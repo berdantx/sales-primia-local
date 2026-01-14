@@ -459,6 +459,92 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          customer_account: string | null
+          email: string
+          external_id: string | null
+          first_name: string | null
+          id: string
+          ip_address: string | null
+          last_name: string | null
+          organization: string | null
+          page_url: string | null
+          phone: string | null
+          raw_payload: Json | null
+          series_id: string | null
+          source: string | null
+          tags: string | null
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_id: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          customer_account?: string | null
+          email: string
+          external_id?: string | null
+          first_name?: string | null
+          id?: string
+          ip_address?: string | null
+          last_name?: string | null
+          organization?: string | null
+          page_url?: string | null
+          phone?: string | null
+          raw_payload?: Json | null
+          series_id?: string | null
+          source?: string | null
+          tags?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_id?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          customer_account?: string | null
+          email?: string
+          external_id?: string | null
+          first_name?: string | null
+          id?: string
+          ip_address?: string | null
+          last_name?: string | null
+          organization?: string | null
+          page_url?: string | null
+          phone?: string | null
+          raw_payload?: Json | null
+          series_id?: string | null
+          source?: string | null
+          tags?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_id?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       llm_integrations: {
         Row: {
           api_key: string
