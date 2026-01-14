@@ -26,6 +26,8 @@ interface LeadData {
   series_id: string | null;
 }
 
+type LeadSource = 'active_campaign' | 'hotmart' | 'eduzz' | 'n8n' | 'unknown';
+
 // Parse Active Campaign format: contact[field] and contact[fields][field]
 function parseActiveCampaignPayload(body: Record<string, string>): LeadData {
   return {
@@ -47,6 +49,152 @@ function parseActiveCampaignPayload(body: Record<string, string>): LeadData {
     page_url: body['contact[fields][link_pagina]'] || null,
     series_id: body['seriesid'] || null,
   };
+}
+
+// Parse Hotmart webhook format
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseHotmartPayload(body: any): LeadData {
+  // Hotmart can send in v1 or v2 format
+  const data = body.data || body;
+  const buyer = data.buyer || body.buyer || {};
+  const purchase = data.purchase || body.purchase || {};
+  const subscription = data.subscription || body.subscription || {};
+  
+  // Extract UTMs from tracking or sck
+  const tracking = purchase.tracking || {};
+  const sck = purchase.origin?.sck || '';
+  
+  return {
+    external_id: buyer.code || null,
+    email: buyer.email || '',
+    first_name: buyer.name?.split(' ')[0] || null,
+    last_name: buyer.name?.split(' ').slice(1).join(' ') || null,
+    phone: buyer.phone || buyer.checkout_phone || null,
+    ip_address: purchase.buyer_ip || null,
+    organization: null,
+    customer_account: null,
+    tags: subscription.plan?.name ? `[${subscription.plan.name}]` : null,
+    utm_source: tracking.source || tracking.src || null,
+    utm_medium: tracking.medium || null,
+    utm_campaign: tracking.campaign || null,
+    utm_id: null,
+    utm_term: null,
+    utm_content: tracking.content || null,
+    page_url: tracking.external_code || null,
+    series_id: sck || null,
+  };
+}
+
+// Parse Eduzz webhook format
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseEduzzPayload(body: any): LeadData {
+  // Eduzz sends customer data
+  const customer = body.customer || body.cliente || body;
+  const sale = body.sale || body.venda || {};
+  const utm = body.utm || sale.utm || {};
+  
+  const fullName = customer.name || customer.nome || '';
+  const nameParts = fullName.split(' ');
+  
+  return {
+    external_id: customer.id?.toString() || customer.code || null,
+    email: customer.email || '',
+    first_name: nameParts[0] || null,
+    last_name: nameParts.slice(1).join(' ') || null,
+    phone: customer.phone || customer.telefone || customer.cellphone || null,
+    ip_address: sale.buyer_ip || body.ip || null,
+    organization: null,
+    customer_account: null,
+    tags: sale.product_name ? `[${sale.product_name}]` : null,
+    utm_source: utm.source || utm.utm_source || null,
+    utm_medium: utm.medium || utm.utm_medium || null,
+    utm_campaign: utm.campaign || utm.utm_campaign || null,
+    utm_id: utm.id || utm.utm_id || null,
+    utm_term: utm.term || utm.utm_term || null,
+    utm_content: utm.content || utm.utm_content || null,
+    page_url: sale.checkout_url || null,
+    series_id: sale.tracker || null,
+  };
+}
+
+// Parse generic/n8n format (flexible)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseGenericPayload(body: any): LeadData {
+  // Try to find email in various places
+  const email = body.email || body.contact_email || body.buyer_email || 
+                body.customer?.email || body.contact?.email || '';
+  
+  // Try to find name
+  const name = body.name || body.full_name || body.contact_name || 
+               body.buyer_name || body.customer?.name || body.contact?.name || '';
+  const nameParts = name.split(' ');
+  
+  return {
+    external_id: body.id?.toString() || body.external_id || body.contact_id || null,
+    email,
+    first_name: body.first_name || body.firstName || nameParts[0] || null,
+    last_name: body.last_name || body.lastName || nameParts.slice(1).join(' ') || null,
+    phone: body.phone || body.telefone || body.cellphone || body.whatsapp || null,
+    ip_address: body.ip || body.ip_address || body.buyer_ip || null,
+    organization: body.organization || body.company || body.empresa || null,
+    customer_account: body.customer_account || null,
+    tags: body.tags || null,
+    utm_source: body.utm_source || body.source || null,
+    utm_medium: body.utm_medium || body.medium || null,
+    utm_campaign: body.utm_campaign || body.campaign || null,
+    utm_id: body.utm_id || null,
+    utm_term: body.utm_term || null,
+    utm_content: body.utm_content || null,
+    page_url: body.page_url || body.landing_page || body.referrer || null,
+    series_id: body.series_id || body.list_id || null,
+  };
+}
+
+// Detect the source from payload structure
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function detectSource(body: any, querySource: string | null): LeadSource {
+  // Explicit source in query or body
+  if (querySource) {
+    const normalized = querySource.toLowerCase();
+    if (['active_campaign', 'hotmart', 'eduzz', 'n8n'].includes(normalized)) {
+      return normalized as LeadSource;
+    }
+  }
+  if (body.source) {
+    const normalized = body.source.toLowerCase();
+    if (['active_campaign', 'hotmart', 'eduzz', 'n8n'].includes(normalized)) {
+      return normalized as LeadSource;
+    }
+  }
+  
+  // Detect by payload structure
+  // Active Campaign format
+  if (body['contact[email]'] || body['contact[id]']) {
+    return 'active_campaign';
+  }
+  
+  // Hotmart format
+  if (body.event && (body.event.includes('PURCHASE') || body.event.includes('SUBSCRIPTION'))) {
+    return 'hotmart';
+  }
+  if (body.data?.buyer || body.buyer) {
+    return 'hotmart';
+  }
+  
+  // Eduzz format
+  if (body.trans_cod || body.cliente || body.eduzz_id) {
+    return 'eduzz';
+  }
+  if (body.api_key || body.sale?.eduzz_id) {
+    return 'eduzz';
+  }
+  
+  // n8n wrapper
+  if (body.webhookUrl?.includes('n8n')) {
+    return 'n8n';
+  }
+  
+  return 'unknown';
 }
 
 // Helper function to log webhook events
@@ -93,9 +241,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Get client_id from query params
+    // Get params from query
     const url = new URL(req.url);
     const clientId = url.searchParams.get('client_id');
+    const querySource = url.searchParams.get('source');
     
     // Fallback to env vars if not in query
     const webhookUserId = Deno.env.get('WEBHOOK_USER_ID');
@@ -111,11 +260,11 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse the incoming body - Active Campaign sends application/x-www-form-urlencoded
+    // Parse the incoming body
     const contentType = req.headers.get('content-type') || '';
-    let bodyData: Record<string, string> = {};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let bodyData: any = {};
     let rawPayload: unknown;
-    let source = 'active_campaign';
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await req.text();
@@ -129,15 +278,10 @@ serve(async (req) => {
       rawPayload = jsonBody;
       
       // Handle n8n wrapper format: { body: { ... } }
-      if (jsonBody.body && typeof jsonBody.body === 'object') {
+      if (jsonBody.body && typeof jsonBody.body === 'object' && !Array.isArray(jsonBody.body)) {
         bodyData = jsonBody.body;
       } else {
         bodyData = jsonBody;
-      }
-      
-      // Detect source from payload structure
-      if (jsonBody.source) {
-        source = jsonBody.source;
       }
     } else {
       // Try to parse as JSON anyway
@@ -157,8 +301,29 @@ serve(async (req) => {
 
     console.log('Received lead payload:', JSON.stringify(rawPayload, null, 2));
 
-    // Parse the lead data
-    const leadData = parseActiveCampaignPayload(bodyData);
+    // Detect source
+    const source = detectSource(bodyData, querySource);
+    console.log('Detected source:', source);
+
+    // Parse based on source
+    let leadData: LeadData;
+    switch (source) {
+      case 'hotmart':
+        leadData = parseHotmartPayload(bodyData);
+        break;
+      case 'eduzz':
+        leadData = parseEduzzPayload(bodyData);
+        break;
+      case 'active_campaign':
+        leadData = parseActiveCampaignPayload(bodyData);
+        break;
+      case 'n8n':
+      default:
+        leadData = parseGenericPayload(bodyData);
+        break;
+    }
+
+    console.log('Parsed lead data:', JSON.stringify(leadData, null, 2));
     
     if (!leadData.email) {
       console.log('Missing email, skipping lead');
@@ -200,7 +365,7 @@ serve(async (req) => {
       utm_content: leadData.utm_content,
       page_url: leadData.page_url,
       series_id: leadData.series_id,
-      source,
+      source: source === 'unknown' ? 'n8n' : source,
       raw_payload: rawPayload,
     };
 
@@ -249,6 +414,7 @@ serve(async (req) => {
       success: true,
       message: 'Lead processed successfully',
       lead_id: data.id,
+      source,
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

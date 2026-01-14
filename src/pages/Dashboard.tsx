@@ -4,6 +4,7 @@ import { DateRange } from 'react-day-picker';
 import { useCombinedStats, PlatformType } from '@/hooks/useCombinedStats';
 import { useActiveGoals } from '@/hooks/useGoals';
 import { useDollarRate } from '@/hooks/useDollarRate';
+import { useLeadCount } from '@/hooks/useLeads';
 import { useFilter } from '@/contexts/FilterContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
@@ -30,6 +31,7 @@ import {
   Loader2,
   Calendar,
   AlertTriangle,
+  UserPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -116,6 +118,13 @@ export default function Dashboard() {
   
   // Fetch dollar rate for USD conversion
   const { data: dollarRate, isLoading: isLoadingRate, isError: isRateError } = useDollarRate();
+  
+  // Fetch lead count for the period
+  const { data: leadCount } = useLeadCount({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    clientId,
+  });
   
   // Calculate platform totals for pie chart - include USD converted to BRL
   const hotmartBRL = hotmartStats?.totalByCurrency?.['BRL'] || 0;
@@ -236,7 +245,7 @@ export default function Dashboard() {
           // Combined view: single card with BRL + USD converted
           if (currencyView === 'combined') {
             return (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 <KPICard
                   title="Faturamento Total (BRL)"
                   value={formatCurrency(totalCombinedBRL, 'BRL')}
@@ -265,6 +274,15 @@ export default function Dashboard() {
                   icon={ShoppingCart}
                   delay={2}
                 />
+                <KPICard
+                  title="Total de Leads"
+                  value={formatNumber(leadCount || 0)}
+                  subtitle="no período"
+                  icon={UserPlus}
+                  delay={3}
+                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => navigate('/leads')}
+                />
               </div>
             );
           }
@@ -272,7 +290,7 @@ export default function Dashboard() {
           // BRL-only view: single card with just BRL
           if (currencyView === 'brl-only') {
             return (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
                 <KPICard
                   title="Vendas em Reais"
                   value={formatCurrency(brlTotal, 'BRL')}
@@ -285,13 +303,22 @@ export default function Dashboard() {
                   icon={ShoppingCart}
                   delay={1}
                 />
+                <KPICard
+                  title="Total de Leads"
+                  value={formatNumber(leadCount || 0)}
+                  subtitle="no período"
+                  icon={UserPlus}
+                  delay={2}
+                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => navigate('/leads')}
+                />
               </div>
             );
           }
           
           // Separated view: separate cards for each currency
           return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
               <KPICard
                 title="Vendas em Reais"
                 value={formatCurrency(brlTotal, 'BRL')}
@@ -315,6 +342,15 @@ export default function Dashboard() {
                 value={formatNumber(stats.totalTransactions)}
                 icon={ShoppingCart}
                 delay={2}
+              />
+              <KPICard
+                title="Total de Leads"
+                value={formatNumber(leadCount || 0)}
+                subtitle="no período"
+                icon={UserPlus}
+                delay={3}
+                className="cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => navigate('/leads')}
               />
             </div>
           );
