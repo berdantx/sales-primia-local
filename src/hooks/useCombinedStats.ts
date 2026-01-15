@@ -9,6 +9,11 @@ import {
   useTmbTopCustomersOptimized, 
   useTmbSalesByDateOptimized 
 } from '@/hooks/useTmbTransactionStatsOptimized';
+import { 
+  useEduzzTransactionStatsOptimized, 
+  useEduzzTopCustomersOptimized, 
+  useEduzzSalesByDateOptimized 
+} from '@/hooks/useEduzzTransactionStatsOptimized';
 
 export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz';
 
@@ -25,29 +30,42 @@ export interface CombinedFilters {
 export function useCombinedStats(filters: CombinedFilters, platform: PlatformType) {
   // Hotmart stats
   const { data: hotmartStats, isLoading: hotmartLoading } = useTransactionStatsOptimized(
-    platform !== 'tmb' ? filters : { startDate: undefined, endDate: undefined }
+    platform !== 'tmb' && platform !== 'eduzz' ? filters : { startDate: undefined, endDate: undefined }
   );
   const { data: hotmartTopCustomers, isLoading: hotmartCustomersLoading } = useTopCustomersOptimized(
-    platform !== 'tmb' ? filters : { startDate: undefined, endDate: undefined }
+    platform !== 'tmb' && platform !== 'eduzz' ? filters : { startDate: undefined, endDate: undefined }
   );
   const { data: hotmartSalesByDate, isLoading: hotmartSalesLoading } = useSalesByDateOptimized(
-    platform !== 'tmb' ? filters : { startDate: undefined, endDate: undefined }
+    platform !== 'tmb' && platform !== 'eduzz' ? filters : { startDate: undefined, endDate: undefined }
   );
 
   // TMB stats (simplified filters, no advanced filters for TMB)
   const tmbFilters = { startDate: filters.startDate, endDate: filters.endDate, clientId: filters.clientId };
   const { data: tmbStats, isLoading: tmbLoading } = useTmbTransactionStatsOptimized(
-    platform !== 'hotmart' ? tmbFilters : { startDate: undefined, endDate: undefined }
+    platform !== 'hotmart' && platform !== 'eduzz' ? tmbFilters : { startDate: undefined, endDate: undefined }
   );
   const { data: tmbTopCustomers, isLoading: tmbCustomersLoading } = useTmbTopCustomersOptimized(
-    platform !== 'hotmart' ? tmbFilters : { startDate: undefined, endDate: undefined }
+    platform !== 'hotmart' && platform !== 'eduzz' ? tmbFilters : { startDate: undefined, endDate: undefined }
   );
   const { data: tmbSalesByDate, isLoading: tmbSalesLoading } = useTmbSalesByDateOptimized(
-    platform !== 'hotmart' ? tmbFilters : { startDate: undefined, endDate: undefined }
+    platform !== 'hotmart' && platform !== 'eduzz' ? tmbFilters : { startDate: undefined, endDate: undefined }
+  );
+
+  // Eduzz stats (simplified filters, like TMB)
+  const eduzzFilters = { startDate: filters.startDate, endDate: filters.endDate, clientId: filters.clientId };
+  const { data: eduzzStats, isLoading: eduzzLoading } = useEduzzTransactionStatsOptimized(
+    platform !== 'hotmart' && platform !== 'tmb' ? eduzzFilters : { startDate: undefined, endDate: undefined }
+  );
+  const { data: eduzzTopCustomers, isLoading: eduzzCustomersLoading } = useEduzzTopCustomersOptimized(
+    platform !== 'hotmart' && platform !== 'tmb' ? eduzzFilters : { startDate: undefined, endDate: undefined }
+  );
+  const { data: eduzzSalesByDate, isLoading: eduzzSalesLoading } = useEduzzSalesByDateOptimized(
+    platform !== 'hotmart' && platform !== 'tmb' ? eduzzFilters : { startDate: undefined, endDate: undefined }
   );
 
   const isLoading = hotmartLoading || hotmartCustomersLoading || hotmartSalesLoading ||
-                    tmbLoading || tmbCustomersLoading || tmbSalesLoading;
+                    tmbLoading || tmbCustomersLoading || tmbSalesLoading ||
+                    eduzzLoading || eduzzCustomersLoading || eduzzSalesLoading;
 
   // Combined stats based on platform
   const stats = useMemo(() => {
@@ -65,32 +83,45 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
       };
     }
 
+    if (platform === 'eduzz') {
+      return {
+        totalByCurrency: { BRL: eduzzStats?.totalBRL || 0 },
+        totalByCountry: {},
+        totalByCountryCurrency: {},
+        totalTransactions: eduzzStats?.totalTransactions || 0,
+        transactionsWithoutDate: eduzzStats?.transactionsWithoutDate || 0,
+      };
+    }
+
     // Combined 'all'
     const hotmartBRL = hotmartStats?.totalByCurrency?.['BRL'] || 0;
     const hotmartUSD = hotmartStats?.totalByCurrency?.['USD'] || 0;
     const tmbBRL = tmbStats?.totalBRL || 0;
+    const eduzzBRL = eduzzStats?.totalBRL || 0;
 
     return {
       totalByCurrency: {
-        BRL: hotmartBRL + tmbBRL,
+        BRL: hotmartBRL + tmbBRL + eduzzBRL,
         ...(hotmartUSD > 0 ? { USD: hotmartUSD } : {}),
       },
       totalByCountry: hotmartStats?.totalByCountry || {},
       totalByCountryCurrency: hotmartStats?.totalByCountryCurrency || {},
-      totalTransactions: (hotmartStats?.totalTransactions || 0) + (tmbStats?.totalTransactions || 0),
-      transactionsWithoutDate: (hotmartStats?.transactionsWithoutDate || 0) + (tmbStats?.transactionsWithoutDate || 0),
+      totalTransactions: (hotmartStats?.totalTransactions || 0) + (tmbStats?.totalTransactions || 0) + (eduzzStats?.totalTransactions || 0),
+      transactionsWithoutDate: (hotmartStats?.transactionsWithoutDate || 0) + (tmbStats?.transactionsWithoutDate || 0) + (eduzzStats?.transactionsWithoutDate || 0),
     };
-  }, [platform, hotmartStats, tmbStats]);
+  }, [platform, hotmartStats, tmbStats, eduzzStats]);
 
   // Combined top customers
   const topCustomers = useMemo(() => {
     if (platform === 'hotmart') return hotmartTopCustomers || [];
     if (platform === 'tmb') return tmbTopCustomers || [];
+    if (platform === 'eduzz') return eduzzTopCustomers || [];
 
     // Merge and sort by totalValue
     const allCustomers = [
       ...(hotmartTopCustomers || []),
       ...(tmbTopCustomers || []),
+      ...(eduzzTopCustomers || []),
     ];
 
     // Group by email and sum values
@@ -111,12 +142,13 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
     return Array.from(customerMap.values())
       .sort((a, b) => b.totalValue - a.totalValue)
       .slice(0, 10);
-  }, [platform, hotmartTopCustomers, tmbTopCustomers]);
+  }, [platform, hotmartTopCustomers, tmbTopCustomers, eduzzTopCustomers]);
 
   // Combined sales by date
   const salesByDate = useMemo(() => {
     if (platform === 'hotmart') return hotmartSalesByDate || {};
     if (platform === 'tmb') return tmbSalesByDate || {};
+    if (platform === 'eduzz') return eduzzSalesByDate || {};
 
     // Merge dates
     const combined: Record<string, Record<string, number>> = {};
@@ -134,8 +166,16 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
       combined[date].BRL = (combined[date].BRL || 0) + (currencies.BRL || 0);
     });
 
+    // Add Eduzz data (BRL only)
+    Object.entries(eduzzSalesByDate || {}).forEach(([date, currencies]) => {
+      if (!combined[date]) {
+        combined[date] = {};
+      }
+      combined[date].BRL = (combined[date].BRL || 0) + (currencies.BRL || 0);
+    });
+
     return combined;
-  }, [platform, hotmartSalesByDate, tmbSalesByDate]);
+  }, [platform, hotmartSalesByDate, tmbSalesByDate, eduzzSalesByDate]);
 
   const currencies = useMemo(() => {
     if (!stats?.totalByCurrency) return [];
@@ -151,5 +191,6 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
     // Individual platform data for comparison
     hotmartStats,
     tmbStats,
+    eduzzStats,
   };
 }
