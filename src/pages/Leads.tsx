@@ -62,7 +62,7 @@ function Leads() {
     to: new Date(),
   });
   
-  const { clientId } = useFilter();
+  const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
 
   const filters = useMemo(() => {
@@ -73,8 +73,8 @@ function Leads() {
     };
   }, [clientId, dateRange]);
 
-  const { data: leads, isLoading } = useLeads(filters);
-  const { stats, isLoading: isLoadingStats } = useLeadStats(filters);
+  const { data: leads, isLoading } = useLeads(isReady ? filters : undefined);
+  const { stats, isLoading: isLoadingStats } = useLeadStats(isReady ? filters : undefined);
 
   // Get unique sources and utm_sources for filters
   const { sources, utmSources } = useMemo(() => {
@@ -216,7 +216,7 @@ function Leads() {
     }
   };
 
-  if (isLoading || isLoadingStats) {
+  if (!isReady || isLoading || isLoadingStats) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-[60vh]">
