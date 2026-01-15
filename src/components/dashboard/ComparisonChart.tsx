@@ -8,13 +8,15 @@ import { ptBR } from 'date-fns/locale';
 interface ComparisonChartProps {
   hotmartData: Record<string, Record<string, number>>;
   tmbData: Record<string, Record<string, number>>;
+  eduzzData: Record<string, Record<string, number>>;
 }
 
-export function ComparisonChart({ hotmartData, tmbData }: ComparisonChartProps) {
+export function ComparisonChart({ hotmartData, tmbData, eduzzData }: ComparisonChartProps) {
   const chartData = useMemo(() => {
     const allDates = new Set([
       ...Object.keys(hotmartData),
       ...Object.keys(tmbData),
+      ...Object.keys(eduzzData),
     ]);
 
     return Array.from(allDates)
@@ -24,8 +26,9 @@ export function ComparisonChart({ hotmartData, tmbData }: ComparisonChartProps) 
         date,
         Hotmart: hotmartData[date]?.BRL || 0,
         TMB: tmbData[date]?.BRL || 0,
+        Eduzz: eduzzData[date]?.BRL || 0,
       }));
-  }, [hotmartData, tmbData]);
+  }, [hotmartData, tmbData, eduzzData]);
 
   const formatValue = (value: number) => {
     if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
@@ -51,7 +54,7 @@ export function ComparisonChart({ hotmartData, tmbData }: ComparisonChartProps) 
       <Card>
         <CardHeader className="pb-2">
           <CardTitle>Evolução Comparativa (BRL)</CardTitle>
-          <p className="text-sm text-muted-foreground">Hotmart vs TMB - Últimos 30 dias</p>
+          <p className="text-sm text-muted-foreground">Hotmart vs TMB vs Eduzz - Últimos 30 dias</p>
         </CardHeader>
         <CardContent>
           <div className="h-[350px]">
@@ -65,6 +68,10 @@ export function ComparisonChart({ hotmartData, tmbData }: ComparisonChartProps) 
                   <linearGradient id="colorTMB" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(160, 100%, 35%)" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="hsl(160, 100%, 35%)" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorEduzz" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(270, 70%, 50%)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="hsl(270, 70%, 50%)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -103,6 +110,14 @@ export function ComparisonChart({ hotmartData, tmbData }: ComparisonChartProps) 
                   stroke="hsl(160, 100%, 35%)"
                   fillOpacity={1}
                   fill="url(#colorTMB)"
+                  strokeWidth={2}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="Eduzz"
+                  stroke="hsl(270, 70%, 50%)"
+                  fillOpacity={1}
+                  fill="url(#colorEduzz)"
                   strokeWidth={2}
                 />
               </AreaChart>

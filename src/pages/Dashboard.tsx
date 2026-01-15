@@ -133,6 +133,7 @@ export default function Dashboard() {
     ? hotmartBRL 
     : hotmartBRL + (dollarRate ? hotmartUSD * dollarRate.rate : 0);
   const tmbTotalBRL = tmbStats?.totalBRL || 0;
+  const eduzzTotalBRL = eduzzStats?.totalBRL || 0;
 
   const { activeGoals } = useActiveGoals(clientId);
 
@@ -450,10 +451,11 @@ export default function Dashboard() {
               
               {/* Secondary chart - 1/3 width */}
               <div className="flex flex-col h-full min-w-0">
-                {(hotmartTotalBRL > 0 || tmbTotalBRL > 0) && (
+                {(hotmartTotalBRL > 0 || tmbTotalBRL > 0 || eduzzTotalBRL > 0) && (
                   <PlatformSharePieChart 
                     hotmartTotal={hotmartTotalBRL} 
-                    tmbTotal={tmbTotalBRL} 
+                    tmbTotal={tmbTotalBRL}
+                    eduzzTotal={eduzzTotalBRL}
                   />
                 )}
               </div>
