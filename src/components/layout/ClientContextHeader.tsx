@@ -3,6 +3,7 @@ import { useFilter } from '@/contexts/FilterContext';
 import { useClients } from '@/hooks/useClients';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,15 +26,10 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
   const displayName = selectedClient?.name || 'Todos os clientes';
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
           {title}
-          {isMaster && (
-            <span className="text-muted-foreground font-normal text-lg sm:text-xl">
-              {' '}- {displayName}
-            </span>
-          )}
         </h1>
 
         {isMaster && clients && clients.length > 0 && (
@@ -70,6 +66,18 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
           </DropdownMenu>
         )}
       </div>
+
+      {isMaster && (
+        <div className="flex items-center gap-2">
+          <Badge 
+            variant="outline" 
+            className="px-3 py-1.5 text-sm font-medium border-primary/50 bg-primary/10 text-primary"
+          >
+            <Building2 className="h-3.5 w-3.5 mr-1.5" />
+            {displayName}
+          </Badge>
+        </div>
+      )}
 
       {description && (
         <p className="text-muted-foreground text-xs sm:text-sm">
