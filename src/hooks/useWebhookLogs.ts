@@ -19,6 +19,7 @@ export interface WebhookLogsFilters {
   endDate?: Date;
   search?: string;
   clientId?: string | null;
+  platform?: string;
 }
 
 export interface WebhookStats {
@@ -59,6 +60,16 @@ export function useWebhookLogs(filters: WebhookLogsFilters = {}) {
 
       if (filters.search) {
         query = query.or(`transaction_code.ilike.%${filters.search}%,event_type.ilike.%${filters.search}%`);
+      }
+
+      if (filters.platform && filters.platform !== 'all') {
+        if (filters.platform === 'hotmart') {
+          query = query.ilike('event_type', '%PURCHASE%');
+        } else if (filters.platform === 'tmb') {
+          query = query.ilike('event_type', 'tmb_%');
+        } else if (filters.platform === 'eduzz') {
+          query = query.ilike('event_type', 'eduzz_%');
+        }
       }
 
       const { data, error } = await query.limit(500);
