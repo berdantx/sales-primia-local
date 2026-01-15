@@ -115,6 +115,90 @@ export type Database = {
         }
         Relationships: []
       }
+      eduzz_transactions: {
+        Row: {
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_phone: string | null
+          client_id: string | null
+          created_at: string | null
+          currency: string | null
+          id: string
+          import_id: string | null
+          invoice_code: string | null
+          product: string | null
+          product_id: string | null
+          sale_date: string | null
+          sale_id: string
+          sale_value: number
+          source: string | null
+          user_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          import_id?: string | null
+          invoice_code?: string | null
+          product?: string | null
+          product_id?: string | null
+          sale_date?: string | null
+          sale_id: string
+          sale_value?: number
+          source?: string | null
+          user_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          import_id?: string | null
+          invoice_code?: string | null
+          product?: string | null
+          product_id?: string | null
+          sale_date?: string | null
+          sale_id?: string
+          sale_value?: number
+          source?: string | null
+          user_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eduzz_transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eduzz_transactions_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       external_webhooks: {
         Row: {
           client_id: string | null
@@ -891,6 +975,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_eduzz_filter_options: {
+        Args: { p_client_id?: string }
+        Returns: Json
+      }
+      get_eduzz_sales_by_date: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
+      get_eduzz_top_customers: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_limit?: number
+          p_start_date?: string
+        }
+        Returns: Json
+      }
+      get_eduzz_transaction_stats: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
       get_filter_options_with_counts: {
         Args: { p_client_id?: string }
         Returns: Json
