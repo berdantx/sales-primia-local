@@ -6,20 +6,23 @@ import { formatCurrency } from '@/lib/calculations/goalCalculations';
 interface PlatformSharePieChartProps {
   hotmartTotal: number;
   tmbTotal: number;
+  eduzzTotal: number;
 }
 
 const COLORS = {
   Hotmart: 'hsl(217, 100%, 50%)',
   TMB: 'hsl(160, 100%, 35%)',
+  Eduzz: 'hsl(270, 70%, 50%)',
 };
 
-export function PlatformSharePieChart({ hotmartTotal, tmbTotal }: PlatformSharePieChartProps) {
+export function PlatformSharePieChart({ hotmartTotal, tmbTotal, eduzzTotal }: PlatformSharePieChartProps) {
   const data = [
     { name: 'Hotmart', value: hotmartTotal },
     { name: 'TMB', value: tmbTotal },
+    { name: 'Eduzz', value: eduzzTotal },
   ].filter(d => d.value > 0);
 
-  const total = hotmartTotal + tmbTotal;
+  const total = hotmartTotal + tmbTotal + eduzzTotal;
 
   const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: {
     cx: number;

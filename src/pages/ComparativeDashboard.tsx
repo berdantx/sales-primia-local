@@ -17,6 +17,10 @@ import {
   useTmbTransactionStatsOptimized, 
   useTmbSalesByDateOptimized 
 } from '@/hooks/useTmbTransactionStatsOptimized';
+import {
+  useEduzzTransactionStatsOptimized,
+  useEduzzSalesByDateOptimized,
+} from '@/hooks/useEduzzTransactionStatsOptimized';
 import { Button } from '@/components/ui/button';
 import { 
   Select,
@@ -61,10 +65,16 @@ function ComparativeDashboard() {
   const { data: tmbStats, isLoading: loadingTmbStats } = useTmbTransactionStatsOptimized(dateRange);
   const { data: tmbSales, isLoading: loadingTmbSales } = useTmbSalesByDateOptimized(dateRange);
 
+  // Eduzz data
+  const { data: eduzzStats, isLoading: loadingEduzzStats } = useEduzzTransactionStatsOptimized(dateRange);
+  const { data: eduzzSales, isLoading: loadingEduzzSales } = useEduzzSalesByDateOptimized(dateRange);
+
   // Dollar rate
   const { data: dollarRate, isLoading: isLoadingRate, isError: isRateError } = useDollarRate();
 
-  const isLoading = loadingHotmartStats || loadingHotmartSales || loadingTmbStats || loadingTmbSales;
+  const isLoading = loadingHotmartStats || loadingHotmartSales || 
+                    loadingTmbStats || loadingTmbSales ||
+                    loadingEduzzStats || loadingEduzzSales;
 
   const hotmartPlatformStats = useMemo(() => {
     if (!hotmartStats) return null;
@@ -83,6 +93,14 @@ function ComparativeDashboard() {
     };
   }, [tmbStats]);
 
+  const eduzzPlatformStats = useMemo(() => {
+    if (!eduzzStats) return null;
+    return {
+      totalBRL: eduzzStats.totalBRL || 0,
+      totalTransactions: eduzzStats.totalTransactions || 0,
+    };
+  }, [eduzzStats]);
+
   // Calculate pie chart totals with currency conversion
   const hotmartTotalForPie = useMemo(() => {
     const brl = hotmartPlatformStats?.totalBRL || 0;
@@ -90,6 +108,10 @@ function ComparativeDashboard() {
     if (currencyView === 'brl-only') return brl;
     return brl + (dollarRate ? usd * dollarRate.rate : 0);
   }, [hotmartPlatformStats, dollarRate, currencyView]);
+
+  const eduzzTotalForPie = useMemo(() => {
+    return eduzzPlatformStats?.totalBRL || 0;
+  }, [eduzzPlatformStats]);
 
   if (isLoading) {
     return (
@@ -117,7 +139,7 @@ function ComparativeDashboard() {
             <div>
               <h1 className="text-3xl font-bold">Análise Comparativa</h1>
               <p className="text-muted-foreground">
-                Hotmart vs TMB - Lado a lado
+                Hotmart vs TMB vs Eduzz - Lado a lado
               </p>
             </div>
           </div>
@@ -180,6 +202,7 @@ function ComparativeDashboard() {
         <PlatformComparisonCards 
           hotmartStats={hotmartPlatformStats} 
           tmbStats={tmbPlatformStats}
+          eduzzStats={eduzzPlatformStats}
         />
 
         {/* Charts Row */}
@@ -187,13 +210,15 @@ function ComparativeDashboard() {
           <div className="lg:col-span-2">
             <ComparisonChart 
               hotmartData={hotmartSales || {}} 
-              tmbData={tmbSales || {}} 
+              tmbData={tmbSales || {}}
+              eduzzData={eduzzSales || {}}
             />
           </div>
           <div>
             <PlatformSharePieChart 
               hotmartTotal={hotmartTotalForPie} 
-              tmbTotal={tmbPlatformStats?.totalBRL || 0} 
+              tmbTotal={tmbPlatformStats?.totalBRL || 0}
+              eduzzTotal={eduzzTotalForPie}
             />
           </div>
         </div>

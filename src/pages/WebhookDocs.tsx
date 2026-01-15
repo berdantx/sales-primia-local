@@ -13,7 +13,8 @@ import {
   ArrowRight,
   Code,
   Users,
-  Zap
+  Zap,
+  Settings
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -34,7 +35,7 @@ function WebhookDocs() {
             Documentação de Webhooks
           </h1>
           <p className="text-muted-foreground">
-            Guia completo para configurar webhooks e receber leads automaticamente
+            Guia completo para configurar webhooks e receber leads e vendas automaticamente
           </p>
         </motion.div>
 
@@ -48,7 +49,7 @@ function WebhookDocs() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              Webhooks permitem que você receba dados de leads automaticamente de diferentes plataformas 
+              Webhooks permitem que você receba dados de leads e vendas automaticamente de diferentes plataformas 
               como Active Campaign, Hotmart e Eduzz. Cada cliente possui sua própria URL de webhook única.
             </p>
             
@@ -254,32 +255,104 @@ function WebhookDocs() {
 
               <TabsContent value="eduzz" className="space-y-4 mt-6">
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">Postback</Badge>
+                  <Badge variant="secondary">Webhook Direto</Badge>
                   <Badge variant="outline">JSON</Badge>
                 </div>
                 
                 <Separator />
                 
                 <div className="space-y-6">
+                  {/* Endpoint de Vendas */}
+                  <div>
+                    <h4 className="font-medium mb-3 flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Endpoint de Vendas Eduzz
+                    </h4>
+                    <code className="block bg-muted p-3 rounded text-sm overflow-x-auto">
+                      POST {SUPABASE_URL}/functions/v1/eduzz-webhook
+                    </code>
+                  </div>
+
                   <div>
                     <h4 className="font-medium mb-3">Passo a Passo</h4>
                     <ol className="list-decimal list-inside space-y-3 text-muted-foreground">
                       <li>Acesse sua conta na <strong>Eduzz</strong></li>
-                      <li>Vá em <strong>Minha Conta</strong> → <strong>Configurações</strong></li>
-                      <li>Procure a seção de <strong>Integrações</strong> ou <strong>Webhooks</strong></li>
-                      <li>Adicione uma nova URL de postback</li>
-                      <li>Cole a URL do webhook do cliente</li>
-                      <li>Configure os eventos de notificação</li>
+                      <li>Vá em <strong>Minha Conta</strong> → <strong>Integrações</strong></li>
+                      <li>Procure a seção de <strong>Webhooks/Postbacks</strong></li>
+                      <li>Adicione uma nova URL de webhook</li>
+                      <li>Cole a URL do endpoint acima</li>
+                      <li>Configure para receber eventos de venda aprovada</li>
                       <li>Salve as configurações</li>
                     </ol>
                   </div>
+
+                  <div>
+                    <h4 className="font-medium mb-3">Status Processados</h4>
+                    <div className="grid gap-2 text-sm">
+                      <div className="flex items-center gap-2 py-2 border-b">
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                        <span><strong>approved</strong>, <strong>aprovado</strong>, <strong>pago</strong>, <strong>paid</strong>, <strong>completed</strong></span>
+                      </div>
+                      <div className="flex items-center gap-2 py-2">
+                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Outros status são ignorados automaticamente</span>
+                      </div>
+                    </div>
+                  </div>
                   
+                  <div>
+                    <h4 className="font-medium mb-3">Campos Capturados</h4>
+                    <div className="grid gap-2 text-sm">
+                      <div className="flex justify-between py-2 border-b">
+                        <span>ID da Venda</span>
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">sale_id / id</code>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span>Produto</span>
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">product_name / product</code>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span>Email do comprador</span>
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">client_email / buyer_email</code>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span>Nome do comprador</span>
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">client_name / buyer_name</code>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span>Telefone</span>
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">client_phone / buyer_phone</code>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span>Valor da Venda</span>
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">sale_amount / sale_value / value</code>
+                      </div>
+                      <div className="flex justify-between py-2 border-b">
+                        <span>Data da Venda</span>
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">sale_date / created_at</code>
+                      </div>
+                      <div className="flex justify-between py-2">
+                        <span>UTMs</span>
+                        <code className="text-xs bg-muted px-2 py-0.5 rounded">utm_source, utm_medium, utm_campaign, utm_content</code>
+                      </div>
+                    </div>
+                  </div>
+
                   <Alert variant="default">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Configuração via Variáveis de Ambiente</AlertTitle>
+                    <AlertDescription>
+                      Para usar o webhook da Eduzz, configure as variáveis <code className="bg-muted px-1 rounded">WEBHOOK_USER_ID</code> e 
+                      opcionalmente <code className="bg-muted px-1 rounded">WEBHOOK_CLIENT_ID</code> nas configurações do projeto.
+                    </AlertDescription>
+                  </Alert>
+
+                  <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Nota sobre Eduzz</AlertTitle>
                     <AlertDescription>
                       A Eduzz pode ter diferentes interfaces dependendo se você é produtor ou afiliado. 
-                      O webhook detecta automaticamente o formato dos dados enviados.
+                      O webhook detecta automaticamente o formato dos dados enviados e processa apenas vendas aprovadas.
                     </AlertDescription>
                   </Alert>
                 </div>
@@ -299,7 +372,7 @@ function WebhookDocs() {
           <CardContent className="space-y-4">
             <div className="space-y-4">
               <div className="border-l-4 border-destructive pl-4 py-2">
-                <h4 className="font-medium">Leads não estão chegando</h4>
+                <h4 className="font-medium">Leads/vendas não estão chegando</h4>
                 <p className="text-sm text-muted-foreground mt-1">
                   Verifique se a URL está correta e se o cliente está ativo. 
                   Confira os logs de webhook para ver se há erros.
@@ -328,6 +401,14 @@ function WebhookDocs() {
                   Confira o payload nos logs de webhook.
                 </p>
               </div>
+
+              <div className="border-l-4 border-blue-500 pl-4 py-2">
+                <h4 className="font-medium">Vendas Eduzz mostrando "skipped"</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  O webhook da Eduzz só processa vendas com status aprovado (approved, aprovado, pago, paid, completed). 
+                  Vendas com outros status são ignoradas automaticamente.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -345,9 +426,16 @@ function WebhookDocs() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <h4 className="font-medium mb-2">Endpoint</h4>
+              <h4 className="font-medium mb-2">Endpoint de Leads</h4>
               <code className="block bg-muted p-3 rounded text-sm">
                 POST {SUPABASE_URL}/functions/v1/leads-webhook/{'{client-slug}'}
+              </code>
+            </div>
+
+            <div>
+              <h4 className="font-medium mb-2">Endpoint de Vendas Eduzz</h4>
+              <code className="block bg-muted p-3 rounded text-sm">
+                POST {SUPABASE_URL}/functions/v1/eduzz-webhook
               </code>
             </div>
             
@@ -359,7 +447,7 @@ function WebhookDocs() {
             </div>
             
             <div>
-              <h4 className="font-medium mb-2">Body (JSON)</h4>
+              <h4 className="font-medium mb-2">Body Lead (JSON)</h4>
               <pre className="bg-muted p-3 rounded text-sm overflow-x-auto">
 {`{
   "email": "lead@example.com",
@@ -370,6 +458,24 @@ function WebhookDocs() {
   "utm_medium": "cpc",
   "utm_campaign": "campanha-123",
   "tags": "[TAG1], [TAG2]"
+}`}
+              </pre>
+            </div>
+
+            <div>
+              <h4 className="font-medium mb-2">Body Venda Eduzz (JSON)</h4>
+              <pre className="bg-muted p-3 rounded text-sm overflow-x-auto">
+{`{
+  "sale_id": "123456",
+  "sale_status": "approved",
+  "product_name": "Curso Exemplo",
+  "client_email": "cliente@example.com",
+  "client_name": "João Silva",
+  "sale_amount": 997.00,
+  "sale_date": "2024-01-15T10:30:00Z",
+  "utm_source": "google",
+  "utm_medium": "cpc",
+  "utm_campaign": "campanha-123"
 }`}
               </pre>
             </div>
