@@ -17,7 +17,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { formatDateTimeBR } from '@/lib/dateUtils';
-import { FileSpreadsheet, Eye } from 'lucide-react';
+import { FileSpreadsheet, Eye, FlaskConical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LeadDetailDialog } from './LeadDetailDialog';
 
@@ -46,21 +46,35 @@ function parseTags(tags: string | null): string[] {
   return tags.split(',').map(tag => tag.trim()).filter(Boolean);
 }
 
+function isTestLead(tags: string | null): boolean {
+  if (!tags) return false;
+  return tags.includes('[TESTE]') || tags.toLowerCase().includes('teste');
+}
+
 // Mobile lead card component
 function LeadCard({ lead, onViewDetails }: { lead: Lead; onViewDetails: (lead: Lead) => void }) {
   const tags = parseTags(lead.tags);
   const source = lead.source || 'desconhecido';
+  const isTest = isTestLead(lead.tags);
   
   return (
     <Card className="mb-2 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onViewDetails(lead)}>
       <CardContent className="p-3 sm:p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm truncate">
-              {lead.first_name || lead.last_name 
-                ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim()
-                : lead.email}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-medium text-sm truncate">
+                {lead.first_name || lead.last_name 
+                  ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim()
+                  : lead.email}
+              </p>
+              {isTest && (
+                <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] px-1.5 py-0 shrink-0">
+                  <FlaskConical className="h-2.5 w-2.5 mr-0.5" />
+                  TESTE
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground truncate">{lead.email}</p>
           </div>
           <Badge 
@@ -156,6 +170,7 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                 {leads.map((lead) => {
                   const tags = parseTags(lead.tags);
                   const source = lead.source || 'desconhecido';
+                  const isTest = isTestLead(lead.tags);
                   
                   return (
                     <TableRow 
@@ -167,9 +182,19 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                         {formatDateTimeBR(lead.created_at, 'dd/MM/yy HH:mm')}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {lead.first_name || lead.last_name 
-                          ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim()
-                          : '-'}
+                        <div className="flex items-center gap-1.5">
+                          <span>
+                            {lead.first_name || lead.last_name 
+                              ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim()
+                              : '-'}
+                          </span>
+                          {isTest && (
+                            <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] px-1.5 py-0">
+                              <FlaskConical className="h-2.5 w-2.5 mr-0.5" />
+                              TESTE
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <TooltipProvider>

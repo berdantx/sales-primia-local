@@ -13,6 +13,20 @@ import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { getDateRangeBrasiliaUTC } from '@/lib/dateUtils';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { 
   Search, 
   Download, 
@@ -23,7 +37,8 @@ import {
   Users,
   TrendingUp,
   Globe,
-  FlaskConical
+  FlaskConical,
+  Trash2
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 20;
@@ -34,8 +49,10 @@ function Leads() {
   const [utmSourceFilter, setUtmSourceFilter] = useState<string>('all');
   const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
   const [currentPage, setCurrentPage] = useState(1);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { clientId } = useFilter();
+  const queryClient = useQueryClient();
 
   const filters = useMemo(() => {
     const range = getDateRangeBrasiliaUTC(365);
@@ -98,6 +115,12 @@ function Leads() {
     });
   }, [leads, search, sourceFilter, utmSourceFilter, testFilter]);
 
+  // Count test leads
+  const testLeadsCount = useMemo(() => {
+    if (!leads) return 0;
+    return leads.filter(l => isTestLead(l.tags)).length;
+  }, [leads]);
+
   // Paginate
   const paginatedLeads = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -140,6 +163,35 @@ function Leads() {
 
   const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || testFilter !== 'hide';
 
+  const handleDeleteTestLeads = async () => {
+    if (!leads) return;
+    
+    const testLeadIds = leads.filter(l => isTestLead(l.tags)).map(l => l.id);
+    if (testLeadIds.length === 0) {
+      toast.info('Não há leads de teste para deletar.');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .in('id', testLeadIds);
+
+      if (error) throw error;
+
+      toast.success(`${testLeadIds.length} leads de teste deletados com sucesso!`);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-count'] });
+    } catch (error) {
+      console.error('Error deleting test leads:', error);
+      toast.error('Erro ao deletar leads de teste.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading || isLoadingStats) {
     return (
       <MainLayout>
@@ -163,10 +215,53 @@ function Leads() {
             title="Leads"
             description={`${filteredLeads.length} leads encontrados`}
           />
-          <Button variant="outline" onClick={handleExportCSV} size="sm" className="w-full sm:w-auto">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            {testLeadsCount > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Deletar Testes</span>
+                    <span className="sm:hidden">Testes</span>
+                    <span className="ml-1">({testLeadsCount})</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Deletar leads de teste?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação irá deletar permanentemente <strong>{testLeadsCount}</strong> leads de teste 
+                      (com tag [TESTE] ou "teste"). Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleDeleteTestLeads}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Deletando...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Deletar {testLeadsCount} leads
+                        </>
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <Button variant="outline" onClick={handleExportCSV} size="sm" className="flex-1 sm:flex-none">
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </div>
         </motion.div>
 
         {/* Summary KPIs */}
