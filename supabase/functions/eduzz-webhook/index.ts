@@ -29,6 +29,34 @@ interface EduzzWebhookPayload {
   utm_medium?: string;
   utm_campaign?: string;
   utm_content?: string;
+  // Ping/validation fields
+  event?: string;
+  type?: string;
+  action?: string;
+  message?: string;
+  // New format with nested data
+  data?: {
+    id?: string | number;
+    status?: string;
+    value?: number;
+    currency?: string;
+    created_at?: string;
+    buyer?: {
+      name?: string;
+      email?: string;
+      cellphone?: string;
+      phone?: string;
+    };
+    product?: {
+      id?: string | number;
+      name?: string;
+    };
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_content?: string;
+    message?: string;
+  };
 }
 
 Deno.serve(async (req) => {
@@ -52,10 +80,11 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   let body: EduzzWebhookPayload;
+  let rawBody: string;
 
   try {
-    const rawBody = await req.text();
-    console.log("Eduzz Webhook received:", rawBody.substring(0, 500));
+    rawBody = await req.text();
+    console.log("Eduzz Webhook received:", rawBody.substring(0, 1000));
 
     // Parse the body - handle both array and object formats
     const parsed = JSON.parse(rawBody);
@@ -69,7 +98,7 @@ Deno.serve(async (req) => {
       body = parsed;
     }
 
-    console.log("Parsed Eduzz payload:", JSON.stringify(body).substring(0, 500));
+    console.log("Parsed Eduzz payload:", JSON.stringify(body).substring(0, 1000));
   } catch (parseError) {
     console.error("Failed to parse Eduzz webhook body:", parseError);
     return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
@@ -78,8 +107,33 @@ Deno.serve(async (req) => {
     });
   }
 
-  const saleId = String(body.sale_id || body.id || "unknown");
-  const saleStatus = body.sale_status || body.status || "";
+  // Check for ping/validation requests
+  const isPingRequest = 
+    body.event === 'ping' || 
+    body.type === 'ping' ||
+    body.action === 'ping' ||
+    body.message === 'ping' ||
+    (body.data?.message === 'ping');
+  
+  if (isPingRequest) {
+    console.log('Ping/validation request detected, responding with 200');
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: 'Eduzz webhook endpoint is active',
+      timestamp: new Date().toISOString()
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Support both new format (data object) and old format (flat)
+  const eduzzData = body.data ?? body;
+  const buyer = body.data?.buyer ?? {};
+  const productData = body.data?.product;
+
+  const saleId = String(body.id || body.data?.id || body.sale_id || "unknown");
+  const saleStatus = body.data?.status || body.sale_status || body.status || "";
   const eventType = "EDUZZ_SALE_" + (saleStatus.toUpperCase().replace(/\s+/g, "_") || "UNKNOWN");
 
   console.log(`Processing Eduzz sale ${saleId} with status: ${saleStatus}`);
@@ -115,24 +169,24 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Map Eduzz fields to eduzz_transactions table
+    // Map Eduzz fields to eduzz_transactions table - support both formats
     const transactionData = {
       user_id: webhookUserId,
       client_id: webhookClientId || null,
       sale_id: saleId,
       invoice_code: body.invoice_code || null,
-      product: body.product_name || body.product || null,
-      product_id: body.product_id ? String(body.product_id) : null,
-      buyer_name: body.client_name || body.buyer_name || null,
-      buyer_email: body.client_email || body.buyer_email || null,
-      buyer_phone: body.client_phone || body.buyer_phone || null,
-      sale_value: body.sale_amount || body.sale_value || body.value || 0,
-      currency: "BRL",
-      sale_date: body.sale_date || body.created_at || null,
-      utm_source: body.utm_source || null,
-      utm_medium: body.utm_medium || null,
-      utm_campaign: body.utm_campaign || null,
-      utm_content: body.utm_content || null,
+      product: productData?.name || body.product_name || body.product || null,
+      product_id: productData?.id ? String(productData.id) : (body.product_id ? String(body.product_id) : null),
+      buyer_name: buyer.name || body.client_name || body.buyer_name || null,
+      buyer_email: buyer.email || body.client_email || body.buyer_email || null,
+      buyer_phone: buyer.cellphone || buyer.phone || body.client_phone || body.buyer_phone || null,
+      sale_value: body.data?.value || body.sale_amount || body.sale_value || body.value || 0,
+      currency: body.data?.currency || "BRL",
+      sale_date: body.data?.created_at || body.sale_date || body.created_at || new Date().toISOString(),
+      utm_source: body.data?.utm_source || body.utm_source || null,
+      utm_medium: body.data?.utm_medium || body.utm_medium || null,
+      utm_campaign: body.data?.utm_campaign || body.utm_campaign || null,
+      utm_content: body.data?.utm_content || body.utm_content || null,
       source: "webhook",
     };
 
