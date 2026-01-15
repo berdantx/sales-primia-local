@@ -54,6 +54,9 @@ function Leads() {
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [utmSourceFilter, setUtmSourceFilter] = useState<string>('all');
+  const [utmMediumFilter, setUtmMediumFilter] = useState<string>('all');
+  const [utmCampaignFilter, setUtmCampaignFilter] = useState<string>('all');
+  const [utmContentFilter, setUtmContentFilter] = useState<string>('all');
   const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -76,21 +79,30 @@ function Leads() {
   const { data: leads, isLoading } = useLeads(isReady ? filters : undefined);
   const { stats, isLoading: isLoadingStats } = useLeadStats(isReady ? filters : undefined);
 
-  // Get unique sources and utm_sources for filters
-  const { sources, utmSources } = useMemo(() => {
-    if (!leads) return { sources: [], utmSources: [] };
+  // Get unique sources and utm values for filters
+  const { sources, utmSources, utmMediums, utmCampaigns, utmContents } = useMemo(() => {
+    if (!leads) return { sources: [], utmSources: [], utmMediums: [], utmCampaigns: [], utmContents: [] };
     
     const sourceSet = new Set<string>();
     const utmSourceSet = new Set<string>();
+    const utmMediumSet = new Set<string>();
+    const utmCampaignSet = new Set<string>();
+    const utmContentSet = new Set<string>();
     
     leads.forEach(l => {
       if (l.source) sourceSet.add(l.source);
       if (l.utm_source) utmSourceSet.add(l.utm_source);
+      if (l.utm_medium) utmMediumSet.add(l.utm_medium);
+      if (l.utm_campaign) utmCampaignSet.add(l.utm_campaign);
+      if (l.utm_content) utmContentSet.add(l.utm_content);
     });
     
     return {
       sources: Array.from(sourceSet).sort(),
       utmSources: Array.from(utmSourceSet).sort(),
+      utmMediums: Array.from(utmMediumSet).sort(),
+      utmCampaigns: Array.from(utmCampaignSet).sort(),
+      utmContents: Array.from(utmContentSet).sort(),
     };
   }, [leads]);
 
@@ -113,6 +125,9 @@ function Leads() {
       
       const matchesSource = sourceFilter === 'all' || l.source === sourceFilter;
       const matchesUtmSource = utmSourceFilter === 'all' || l.utm_source === utmSourceFilter;
+      const matchesUtmMedium = utmMediumFilter === 'all' || l.utm_medium === utmMediumFilter;
+      const matchesUtmCampaign = utmCampaignFilter === 'all' || l.utm_campaign === utmCampaignFilter;
+      const matchesUtmContent = utmContentFilter === 'all' || l.utm_content === utmContentFilter;
       
       // Test filter
       const isTest = isTestLead(l.tags);
@@ -121,9 +136,9 @@ function Leads() {
         (testFilter === 'hide' && !isTest) || 
         (testFilter === 'only' && isTest);
       
-      return matchesSearch && matchesSource && matchesUtmSource && matchesTestFilter;
+      return matchesSearch && matchesSource && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesTestFilter;
     });
-  }, [leads, search, sourceFilter, utmSourceFilter, testFilter]);
+  }, [leads, search, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, testFilter]);
 
   // Count test leads
   const testLeadsCount = useMemo(() => {
@@ -176,6 +191,9 @@ function Leads() {
     setSearch('');
     setSourceFilter('all');
     setUtmSourceFilter('all');
+    setUtmMediumFilter('all');
+    setUtmCampaignFilter('all');
+    setUtmContentFilter('all');
     setTestFilter('hide');
     setDateRange({ from: subDays(new Date(), 30), to: new Date() });
     setCurrentPage(1);
@@ -185,7 +203,7 @@ function Leads() {
   const isDateRangeChanged = dateRange?.from?.getTime() !== defaultDateRange.from.getTime() || 
                              dateRange?.to?.getTime() !== defaultDateRange.to.getTime();
 
-  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || testFilter !== 'hide' || isDateRangeChanged;
+  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || testFilter !== 'hide' || isDateRangeChanged;
 
   const handleDeleteTestLeads = async () => {
     if (!leads) return;
@@ -394,8 +412,44 @@ function Leads() {
                     <SelectValue placeholder="UTM Source" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos UTM</SelectItem>
+                    <SelectItem value="all">Todos Source</SelectItem>
                     {utmSources.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={utmMediumFilter} onValueChange={(v) => { setUtmMediumFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-sm">
+                    <SelectValue placeholder="UTM Medium" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Medium</SelectItem>
+                    {utmMediums.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={utmCampaignFilter} onValueChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-sm">
+                    <SelectValue placeholder="UTM Campaign" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Campaign</SelectItem>
+                    {utmCampaigns.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={utmContentFilter} onValueChange={(v) => { setUtmContentFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-sm">
+                    <SelectValue placeholder="UTM Content" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Content</SelectItem>
+                    {utmContents.map(s => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
                   </SelectContent>
