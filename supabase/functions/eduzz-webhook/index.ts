@@ -198,6 +198,7 @@ Deno.serve(async (req) => {
     // Log skipped event
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
+      client_id: webhookClientId || null,
       event_type: eventType,
       transaction_code: saleId,
       status: "skipped",
@@ -282,6 +283,7 @@ Deno.serve(async (req) => {
       // Log error
       await supabase.from("webhook_logs").insert({
         user_id: webhookUserId,
+        client_id: webhookClientId || null,
         event_type: eventType,
         transaction_code: saleId,
         status: "error",
@@ -306,6 +308,7 @@ Deno.serve(async (req) => {
     // Log success
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
+      client_id: webhookClientId || null,
       event_type: eventType,
       transaction_code: saleId,
       status: "processed",
@@ -329,6 +332,7 @@ Deno.serve(async (req) => {
     // Log error
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
+      client_id: webhookClientId || null,
       event_type: eventType,
       transaction_code: saleId,
       status: "error",
