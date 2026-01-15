@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
-import { useTransactions } from '@/hooks/useTransactions';
+import { useTransactions, Transaction } from '@/hooks/useTransactions';
 import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useFilter } from '@/contexts/FilterContext';
@@ -40,14 +40,15 @@ import {
   Receipt
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
+import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
 
 
 const ITEMS_PER_PAGE = 20;
 
 // Mobile transaction card component
-function TransactionCard({ transaction }: { transaction: any }) {
+function TransactionCard({ transaction, onClick }: { transaction: Transaction; onClick: () => void }) {
   return (
-    <Card className="mb-2">
+    <Card className="mb-2 cursor-pointer hover:bg-muted/50" onClick={onClick}>
       <CardContent className="p-3 sm:p-4">
         <div className="flex justify-between items-start mb-2">
           <div className="flex-1 min-w-0">
@@ -91,6 +92,8 @@ function Transactions() {
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   
   const { clientId, setClientId } = useFilter();
 
@@ -356,7 +359,14 @@ function Transactions() {
             </Card>
           ) : (
             paginatedTransactions.map((transaction) => (
-              <TransactionCard key={transaction.id} transaction={transaction} />
+              <TransactionCard 
+                key={transaction.id} 
+                transaction={transaction} 
+                onClick={() => {
+                  setSelectedTransaction(transaction);
+                  setIsDetailOpen(true);
+                }}
+              />
             ))
           )}
         </div>
@@ -379,7 +389,14 @@ function Transactions() {
                 </TableHeader>
                 <TableBody>
                   {paginatedTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
+                    <TableRow 
+                      key={transaction.id}
+                      className="cursor-pointer hover:bg-muted/70"
+                      onClick={() => {
+                        setSelectedTransaction(transaction);
+                        setIsDetailOpen(true);
+                      }}
+                    >
                       <TableCell className="font-mono text-xs">
                         {transaction.transaction_code.slice(0, 12)}...
                       </TableCell>
@@ -499,6 +516,13 @@ function Transactions() {
             </div>
           </div>
         )}
+
+        {/* Transaction Detail Dialog */}
+        <HotmartTransactionDetailDialog
+          transaction={selectedTransaction}
+          open={isDetailOpen}
+          onOpenChange={setIsDetailOpen}
+        />
       </div>
     </MainLayout>
   );

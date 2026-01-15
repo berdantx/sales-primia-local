@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { DateRange } from 'react-day-picker';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
-import { useTmbTransactions } from '@/hooks/useTmbTransactions';
+import { useTmbTransactions, TmbTransaction } from '@/hooks/useTmbTransactions';
 import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsOptimized';
 import { useFilter } from '@/contexts/FilterContext';
 import { TmbAdvancedFilters } from '@/components/dashboard/TmbAdvancedFilters';
@@ -50,6 +50,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
+import { TmbTransactionDetailDialog } from '@/components/tmb/TmbTransactionDetailDialog';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -60,6 +61,8 @@ function TmbTransactions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [period, setPeriod] = useState<PeriodFilter>('365d');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [selectedTransaction, setSelectedTransaction] = useState<TmbTransaction | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   
   // Advanced filters
   const [productFilter, setProductFilter] = useState<string | null>(null);
@@ -343,7 +346,14 @@ function TmbTransactions() {
               </TableHeader>
               <TableBody>
                 {paginatedTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
+                  <TableRow 
+                    key={transaction.id}
+                    className="cursor-pointer hover:bg-muted/70"
+                    onClick={() => {
+                      setSelectedTransaction(transaction);
+                      setIsDetailOpen(true);
+                    }}
+                  >
                     <TableCell className="font-mono text-xs p-2 sm:p-4">
                       <span className="hidden sm:inline">{transaction.order_id.slice(0, 15)}...</span>
                       <span className="sm:hidden">{transaction.order_id.slice(0, 8)}...</span>
@@ -466,6 +476,13 @@ function TmbTransactions() {
             </div>
           </div>
         )}
+
+        {/* Transaction Detail Dialog */}
+        <TmbTransactionDetailDialog
+          transaction={selectedTransaction}
+          open={isDetailOpen}
+          onOpenChange={setIsDetailOpen}
+        />
       </div>
     </MainLayout>
   );
