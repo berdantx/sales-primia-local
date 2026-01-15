@@ -34,13 +34,14 @@ interface EduzzWebhookPayload {
   type?: string;
   action?: string;
   message?: string;
-  // New format with nested data
+  // New Eduzz format with nested data
   data?: {
     id?: string | number;
     status?: string;
     value?: number;
     currency?: string;
     created_at?: string;
+    createdAt?: string;
     buyer?: {
       name?: string;
       email?: string;
@@ -50,6 +51,28 @@ interface EduzzWebhookPayload {
     product?: {
       id?: string | number;
       name?: string;
+    };
+    // Nested price object (new Eduzz format)
+    price?: {
+      currency?: string;
+      value?: number;
+      paid?: {
+        currency?: string;
+        value?: number;
+      };
+    };
+    // Items array (new Eduzz format)
+    items?: Array<{
+      productId?: string;
+      name?: string;
+      parentId?: string;
+    }>;
+    // UTM object (new Eduzz format)
+    utm?: {
+      source?: string;
+      medium?: string;
+      campaign?: string;
+      content?: string;
     };
     utm_source?: string;
     utm_medium?: string;
@@ -196,24 +219,48 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Extract data from new Eduzz format
+    const priceData = body.data?.price;
+    const itemsData = body.data?.items;
+    const utmData = body.data?.utm;
+    
+    // Get product from items array (new format) or product object (old format)
+    const productName = itemsData?.[0]?.name || productData?.name || body.product_name || body.product || null;
+    const productId = itemsData?.[0]?.productId || (productData?.id ? String(productData.id) : null) || (body.product_id ? String(body.product_id) : null);
+    
+    // Get sale value from price object (new format) or direct value
+    const saleValue = priceData?.paid?.value || priceData?.value || body.data?.value || body.sale_amount || body.sale_value || body.value || 0;
+    
+    // Get currency from price object or data
+    const currency = priceData?.currency || body.data?.currency || "BRL";
+    
+    // Get UTM from utm object (new format) or direct fields
+    const utmSource = utmData?.source || body.data?.utm_source || body.utm_source || null;
+    const utmMedium = utmData?.medium || body.data?.utm_medium || body.utm_medium || null;
+    const utmCampaign = utmData?.campaign || body.data?.utm_campaign || body.utm_campaign || null;
+    const utmContent = utmData?.content || body.data?.utm_content || body.utm_content || null;
+    
+    // Get sale date
+    const saleDate = body.data?.createdAt || body.data?.created_at || body.sale_date || body.created_at || new Date().toISOString();
+
     // Map Eduzz fields to eduzz_transactions table - support both formats
     const transactionData = {
       user_id: webhookUserId,
       client_id: webhookClientId || null,
       sale_id: saleId,
       invoice_code: body.invoice_code || null,
-      product: productData?.name || body.product_name || body.product || null,
-      product_id: productData?.id ? String(productData.id) : (body.product_id ? String(body.product_id) : null),
+      product: productName,
+      product_id: productId,
       buyer_name: buyer.name || body.client_name || body.buyer_name || null,
       buyer_email: buyer.email || body.client_email || body.buyer_email || null,
       buyer_phone: buyer.cellphone || buyer.phone || body.client_phone || body.buyer_phone || null,
-      sale_value: body.data?.value || body.sale_amount || body.sale_value || body.value || 0,
-      currency: body.data?.currency || "BRL",
-      sale_date: body.data?.created_at || body.sale_date || body.created_at || new Date().toISOString(),
-      utm_source: body.data?.utm_source || body.utm_source || null,
-      utm_medium: body.data?.utm_medium || body.utm_medium || null,
-      utm_campaign: body.data?.utm_campaign || body.utm_campaign || null,
-      utm_content: body.data?.utm_content || body.utm_content || null,
+      sale_value: saleValue,
+      currency: currency,
+      sale_date: saleDate,
+      utm_source: utmSource,
+      utm_medium: utmMedium,
+      utm_campaign: utmCampaign,
+      utm_content: utmContent,
       source: "webhook",
     };
 
