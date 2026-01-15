@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileSpreadsheet, Store } from 'lucide-react';
+import { FileSpreadsheet, Store, CreditCard } from 'lucide-react';
 
-export type UploadPlatform = 'hotmart' | 'tmb' | null;
+export type UploadPlatform = 'hotmart' | 'tmb' | 'eduzz' | null;
 
 interface PlatformSelectorProps {
   onSelect: (platform: UploadPlatform) => void;
@@ -27,6 +27,15 @@ export function PlatformSelector({ onSelect }: PlatformSelectorProps) {
       color: 'hsl(var(--success))',
       bgColor: 'hsl(var(--success) / 0.1)',
       formats: 'CSV (;)',
+    },
+    {
+      id: 'eduzz' as const,
+      name: 'Eduzz',
+      description: 'Planilha de vendas da plataforma Eduzz',
+      icon: CreditCard,
+      color: 'hsl(25 95% 53%)',
+      bgColor: 'hsl(25 95% 53% / 0.1)',
+      formats: 'CSV, XLSX',
     },
   ];
 
