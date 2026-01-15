@@ -16,6 +16,7 @@ import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
 import WebhookLogs from "./pages/WebhookLogs";
 import WebhookConfig from "./pages/WebhookConfig";
+import WebhookDocs from "./pages/WebhookDocs";
 import Users from "./pages/Users";
 import Clients from "./pages/Clients";
 import Leads from "./pages/Leads";
@@ -71,6 +72,11 @@ const App = () => (
             <Route path="/clients" element={
               <ProtectedRoute allowedRoles={['master']}>
                 <Clients />
+              </ProtectedRoute>
+            } />
+            <Route path="/webhook-docs" element={
+              <ProtectedRoute allowedRoles={['master', 'admin']}>
+                <WebhookDocs />
               </ProtectedRoute>
             } />
             <Route path="/leads" element={<Leads />} />

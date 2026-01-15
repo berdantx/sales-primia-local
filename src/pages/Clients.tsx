@@ -6,10 +6,12 @@ import { useClientManagement } from '@/hooks/useClientManagement';
 import { ClientsTable } from '@/components/clients/ClientsTable';
 import { ClientFormDialog } from '@/components/clients/ClientFormDialog';
 import { ClientUsersDialog } from '@/components/clients/ClientUsersDialog';
+import { ClientWebhookDialog } from '@/components/clients/ClientWebhookDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, Search, Building2 } from 'lucide-react';
+import { Loader2, Plus, Search, Building2, BookOpen } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 function Clients() {
   const [search, setSearch] = useState('');
@@ -17,6 +19,8 @@ function Clients() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [usersDialogOpen, setUsersDialogOpen] = useState(false);
   const [managingUsersClient, setManagingUsersClient] = useState<Client | null>(null);
+  const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
+  const [webhookClient, setWebhookClient] = useState<Client | null>(null);
 
   const { data: clients, isLoading } = useClients();
   const { createClient, updateClient, toggleClientStatus } = useClientManagement();
@@ -39,6 +43,11 @@ function Clients() {
   const handleManageUsers = (client: Client) => {
     setManagingUsersClient(client);
     setUsersDialogOpen(true);
+  };
+
+  const handleShowWebhook = (client: Client) => {
+    setWebhookClient(client);
+    setWebhookDialogOpen(true);
   };
 
   const handleSubmit = async (data: { name: string; slug: string; logo_url?: string }) => {
@@ -89,10 +98,18 @@ function Clients() {
               {clients?.length || 0} clientes cadastrados
             </p>
           </div>
-          <Button onClick={handleOpenCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Cliente
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/webhook-docs">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Documentação
+              </Link>
+            </Button>
+            <Button onClick={handleOpenCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Cliente
+            </Button>
+          </div>
         </motion.div>
 
         {/* Search */}
@@ -121,6 +138,7 @@ function Clients() {
               onEdit={handleOpenEdit}
               onToggleStatus={handleToggleStatus}
               onManageUsers={handleManageUsers}
+              onShowWebhook={handleShowWebhook}
               isToggling={toggleClientStatus.isPending}
             />
           </CardContent>
@@ -145,6 +163,15 @@ function Clients() {
           if (!open) setManagingUsersClient(null);
         }}
         client={managingUsersClient}
+      />
+
+      <ClientWebhookDialog
+        open={webhookDialogOpen}
+        onOpenChange={(open) => {
+          setWebhookDialogOpen(open);
+          if (!open) setWebhookClient(null);
+        }}
+        client={webhookClient}
       />
     </MainLayout>
   );
