@@ -345,6 +345,28 @@ serve(async (req) => {
 
     console.log('Received lead payload:', JSON.stringify(rawPayload, null, 2));
 
+    // Check for ping/validation requests from platforms
+    // Active Campaign sends { event: "ping", data: { message: "ping" } }
+    // Hotmart/Eduzz may send similar validation requests
+    const isPingRequest = 
+      bodyData.event === 'ping' || 
+      bodyData.type === 'ping' ||
+      bodyData.action === 'ping' ||
+      bodyData.message === 'ping' ||
+      (bodyData.data?.message === 'ping');
+    
+    if (isPingRequest) {
+      console.log('Ping/validation request detected, responding with 200');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Webhook endpoint is active',
+        timestamp: new Date().toISOString()
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Detect source from payload (no query param needed)
     const source = detectSource(bodyData, bodyData.source || null);
     console.log('Detected source:', source);
@@ -380,11 +402,14 @@ serve(async (req) => {
         rawPayload,
         'Missing email'
       );
+      // Return 200 even for missing email to prevent webhook retry loops
+      // But indicate in the response that the lead was not processed
       return new Response(JSON.stringify({ 
         success: false, 
-        error: 'Missing email' 
+        message: 'Lead skipped - missing email',
+        received: true
       }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
