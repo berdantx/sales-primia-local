@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Copy, ExternalLink, Webhook } from 'lucide-react';
+import { Check, Copy, ExternalLink, Webhook, Play, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ClientWebhookDialogProps {
@@ -26,6 +26,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhookDialogProps) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
 
   if (!client) return null;
 
@@ -36,6 +37,37 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
     setCopied(label);
     toast.success('URL copiada!');
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const handleTestWebhook = async () => {
+    setIsTesting(true);
+    try {
+      const testData = new FormData();
+      testData.append('contact[email]', `teste-${Date.now()}@exemplo.com`);
+      testData.append('contact[first_name]', 'Lead');
+      testData.append('contact[last_name]', 'de Teste');
+      testData.append('contact[phone]', '+5511999999999');
+      testData.append('contact[tags]', '[TESTE][WEBHOOK]');
+      testData.append('source', 'Teste Manual');
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        body: testData,
+      });
+
+      if (response.ok) {
+        toast.success('Lead de teste enviado com sucesso! Verifique a página de Leads.');
+      } else {
+        const errorText = await response.text();
+        toast.error(`Erro ao enviar lead de teste: ${response.status}`);
+        console.error('Webhook test error:', errorText);
+      }
+    } catch (error) {
+      console.error('Webhook test connection error:', error);
+      toast.error('Erro de conexão ao testar webhook');
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -188,15 +220,35 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Testando o Webhook</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Após configurar o webhook na plataforma, você pode testar enviando um lead de teste:
+                Clique no botão abaixo para enviar um lead de teste e verificar se o webhook está funcionando:
               </p>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                <li>Faça uma ação que dispare o webhook (ex: cadastro em formulário)</li>
-                <li>Verifique a página de <strong>Leads</strong> para confirmar o recebimento</li>
-                <li>Confira os <strong>Logs de Webhook</strong> para ver detalhes da requisição</li>
-              </ol>
+              
+              <Button 
+                onClick={handleTestWebhook} 
+                disabled={isTesting}
+                className="w-full"
+              >
+                {isTesting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Testar Webhook
+                  </>
+                )}
+              </Button>
+
+              <div className="bg-muted p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Após o teste:</strong> Verifique a página de <strong>Leads</strong> para confirmar 
+                  o recebimento. O lead terá a tag <code>[TESTE][WEBHOOK]</code>.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>

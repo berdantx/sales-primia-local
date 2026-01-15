@@ -31,6 +31,7 @@ import {
   Send,
   Building2,
   UserPlus,
+  BookOpen,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -50,6 +51,7 @@ const menuItems: MenuItem[] = [
   { title: 'Leads', url: '/leads', icon: UserPlus, roles: ['master', 'admin', 'user'] },
   { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook, roles: ['master', 'admin'] },
   { title: 'Webhooks Externos', url: '/webhook-config', icon: Send, roles: ['master', 'admin'] },
+  { title: 'Docs Webhook', url: '/webhook-docs', icon: BookOpen, roles: ['master', 'admin'] },
   { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin', 'user'] },
   { title: 'Clientes', url: '/clients', icon: Building2, roles: ['master'] },
   { title: 'Usuários', url: '/users', icon: Users, roles: ['master'] },
