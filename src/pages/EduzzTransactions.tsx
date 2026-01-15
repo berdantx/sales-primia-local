@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { DateRange } from 'react-day-picker';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
-import { useEduzzTransactions } from '@/hooks/useEduzzTransactions';
+import { useEduzzTransactions, EduzzTransaction } from '@/hooks/useEduzzTransactions';
 import { useEduzzTransactionStatsOptimized } from '@/hooks/useEduzzTransactionStatsOptimized';
 import { useFilter } from '@/contexts/FilterContext';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
@@ -49,6 +49,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
+import { EduzzTransactionDetailDialog } from '@/components/eduzz/EduzzTransactionDetailDialog';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -59,6 +60,8 @@ function EduzzTransactions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [period, setPeriod] = useState<PeriodFilter>('365d');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
+  const [selectedTransaction, setSelectedTransaction] = useState<EduzzTransaction | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const { clientId } = useFilter();
 
@@ -309,7 +312,14 @@ function EduzzTransactions() {
               </TableHeader>
               <TableBody>
                 {paginatedTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
+                  <TableRow 
+                    key={transaction.id}
+                    className="cursor-pointer hover:bg-muted/70"
+                    onClick={() => {
+                      setSelectedTransaction(transaction);
+                      setIsDetailOpen(true);
+                    }}
+                  >
                     <TableCell className="font-mono text-xs p-2 sm:p-4">
                       <span className="hidden sm:inline">{transaction.sale_id.slice(0, 15)}...</span>
                       <span className="sm:hidden">{transaction.sale_id.slice(0, 8)}...</span>
@@ -432,6 +442,13 @@ function EduzzTransactions() {
             </div>
           </div>
         )}
+
+        {/* Transaction Detail Dialog */}
+        <EduzzTransactionDetailDialog
+          transaction={selectedTransaction}
+          open={isDetailOpen}
+          onOpenChange={setIsDetailOpen}
+        />
       </div>
     </MainLayout>
   );
