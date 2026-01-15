@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Pencil, Power, PowerOff, Users } from 'lucide-react';
+import { Pencil, Power, PowerOff, Users, Webhook } from 'lucide-react';
 import { Client } from '@/hooks/useClients';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -19,10 +19,11 @@ interface ClientsTableProps {
   onEdit: (client: Client) => void;
   onToggleStatus: (client: Client) => void;
   onManageUsers?: (client: Client) => void;
+  onShowWebhook?: (client: Client) => void;
   isToggling?: boolean;
 }
 
-export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, isToggling }: ClientsTableProps) {
+export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, onShowWebhook, isToggling }: ClientsTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -63,6 +64,16 @@ export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, i
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
+                {onShowWebhook && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onShowWebhook(client)}
+                    title="Ver webhook"
+                  >
+                    <Webhook className="h-4 w-4" />
+                  </Button>
+                )}
                 {onManageUsers && (
                   <Button
                     variant="ghost"
