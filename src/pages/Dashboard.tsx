@@ -114,7 +114,7 @@ export default function Dashboard() {
   }), [dateRange, billingType, paymentMethod, sckCode, product, clientId]);
 
   // Use combined stats hook that handles platform switching
-  const { stats, topCustomers, salesByDate, currencies, isLoading, hotmartStats, tmbStats } = useCombinedStats(filters, platform);
+  const { stats, topCustomers, salesByDate, currencies, isLoading, hotmartStats, tmbStats, eduzzStats } = useCombinedStats(filters, platform);
   
   // Fetch dollar rate for USD conversion
   const { data: dollarRate, isLoading: isLoadingRate, isError: isRateError } = useDollarRate();
