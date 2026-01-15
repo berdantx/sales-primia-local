@@ -60,9 +60,7 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
     utm_term: 'curso-online',
   });
 
-  if (!client) return null;
-
-  const webhookUrl = `${SUPABASE_URL}/functions/v1/leads-webhook/${client.slug}`;
+  const webhookUrl = client ? `${SUPABASE_URL}/functions/v1/leads-webhook/${client.slug}` : '';
 
   // Generate payload based on format
   const getPayload = useMemo(() => {
@@ -197,6 +195,8 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
     }
     return JSON.stringify(getPayload, null, 2);
   };
+
+  if (!client) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
