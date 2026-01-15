@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Eye, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { Eye, CheckCircle, AlertCircle, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -19,6 +19,11 @@ interface WebhookLogsTableProps {
   logs: WebhookLog[];
   isLoading: boolean;
   onViewDetails: (log: WebhookLog) => void;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  itemsPerPage: number;
+  totalItems: number;
 }
 
 function StatusBadge({ status, isMobile }: { status: string; isMobile?: boolean }) {
@@ -51,7 +56,16 @@ function StatusBadge({ status, isMobile }: { status: string; isMobile?: boolean 
   );
 }
 
-export function WebhookLogsTable({ logs, isLoading, onViewDetails }: WebhookLogsTableProps) {
+export function WebhookLogsTable({ 
+  logs, 
+  isLoading, 
+  onViewDetails,
+  currentPage,
+  totalPages,
+  onPageChange,
+  itemsPerPage,
+  totalItems
+}: WebhookLogsTableProps) {
   const isMobile = useIsMobile();
 
   if (isLoading) {
@@ -73,57 +87,116 @@ export function WebhookLogsTable({ logs, isLoading, onViewDetails }: WebhookLogs
     );
   }
 
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
   return (
-    <div className="rounded-md border border-border/50 overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-xs sm:text-sm">Data/Hora</TableHead>
-            <TableHead className="text-xs sm:text-sm">Tipo</TableHead>
-            <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Código</TableHead>
-            <TableHead className="text-xs sm:text-sm">Status</TableHead>
-            <TableHead className="w-[50px] sm:w-[80px]">
-              <span className="sr-only sm:not-sr-only">Ações</span>
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {logs.map((log) => (
-            <TableRow key={log.id}>
-              <TableCell className="font-mono text-xs p-2 sm:p-4">
-                <span className="hidden sm:inline">
-                  {format(new Date(log.created_at), "dd/MM/yy HH:mm:ss", { locale: ptBR })}
-                </span>
-                <span className="sm:hidden">
-                  {format(new Date(log.created_at), "dd/MM HH:mm", { locale: ptBR })}
-                </span>
-              </TableCell>
-              <TableCell className="p-2 sm:p-4">
-                <span className="font-medium text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none block">
-                  {log.event_type}
-                </span>
-              </TableCell>
-              <TableCell className="hidden sm:table-cell font-mono text-xs sm:text-sm p-2 sm:p-4">
-                {log.transaction_code || '-'}
-              </TableCell>
-              <TableCell className="p-1 sm:p-4">
-                <StatusBadge status={log.status} isMobile={isMobile} />
-              </TableCell>
-              <TableCell className="p-1 sm:p-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onViewDetails(log)}
-                  title="Ver detalhes"
-                  className="h-7 w-7 sm:h-8 sm:w-8"
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-              </TableCell>
+    <div className="space-y-4">
+      <div className="rounded-md border border-border/50 overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs sm:text-sm">Data/Hora</TableHead>
+              <TableHead className="text-xs sm:text-sm">Tipo</TableHead>
+              <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Código</TableHead>
+              <TableHead className="text-xs sm:text-sm">Status</TableHead>
+              <TableHead className="w-[50px] sm:w-[80px]">
+                <span className="sr-only sm:not-sr-only">Ações</span>
+              </TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {logs.map((log) => (
+              <TableRow key={log.id}>
+                <TableCell className="font-mono text-xs p-2 sm:p-4">
+                  <span className="hidden sm:inline">
+                    {format(new Date(log.created_at), "dd/MM/yy HH:mm:ss", { locale: ptBR })}
+                  </span>
+                  <span className="sm:hidden">
+                    {format(new Date(log.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                  </span>
+                </TableCell>
+                <TableCell className="p-2 sm:p-4">
+                  <span className="font-medium text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none block">
+                    {log.event_type}
+                  </span>
+                </TableCell>
+                <TableCell className="hidden sm:table-cell font-mono text-xs sm:text-sm p-2 sm:p-4">
+                  {log.transaction_code || '-'}
+                </TableCell>
+                <TableCell className="p-1 sm:p-4">
+                  <StatusBadge status={log.status} isMobile={isMobile} />
+                </TableCell>
+                <TableCell className="p-1 sm:p-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onViewDetails(log)}
+                    title="Ver detalhes"
+                    className="h-7 w-7 sm:h-8 sm:w-8"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            Mostrando {startItem} a {endItem} de {totalItems} logs
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Anterior
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    className="w-8 h-8 p-0"
+                    onClick={() => onPageChange(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Próximo
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
