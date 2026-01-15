@@ -10,7 +10,7 @@ import {
   useTmbSalesByDateOptimized 
 } from '@/hooks/useTmbTransactionStatsOptimized';
 
-export type PlatformType = 'all' | 'hotmart' | 'tmb';
+export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz';
 
 export interface CombinedFilters {
   startDate?: Date;
