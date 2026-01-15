@@ -136,6 +136,20 @@ export default function WebhookLogs() {
                     <Copy className="h-4 w-4 mr-1" />
                     Copiar
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <a
+                      href="https://developers.eduzz.com/reference/introducao-webhook"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Docs
+                    </a>
+                  </Button>
                 </div>
               </div>
             </CardContent>

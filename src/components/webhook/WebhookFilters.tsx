@@ -44,6 +44,10 @@ export function WebhookFilters({ filters, onFiltersChange }: WebhookFiltersProps
     onFiltersChange({ ...filters, status });
   };
 
+  const handlePlatformChange = (platform: string) => {
+    onFiltersChange({ ...filters, platform });
+  };
+
   const handlePeriodChange = (value: string) => {
     setPeriod(value);
     const now = new Date();
@@ -101,7 +105,19 @@ export function WebhookFilters({ filters, onFiltersChange }: WebhookFiltersProps
 
   return (
     <div className="flex flex-col sm:flex-row gap-3">
-      <div className="flex gap-2 w-full sm:w-auto">
+      <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+        <Select value={filters.platform || 'all'} onValueChange={handlePlatformChange}>
+          <SelectTrigger className="w-full sm:w-[140px]">
+            <SelectValue placeholder="Plataforma" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas</SelectItem>
+            <SelectItem value="hotmart">Hotmart</SelectItem>
+            <SelectItem value="tmb">TMB</SelectItem>
+            <SelectItem value="eduzz">Eduzz</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Select value={filters.status || 'all'} onValueChange={handleStatusChange}>
           <SelectTrigger className="w-full sm:w-[150px]">
             <Filter className="h-4 w-4 mr-2" />
