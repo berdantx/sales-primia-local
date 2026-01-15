@@ -15,6 +15,7 @@ import { LogDetailDialog } from '@/components/webhook/LogDetailDialog';
 
 const HOTMART_WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/hotmart-webhook';
 const TMB_WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/tmb-webhook';
+const EDUZZ_WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/eduzz-webhook';
 
 export default function WebhookLogs() {
   const { toast } = useToast();
@@ -65,7 +66,7 @@ export default function WebhookLogs() {
         </div>
 
         {/* Webhook URLs */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           {/* Hotmart Webhook URL */}
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="p-4">
@@ -112,6 +113,26 @@ export default function WebhookLogs() {
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => handleCopyUrl(TMB_WEBHOOK_URL, 'TMB')}>
+                    <Copy className="h-4 w-4 mr-1" />
+                    Copiar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Eduzz Webhook URL */}
+          <Card className="border-purple-500/20 bg-purple-500/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-medium mb-1">Webhook Eduzz</p>
+                <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto break-all">
+                  {EDUZZ_WEBHOOK_URL}
+                </code>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleCopyUrl(EDUZZ_WEBHOOK_URL, 'Eduzz')}>
                     <Copy className="h-4 w-4 mr-1" />
                     Copiar
                   </Button>
