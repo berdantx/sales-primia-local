@@ -6,12 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { 
-  User, 
   Mail, 
   Phone, 
   Globe, 
@@ -20,8 +17,10 @@ import {
   Link as LinkIcon,
   Building2,
   MapPin,
-  Code
+  Code,
+  ExternalLink
 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
@@ -30,10 +29,10 @@ interface LeadDetailDialogProps {
 }
 
 const SOURCE_COLORS: Record<string, string> = {
-  active_campaign: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  hotmart: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-  eduzz: 'bg-green-500/10 text-green-500 border-green-500/20',
-  n8n: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+  active_campaign: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  hotmart: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+  eduzz: 'bg-green-500/10 text-green-600 border-green-500/30',
+  n8n: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -45,11 +44,10 @@ const SOURCE_LABELS: Record<string, string> = {
 
 function parseTags(tags: string | null): string[] {
   if (!tags) return [];
-  // Tags são separadas por vírgula (ex: "[VSRI][ALUNO][T1], [VSRI][LEAD][T1]")
   return tags.split(',').map(tag => tag.trim()).filter(Boolean);
 }
 
-function InfoRow({ 
+function InfoItem({ 
   icon: Icon, 
   label, 
   value, 
@@ -63,23 +61,58 @@ function InfoRow({
   if (!value) return null;
   
   return (
-    <div className="flex items-start gap-3 py-2">
-      <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+    <div className="flex items-start gap-3 py-3">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted shrink-0">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
         {isLink ? (
           <a 
             href={value.startsWith('http') ? value : `https://${value}`} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-sm text-primary hover:underline break-all"
+            className="text-sm text-primary hover:underline break-all inline-flex items-center gap-1"
           >
             {value}
+            <ExternalLink className="h-3 w-3 shrink-0" />
           </a>
         ) : (
-          <p className="text-sm break-all">{value}</p>
+          <p className="text-sm font-medium break-all">{value}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function Section({ 
+  icon: Icon, 
+  title, 
+  children 
+}: { 
+  icon: React.ComponentType<{ className?: string }>; 
+  title: string; 
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      <div className="space-y-1">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function HistoryItem({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between items-center py-2">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium">{formatDateTimeBR(value, 'dd/MM/yyyy HH:mm')}</span>
     </div>
   );
 }
@@ -91,13 +124,17 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
   const source = lead.source || 'unknown';
   const fullName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
 
+  // Check if UTM params exist
+  const hasUtmParams = lead.utm_source || lead.utm_medium || lead.utm_campaign || lead.utm_id || lead.utm_term || lead.utm_content;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="max-w-xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+        {/* Header */}
+        <DialogHeader className="p-6 pb-4 bg-gradient-to-b from-muted/50 to-background">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-xl">
+              <DialogTitle className="text-xl font-bold">
                 {fullName || lead.email}
               </DialogTitle>
               {fullName && (
@@ -106,130 +143,75 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
             </div>
             <Badge 
               variant="outline" 
-              className={SOURCE_COLORS[source] || ''}
+              className={`shrink-0 font-medium ${SOURCE_COLORS[source] || 'bg-muted text-foreground'}`}
             >
               {SOURCE_LABELS[source] || source}
             </Badge>
           </div>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-120px)]">
-          <div className="p-6 pt-4 space-y-6">
+        <Separator />
+
+        <ScrollArea className="max-h-[calc(90vh-140px)]">
+          <div className="p-6 space-y-4">
             {/* Contact Info */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Informações de Contato
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <InfoRow icon={Mail} label="Email" value={lead.email} />
-                <InfoRow icon={Phone} label="Telefone" value={lead.phone} />
-                <InfoRow icon={MapPin} label="IP" value={lead.ip_address} />
-                <InfoRow icon={Building2} label="Organização" value={lead.organization} />
-                <InfoRow icon={User} label="Conta" value={lead.customer_account} />
-              </CardContent>
-            </Card>
+            <Section icon={Mail} title="Informações de Contato">
+              <InfoItem icon={Mail} label="Email" value={lead.email} />
+              <InfoItem icon={Phone} label="Telefone" value={lead.phone} />
+              <InfoItem icon={MapPin} label="Endereço IP" value={lead.ip_address} />
+              <InfoItem icon={Building2} label="Organização" value={lead.organization} />
+            </Section>
 
             {/* Tags */}
             {tags.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Tag className="h-4 w-4" />
-                    Tags
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map((tag, i) => (
-                      <Badge key={i} variant="secondary">{tag}</Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <Section icon={Tag} title="Tags">
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {tags.map((tag, i) => (
+                    <Badge key={i} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </Section>
             )}
 
             {/* UTM Parameters */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
-                  Parâmetros UTM
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
+            {hasUtmParams && (
+              <Section icon={Globe} title="Parâmetros UTM">
                 <div className="grid grid-cols-2 gap-x-4">
-                  <InfoRow icon={Globe} label="UTM Source" value={lead.utm_source} />
-                  <InfoRow icon={Globe} label="UTM Medium" value={lead.utm_medium} />
-                  <InfoRow icon={Globe} label="UTM Campaign" value={lead.utm_campaign} />
-                  <InfoRow icon={Globe} label="UTM ID" value={lead.utm_id} />
-                  <InfoRow icon={Globe} label="UTM Term" value={lead.utm_term} />
-                  <InfoRow icon={Globe} label="UTM Content" value={lead.utm_content} />
+                  <InfoItem icon={Globe} label="Source" value={lead.utm_source} />
+                  <InfoItem icon={Globe} label="Medium" value={lead.utm_medium} />
+                  <InfoItem icon={Globe} label="Campaign" value={lead.utm_campaign} />
+                  <InfoItem icon={Globe} label="ID" value={lead.utm_id} />
+                  <InfoItem icon={Globe} label="Term" value={lead.utm_term} />
+                  <InfoItem icon={Globe} label="Content" value={lead.utm_content} />
                 </div>
-                {!lead.utm_source && !lead.utm_medium && !lead.utm_campaign && (
-                  <p className="text-sm text-muted-foreground py-2">Nenhum parâmetro UTM registrado</p>
-                )}
-              </CardContent>
-            </Card>
+              </Section>
+            )}
 
             {/* Origin Info */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4" />
-                  Origem
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <InfoRow icon={LinkIcon} label="Página" value={lead.page_url} isLink />
-                <InfoRow icon={Tag} label="Series ID" value={lead.series_id} />
-                <InfoRow icon={Code} label="External ID" value={lead.external_id} />
-              </CardContent>
-            </Card>
+            <Section icon={LinkIcon} title="Origem">
+              <InfoItem icon={LinkIcon} label="Página" value={lead.page_url} isLink />
+              <InfoItem icon={Tag} label="Series ID" value={lead.series_id} />
+              <InfoItem icon={Code} label="External ID" value={lead.external_id} />
+              {!lead.page_url && !lead.series_id && !lead.external_id && (
+                <p className="text-sm text-muted-foreground py-2">Nenhuma informação de origem</p>
+              )}
+            </Section>
 
             {/* Timestamps */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Histórico
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-sm text-muted-foreground">Criado em</span>
-                    <span className="text-sm font-medium">
-                      {formatDateTimeBR(lead.created_at, 'dd/MM/yyyy HH:mm:ss')}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-sm text-muted-foreground">Atualizado em</span>
-                    <span className="text-sm font-medium">
-                      {formatDateTimeBR(lead.updated_at, 'dd/MM/yyyy HH:mm:ss')}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <Section icon={Calendar} title="Histórico">
+              <HistoryItem label="Criado em" value={lead.created_at} />
+              <HistoryItem label="Atualizado em" value={lead.updated_at} />
+            </Section>
 
             {/* Raw Payload */}
             {lead.raw_payload && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Code className="h-4 w-4" />
-                    Payload Original
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto max-h-48">
-                    {JSON.stringify(lead.raw_payload, null, 2)}
-                  </pre>
-                </CardContent>
-              </Card>
+              <Section icon={Code} title="Payload Original">
+                <pre className="text-xs bg-muted/50 p-4 rounded-lg overflow-x-auto max-h-64 mt-2 border">
+                  {JSON.stringify(lead.raw_payload, null, 2)}
+                </pre>
+              </Section>
             )}
           </div>
         </ScrollArea>
