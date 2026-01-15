@@ -241,9 +241,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Use environment variables for user/client (same pattern as other webhooks)
+    // Use environment variable for system user (for logging)
     const webhookUserId = Deno.env.get('WEBHOOK_USER_ID');
-    const webhookClientId = Deno.env.get('WEBHOOK_CLIENT_ID');
+    // Fallback client ID from environment (for backwards compatibility)
+    const webhookClientIdFallback = Deno.env.get('WEBHOOK_CLIENT_ID');
 
     if (!webhookUserId) {
       console.error('WEBHOOK_USER_ID not configured');
@@ -254,6 +255,54 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Extract client slug from URL path
+    // URL format: /leads-webhook/{client_slug} or /leads-webhook (fallback)
+    const url = new URL(req.url);
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    // pathParts will be like ['leads-webhook', 'client-slug'] or just ['leads-webhook']
+    const clientSlug = pathParts.length > 1 ? pathParts[pathParts.length - 1] : null;
+    
+    let resolvedClientId: string | null = null;
+
+    if (clientSlug && clientSlug !== 'leads-webhook') {
+      // Look up client by slug
+      console.log('Looking up client by slug:', clientSlug);
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('id, name, is_active')
+        .eq('slug', clientSlug)
+        .single();
+
+      if (clientError || !client) {
+        console.error('Client not found for slug:', clientSlug, clientError);
+        return new Response(JSON.stringify({ 
+          error: 'Client not found',
+          slug: clientSlug 
+        }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (client.is_active === false) {
+        console.error('Client is inactive:', clientSlug);
+        return new Response(JSON.stringify({ 
+          error: 'Client is inactive',
+          slug: clientSlug 
+        }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      resolvedClientId = client.id;
+      console.log('Resolved client:', client.name, client.id);
+    } else {
+      // Fallback to environment variable (backwards compatibility)
+      resolvedClientId = webhookClientIdFallback || null;
+      console.log('Using fallback client ID from env:', resolvedClientId);
+    }
 
     // Parse the incoming body
     const contentType = req.headers.get('content-type') || '';
@@ -342,7 +391,7 @@ serve(async (req) => {
 
     // Prepare lead record
     const leadRecord = {
-      client_id: webhookClientId || null,
+      client_id: resolvedClientId,
       external_id: leadData.external_id,
       email: leadData.email,
       first_name: leadData.first_name,
