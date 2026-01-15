@@ -6,6 +6,7 @@ import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { DropZone } from '@/components/upload/DropZone';
 import { ImportPreview } from '@/components/upload/ImportPreview';
 import { TmbImportPreview } from '@/components/upload/TmbImportPreview';
+import { EduzzImportPreview } from '@/components/upload/EduzzImportPreview';
 import { ImportProgress } from '@/components/upload/ImportProgress';
 import { PlatformSelector, UploadPlatform } from '@/components/upload/PlatformSelector';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,8 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { supabase } from '@/integrations/supabase/client';
 import { parseFile, HotmartTransaction, ParseError } from '@/lib/parsers/hotmartParser';
 import { parseTmbFile, TmbTransaction, TmbParseError } from '@/lib/parsers/tmbParser';
-import { ArrowLeft, ArrowRight, FileSpreadsheet, Store, CheckCircle2 } from 'lucide-react';
+import { parseEduzzFile, EduzzTransaction, EduzzParseError } from '@/lib/parsers/eduzzParser';
+import { ArrowLeft, ArrowRight, FileSpreadsheet, Store, CheckCircle2, CreditCard } from 'lucide-react';
 import { DataManagement } from '@/components/upload/DataManagement';
 
 type UploadStep = 'platform' | 'upload' | 'preview' | 'importing' | 'complete';
@@ -41,6 +43,10 @@ export default function UploadPage() {
   // TMB state
   const [tmbTransactions, setTmbTransactions] = useState<TmbTransaction[]>([]);
   const [tmbErrors, setTmbErrors] = useState<TmbParseError[]>([]);
+  
+  // Eduzz state
+  const [eduzzTransactions, setEduzzTransactions] = useState<EduzzTransaction[]>([]);
+  const [eduzzErrors, setEduzzErrors] = useState<EduzzParseError[]>([]);
   
   // Shared state
   const [duplicates, setDuplicates] = useState<string[]>([]);
@@ -69,6 +75,12 @@ export default function UploadPage() {
         setTmbErrors(result.errors);
         setDuplicates(result.duplicates);
         setTotalRows(result.totalRows);
+      } else if (platform === 'eduzz') {
+        const result = await parseEduzzFile(acceptedFile);
+        setEduzzTransactions(result.transactions);
+        setEduzzErrors(result.errors);
+        setDuplicates(result.duplicates);
+        setTotalRows(result.totalRows);
       }
       setStep('preview');
     } catch (error) {
@@ -86,6 +98,8 @@ export default function UploadPage() {
     setHotmartErrors([]);
     setTmbTransactions([]);
     setTmbErrors([]);
+    setEduzzTransactions([]);
+    setEduzzErrors([]);
     setDuplicates([]);
     setTotalRows(0);
     setStep('upload');
@@ -102,7 +116,9 @@ export default function UploadPage() {
 
     const transactionCount = platform === 'hotmart' 
       ? hotmartTransactions.length 
-      : tmbTransactions.length;
+      : platform === 'tmb'
+      ? tmbTransactions.length
+      : eduzzTransactions.length;
     
     if (transactionCount === 0) return;
 
@@ -239,6 +255,61 @@ export default function UploadPage() {
           await supabase.from('import_errors').insert(errorRecords);
           errorCount += tmbErrors.length;
         }
+      } else if (platform === 'eduzz') {
+        // Import Eduzz transactions
+        for (let i = 0; i < eduzzTransactions.length; i += batchSize) {
+          const batch = eduzzTransactions.slice(i, i + batchSize);
+          
+          const transactionRecords = batch.map(t => ({
+            user_id: user.id,
+            import_id: importRecord.id,
+            sale_id: t.sale_id,
+            invoice_code: t.invoice_code || null,
+            product: t.product || null,
+            product_id: t.product_id || null,
+            buyer_name: t.buyer_name || null,
+            buyer_email: t.buyer_email || null,
+            buyer_phone: t.buyer_phone || null,
+            sale_value: t.sale_value || 0,
+            currency: 'BRL',
+            sale_date: t.sale_date?.toISOString() || null,
+            utm_source: t.utm_source || null,
+            utm_medium: t.utm_medium || null,
+            utm_campaign: t.utm_campaign || null,
+            utm_content: t.utm_content || null,
+            source: 'eduzz',
+            client_id: clientId,
+          }));
+
+          const { error: insertError } = await supabase
+            .from('eduzz_transactions')
+            .upsert(transactionRecords, { 
+              onConflict: 'user_id,sale_id',
+              ignoreDuplicates: true 
+            });
+
+          if (insertError) {
+            console.error('Batch insert error:', insertError);
+            errorCount += batch.length;
+          } else {
+            importedCount += batch.length;
+          }
+
+          setImportProgress({ current: Math.min(i + batchSize, eduzzTransactions.length), total: eduzzTransactions.length });
+        }
+
+        // Log errors
+        if (eduzzErrors.length > 0) {
+          const errorRecords = eduzzErrors.slice(0, 100).map(e => ({
+            import_id: importRecord.id,
+            row_number: e.row,
+            error_type: e.type,
+            error_message: e.message,
+            raw_data: e.rawData ? JSON.parse(JSON.stringify(e.rawData)) : null,
+          }));
+          await supabase.from('import_errors').insert(errorRecords);
+          errorCount += eduzzErrors.length;
+        }
       }
 
       // Update import record
@@ -270,23 +341,28 @@ export default function UploadPage() {
 
   const transactionCount = platform === 'hotmart' 
     ? hotmartTransactions.length 
-    : tmbTransactions.length;
+    : platform === 'tmb'
+    ? tmbTransactions.length
+    : eduzzTransactions.length;
 
   const getPlatformIcon = () => {
     if (platform === 'hotmart') return <FileSpreadsheet className="h-4 w-4" />;
     if (platform === 'tmb') return <Store className="h-4 w-4" />;
+    if (platform === 'eduzz') return <CreditCard className="h-4 w-4" />;
     return null;
   };
 
   const getPlatformLabel = () => {
     if (platform === 'hotmart') return 'Vendas Hotmart';
     if (platform === 'tmb') return 'Vendas TMB';
+    if (platform === 'eduzz') return 'Vendas Eduzz';
     return '';
   };
 
   const getDropZoneHint = () => {
     if (platform === 'hotmart') return 'Arraste sua planilha CSV ou XLSX para a área abaixo';
     if (platform === 'tmb') return 'Arraste sua planilha CSV (delimitador ;) para a área abaixo';
+    if (platform === 'eduzz') return 'Arraste sua planilha CSV ou XLSX da Eduzz para a área abaixo';
     return '';
   };
 
@@ -423,6 +499,30 @@ export default function UploadPage() {
                     <Button 
                       onClick={handleImport}
                       disabled={tmbTransactions.length === 0}
+                    >
+                      Confirmar Importação
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {step === 'preview' && platform === 'eduzz' && (
+                <div className="space-y-6">
+                  <EduzzImportPreview
+                    transactions={eduzzTransactions}
+                    errors={eduzzErrors}
+                    duplicates={duplicates}
+                    totalRows={totalRows}
+                  />
+                  <div className="flex justify-between">
+                    <Button variant="outline" onClick={handleClear}>
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Voltar
+                    </Button>
+                    <Button 
+                      onClick={handleImport}
+                      disabled={eduzzTransactions.length === 0}
                     >
                       Confirmar Importação
                       <ArrowRight className="h-4 w-4 ml-2" />

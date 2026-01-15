@@ -17,8 +17,9 @@ export interface EduzzStats {
 export interface EduzzTopCustomer {
   email: string;
   name: string;
-  total_value: number;
-  total_purchases: number;
+  totalValue: number;
+  totalPurchases: number;
+  currency: string;
 }
 
 export function useEduzzTransactionStatsOptimized(filters?: EduzzTransactionFilters) {
@@ -72,7 +73,15 @@ export function useEduzzTopCustomersOptimized(filters?: EduzzTransactionFilters,
         throw error;
       }
 
-      return (data as unknown as EduzzTopCustomer[]) || [];
+      // Transform snake_case to camelCase to match other hooks
+      const rawData = (data || []) as Array<{ email: string; name: string; total_value: number; total_purchases: number }>;
+      return rawData.map(item => ({
+        email: item.email,
+        name: item.name,
+        totalValue: item.total_value,
+        totalPurchases: item.total_purchases,
+        currency: 'BRL',
+      })) as EduzzTopCustomer[];
     },
     enabled: !!user,
   });
