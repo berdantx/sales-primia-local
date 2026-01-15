@@ -75,6 +75,7 @@ async function logWebhookEvent(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   userId: string,
+  clientId: string | null,
   eventType: string,
   transactionCode: string | null,
   status: 'processed' | 'skipped' | 'error',
@@ -84,6 +85,7 @@ async function logWebhookEvent(
   try {
     await supabase.from('webhook_logs').insert({
       user_id: userId,
+      client_id: clientId,
       event_type: eventType,
       transaction_code: transactionCode,
       status,
@@ -207,6 +209,7 @@ serve(async (req) => {
           await logWebhookEvent(
             supabase,
             webhookUserId,
+            webhookClientId || null,
             eventType,
             transactionCode,
             'skipped',
@@ -225,6 +228,7 @@ serve(async (req) => {
           await logWebhookEvent(
             supabase,
             webhookUserId,
+            webhookClientId || null,
             eventType,
             null,
             'skipped',
@@ -285,6 +289,7 @@ serve(async (req) => {
           await logWebhookEvent(
             supabase,
             webhookUserId,
+            webhookClientId || null,
             eventType,
             purchase.transaction,
             'error',
@@ -300,6 +305,7 @@ serve(async (req) => {
           await logWebhookEvent(
             supabase,
             webhookUserId,
+            webhookClientId || null,
             eventType,
             purchase.transaction,
             'processed',
@@ -316,6 +322,7 @@ serve(async (req) => {
         await logWebhookEvent(
           supabase,
           webhookUserId,
+          webhookClientId || null,
           eventType,
           transactionCode,
           'error',
