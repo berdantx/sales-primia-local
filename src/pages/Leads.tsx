@@ -8,6 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
@@ -129,9 +135,15 @@ function Leads() {
 
   const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
 
-  const handleExportCSV = () => {
+  const handleExportCSV = (excludeTests: boolean = false) => {
+    let leadsToExport = filteredLeads;
+    
+    if (excludeTests) {
+      leadsToExport = filteredLeads.filter(l => !isTestLead(l.tags));
+    }
+
     const headers = ['Data', 'Nome', 'Email', 'Telefone', 'Fonte', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Tags', 'Página'];
-    const rows = filteredLeads.map(l => [
+    const rows = leadsToExport.map(l => [
       format(new Date(l.created_at), 'dd/MM/yyyy HH:mm'),
       `${l.first_name || ''} ${l.last_name || ''}`.trim(),
       l.email || '',
@@ -149,8 +161,11 @@ function Leads() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `leads-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    const suffix = excludeTests ? '-sem-testes' : '';
+    a.download = `leads${suffix}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
+    
+    toast.success(`${leadsToExport.length} leads exportados!`);
   };
 
   const clearFilters = () => {
@@ -257,10 +272,24 @@ function Leads() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            <Button variant="outline" onClick={handleExportCSV} size="sm" className="flex-1 sm:flex-none">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar CSV
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExportCSV(false)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar todos ({filteredLeads.length})
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExportCSV(true)}>
+                  <FlaskConical className="h-4 w-4 mr-2" />
+                  Apenas reais ({filteredLeads.filter(l => !isTestLead(l.tags)).length})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </motion.div>
 
