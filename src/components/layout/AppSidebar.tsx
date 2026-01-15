@@ -43,21 +43,51 @@ interface MenuItem {
   roles: AppRole[];
 }
 
-const menuItems: MenuItem[] = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard, roles: ['master', 'admin', 'user'] },
-  { title: 'Comparativo', url: '/comparative', icon: GitCompare, roles: ['master', 'admin'] },
-  { title: 'Upload', url: '/upload', icon: Upload, roles: ['master', 'admin'] },
-  { title: 'Hotmart', url: '/transactions', icon: FileText, roles: ['master', 'admin', 'user'] },
-  { title: 'TMB', url: '/tmb-transactions', icon: Wallet, roles: ['master', 'admin', 'user'] },
-  { title: 'Eduzz', url: '/eduzz-transactions', icon: CreditCard, roles: ['master', 'admin', 'user'] },
-  { title: 'Leads', url: '/leads', icon: UserPlus, roles: ['master', 'admin', 'user'] },
-  { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook, roles: ['master', 'admin'] },
-  { title: 'Webhooks Externos', url: '/webhook-config', icon: Send, roles: ['master', 'admin'] },
-  { title: 'Docs Webhook', url: '/webhook-docs', icon: BookOpen, roles: ['master', 'admin'] },
-  { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin', 'user'] },
-  { title: 'Clientes', url: '/clients', icon: Building2, roles: ['master'] },
-  { title: 'Usuários', url: '/users', icon: Users, roles: ['master'] },
-  { title: 'Configurações', url: '/settings', icon: Settings, roles: ['master', 'admin'] },
+interface MenuGroup {
+  label: string;
+  items: MenuItem[];
+}
+
+const menuGroups: MenuGroup[] = [
+  {
+    label: 'Visão Geral',
+    items: [
+      { title: 'Dashboard', url: '/', icon: LayoutDashboard, roles: ['master', 'admin', 'user'] },
+      { title: 'Comparativo', url: '/comparative', icon: GitCompare, roles: ['master', 'admin'] },
+    ]
+  },
+  {
+    label: 'Vendas',
+    items: [
+      { title: 'Hotmart', url: '/transactions', icon: FileText, roles: ['master', 'admin', 'user'] },
+      { title: 'TMB', url: '/tmb-transactions', icon: Wallet, roles: ['master', 'admin', 'user'] },
+      { title: 'Eduzz', url: '/eduzz-transactions', icon: CreditCard, roles: ['master', 'admin', 'user'] },
+    ]
+  },
+  {
+    label: 'Dados',
+    items: [
+      { title: 'Leads', url: '/leads', icon: UserPlus, roles: ['master', 'admin', 'user'] },
+      { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin', 'user'] },
+      { title: 'Upload', url: '/upload', icon: Upload, roles: ['master', 'admin'] },
+    ]
+  },
+  {
+    label: 'Integrações',
+    items: [
+      { title: 'Webhook Logs', url: '/webhook-logs', icon: Webhook, roles: ['master', 'admin'] },
+      { title: 'Webhooks Externos', url: '/webhook-config', icon: Send, roles: ['master', 'admin'] },
+      { title: 'Docs Webhook', url: '/webhook-docs', icon: BookOpen, roles: ['master', 'admin'] },
+    ]
+  },
+  {
+    label: 'Sistema',
+    items: [
+      { title: 'Clientes', url: '/clients', icon: Building2, roles: ['master'] },
+      { title: 'Usuários', url: '/users', icon: Users, roles: ['master'] },
+      { title: 'Configurações', url: '/settings', icon: Settings, roles: ['master', 'admin'] },
+    ]
+  },
 ];
 
 export function AppSidebar() {
@@ -73,9 +103,6 @@ export function AppSidebar() {
     }
     return location.pathname.startsWith(path);
   };
-
-  // Filter menu items based on user role
-  const visibleMenuItems = menuItems.filter(item => item.roles.includes(role));
 
   return (
     <Sidebar collapsible="icon">
@@ -94,31 +121,39 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {visibleMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                  >
-                    <NavLink
-                      to={item.url}
-                      className="flex items-center gap-3"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {menuGroups.map((group) => {
+          const visibleItems = group.items.filter(item => item.roles.includes(role));
+          
+          if (visibleItems.length === 0) return null;
+          
+          return (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visibleItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.url)}
+                        tooltip={item.title}
+                      >
+                        <NavLink
+                          to={item.url}
+                          className="flex items-center gap-3"
+                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
