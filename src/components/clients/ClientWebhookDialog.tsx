@@ -13,8 +13,17 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Check, Copy, ExternalLink, Webhook, Play, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+type TestFormat = 'active_campaign' | 'hotmart' | 'eduzz';
 
 interface ClientWebhookDialogProps {
   open: boolean;
@@ -27,6 +36,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhookDialogProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  const [testFormat, setTestFormat] = useState<TestFormat>('active_campaign');
 
   if (!client) return null;
 
@@ -42,25 +52,86 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
   const handleTestWebhook = async () => {
     setIsTesting(true);
     try {
-      // Use URLSearchParams for x-www-form-urlencoded format (compatible with Active Campaign)
-      const testData = new URLSearchParams();
-      testData.append('contact[email]', `teste-${Date.now()}@exemplo.com`);
-      testData.append('contact[first_name]', 'Lead');
-      testData.append('contact[last_name]', 'de Teste');
-      testData.append('contact[phone]', '+5511999999999');
-      testData.append('contact[tags]', '[TESTE][WEBHOOK]');
-      testData.append('source', 'active_campaign');
+      let response: Response;
+      const testEmail = `teste-${Date.now()}@exemplo.com`;
 
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: testData.toString(),
-      });
+      if (testFormat === 'active_campaign') {
+        // Use URLSearchParams for x-www-form-urlencoded format (compatible with Active Campaign)
+        const testData = new URLSearchParams();
+        testData.append('contact[email]', testEmail);
+        testData.append('contact[first_name]', 'Lead');
+        testData.append('contact[last_name]', 'de Teste');
+        testData.append('contact[phone]', '+5511999999999');
+        testData.append('contact[tags]', '[TESTE][WEBHOOK]');
+        testData.append('source', 'active_campaign');
+
+        response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: testData.toString(),
+        });
+      } else if (testFormat === 'hotmart') {
+        // Hotmart JSON format
+        const hotmartPayload = {
+          event: 'PURCHASE_COMPLETE',
+          data: {
+            buyer: {
+              email: testEmail,
+              name: 'Lead de Teste Hotmart',
+              phone: '+5511999999999',
+            },
+            purchase: {
+              transaction: `TEST-${Date.now()}`,
+              order_date: new Date().toISOString(),
+            },
+            product: {
+              name: 'Produto Teste Hotmart',
+            },
+          },
+          source: 'hotmart',
+        };
+
+        response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(hotmartPayload),
+        });
+      } else {
+        // Eduzz JSON format
+        const eduzzPayload = {
+          event_type: 'purchase',
+          data: {
+            client: {
+              email: testEmail,
+              name: 'Lead de Teste Eduzz',
+              phone: '+5511999999999',
+            },
+            sale: {
+              sale_id: `EDUZZ-TEST-${Date.now()}`,
+              date_create: new Date().toISOString(),
+            },
+            product: {
+              name: 'Produto Teste Eduzz',
+            },
+          },
+          source: 'eduzz',
+        };
+
+        response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(eduzzPayload),
+        });
+      }
 
       if (response.ok) {
-        toast.success('Lead de teste enviado com sucesso! Verifique a página de Leads.');
+        toast.success(`Lead de teste (${testFormat.toUpperCase()}) enviado com sucesso! Verifique a página de Leads.`);
       } else {
         const errorText = await response.text();
         toast.error(`Erro ao enviar lead de teste: ${response.status}`);
@@ -226,31 +297,62 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Clique no botão abaixo para enviar um lead de teste e verificar se o webhook está funcionando:
+                Selecione o formato e clique para enviar um lead de teste:
               </p>
               
-              <Button 
-                onClick={handleTestWebhook} 
-                disabled={isTesting}
-                className="w-full"
-              >
-                {isTesting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4 mr-2" />
-                    Testar Webhook
-                  </>
-                )}
-              </Button>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="test-format">Formato do teste</Label>
+                  <Select value={testFormat} onValueChange={(v) => setTestFormat(v as TestFormat)}>
+                    <SelectTrigger id="test-format">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active_campaign">
+                        <div className="flex items-center gap-2">
+                          <span>Active Campaign</span>
+                          <Badge variant="secondary" className="text-xs">Form Data</Badge>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="hotmart">
+                        <div className="flex items-center gap-2">
+                          <span>Hotmart</span>
+                          <Badge variant="outline" className="text-xs">JSON</Badge>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="eduzz">
+                        <div className="flex items-center gap-2">
+                          <span>Eduzz</span>
+                          <Badge variant="outline" className="text-xs">JSON</Badge>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button 
+                  onClick={handleTestWebhook} 
+                  disabled={isTesting}
+                  className="w-full"
+                >
+                  {isTesting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4 mr-2" />
+                      Testar Webhook ({testFormat === 'active_campaign' ? 'Active Campaign' : testFormat === 'hotmart' ? 'Hotmart' : 'Eduzz'})
+                    </>
+                  )}
+                </Button>
+              </div>
 
               <div className="bg-muted p-3 rounded-lg">
                 <p className="text-xs text-muted-foreground">
                   <strong>Após o teste:</strong> Verifique a página de <strong>Leads</strong> para confirmar 
-                  o recebimento. O lead terá a tag <code>[TESTE][WEBHOOK]</code>.
+                  o recebimento.
                 </p>
               </div>
             </CardContent>
