@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole, AppRole } from '@/hooks/useUserRole';
+import { useBrandingSettings } from '@/hooks/useBrandingSettings';
 import { Button } from '@/components/ui/button';
 import {
   BarChart3,
@@ -94,6 +95,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
   const { role } = useUserRole();
+  const { settings: branding } = useBrandingSettings();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
 
@@ -108,13 +110,21 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary rounded-lg">
-            <BarChart3 className="h-5 w-5 text-primary-foreground" />
+          <div className="p-2 bg-primary rounded-lg overflow-hidden">
+            {branding.logoUrl ? (
+              <img 
+                src={branding.logoUrl} 
+                alt="Logo" 
+                className="h-5 w-5 object-cover"
+              />
+            ) : (
+              <BarChart3 className="h-5 w-5 text-primary-foreground" />
+            )}
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="font-bold text-lg">Sales Analytics</span>
-              <span className="text-xs text-muted-foreground">Análise de Vendas</span>
+              <span className="font-bold text-lg">{branding.appName}</span>
+              <span className="text-xs text-muted-foreground">{branding.appSubtitle}</span>
             </div>
           )}
         </div>

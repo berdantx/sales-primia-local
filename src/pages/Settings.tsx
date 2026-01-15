@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,13 +11,16 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LLMIntegrationsCard } from '@/components/settings/LLMIntegrationsCard';
 import { ChangePasswordCard } from '@/components/settings/ChangePasswordCard';
+import { BrandingSettingsCard } from '@/components/settings/BrandingSettingsCard';
 
 export default function Settings() {
   const { user } = useAuth();
+  const { role } = useUserRole();
+  const isMaster = role === 'master';
 
   return (
     <MainLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -27,6 +31,9 @@ export default function Settings() {
             Gerencie sua conta e preferências
           </p>
         </motion.div>
+
+        {/* Branding Settings - Only for Masters */}
+        {isMaster && <BrandingSettingsCard />}
 
         {/* Profile Card */}
         <motion.div
