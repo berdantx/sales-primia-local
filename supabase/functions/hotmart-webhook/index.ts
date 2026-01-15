@@ -114,7 +114,14 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const webhookUserId = Deno.env.get('WEBHOOK_USER_ID');
-    const webhookClientId = Deno.env.get('WEBHOOK_CLIENT_ID');
+    const defaultClientId = Deno.env.get('WEBHOOK_CLIENT_ID');
+
+    // Get client_id from query parameter (priority) or fall back to env var
+    const url = new URL(req.url);
+    const clientIdParam = url.searchParams.get('client_id');
+    const webhookClientId = clientIdParam || defaultClientId;
+
+    console.log(`Hotmart webhook - client_id from URL: ${clientIdParam}, using: ${webhookClientId}`);
 
     if (!webhookUserId) {
       console.error('WEBHOOK_USER_ID not configured');
@@ -125,6 +132,26 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Validate client_id if provided
+    if (webhookClientId) {
+      const { data: clientExists } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('id', webhookClientId)
+        .single();
+      
+      if (!clientExists) {
+        console.error(`Client not found: ${webhookClientId}`);
+        return new Response(JSON.stringify({ 
+          error: 'Invalid client_id',
+          message: `Client ${webhookClientId} not found`
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // Parse the incoming JSON (can be array or single object)
     const body = await req.json();

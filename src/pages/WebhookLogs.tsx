@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { RefreshCw, Copy, ExternalLink } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { RefreshCw, Copy, ExternalLink, AlertCircle } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,10 +12,9 @@ import { WebhookStatusCards } from '@/components/webhook/WebhookStatusCards';
 import { WebhookLogsTable } from '@/components/webhook/WebhookLogsTable';
 import { WebhookFilters } from '@/components/webhook/WebhookFilters';
 import { LogDetailDialog } from '@/components/webhook/LogDetailDialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const HOTMART_WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/hotmart-webhook';
-const TMB_WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/tmb-webhook';
-const EDUZZ_WEBHOOK_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1/eduzz-webhook';
+const BASE_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1';
 
 export default function WebhookLogs() {
   const { toast } = useToast();
@@ -27,6 +26,16 @@ export default function WebhookLogs() {
 
   const { data: logs, isLoading: logsLoading, refetch: refetchLogs } = useWebhookLogs({ ...filters, clientId });
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useWebhookStats({ ...filters, clientId });
+
+  // Generate client-specific webhook URLs
+  const webhookUrls = useMemo(() => {
+    const clientParam = clientId ? `?client_id=${clientId}` : '';
+    return {
+      hotmart: `${BASE_URL}/hotmart-webhook${clientParam}`,
+      tmb: `${BASE_URL}/tmb-webhook${clientParam}`,
+      eduzz: `${BASE_URL}/eduzz-webhook${clientParam}`,
+    };
+  }, [clientId]);
 
   const handleRefresh = () => {
     refetchLogs();
@@ -65,6 +74,17 @@ export default function WebhookLogs() {
           </Button>
         </div>
 
+        {/* Warning when no client selected */}
+        {!clientId && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Atenção:</strong> Selecione um cliente no topo da página para obter a URL específica do webhook. 
+              Sem o parâmetro client_id, as transações serão associadas ao cliente padrão.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Webhook URLs */}
         <div className="grid gap-4 md:grid-cols-3">
           {/* Hotmart Webhook URL */}
@@ -74,11 +94,11 @@ export default function WebhookLogs() {
                 <div className="flex-1">
                   <p className="text-sm font-medium mb-1">Webhook Hotmart</p>
                 <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto break-all">
-                  {HOTMART_WEBHOOK_URL}
+                  {webhookUrls.hotmart}
                 </code>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleCopyUrl(HOTMART_WEBHOOK_URL, 'Hotmart')}>
+                  <Button variant="outline" size="sm" onClick={() => handleCopyUrl(webhookUrls.hotmart, 'Hotmart')}>
                     <Copy className="h-4 w-4 mr-1" />
                     Copiar
                   </Button>
@@ -108,11 +128,11 @@ export default function WebhookLogs() {
                 <div className="flex-1">
                   <p className="text-sm font-medium mb-1">Webhook TMB</p>
                 <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto break-all">
-                  {TMB_WEBHOOK_URL}
+                  {webhookUrls.tmb}
                 </code>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleCopyUrl(TMB_WEBHOOK_URL, 'TMB')}>
+                  <Button variant="outline" size="sm" onClick={() => handleCopyUrl(webhookUrls.tmb, 'TMB')}>
                     <Copy className="h-4 w-4 mr-1" />
                     Copiar
                   </Button>
@@ -128,11 +148,11 @@ export default function WebhookLogs() {
                 <div className="flex-1">
                   <p className="text-sm font-medium mb-1">Webhook Eduzz</p>
                 <code className="text-xs bg-background px-2 py-1 rounded border block overflow-x-auto break-all">
-                  {EDUZZ_WEBHOOK_URL}
+                  {webhookUrls.eduzz}
                 </code>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleCopyUrl(EDUZZ_WEBHOOK_URL, 'Eduzz')}>
+                  <Button variant="outline" size="sm" onClick={() => handleCopyUrl(webhookUrls.eduzz, 'Eduzz')}>
                     <Copy className="h-4 w-4 mr-1" />
                     Copiar
                   </Button>
