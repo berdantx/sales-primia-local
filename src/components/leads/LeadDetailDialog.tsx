@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { 
   Mail, 
@@ -18,9 +19,13 @@ import {
   Building2,
   MapPin,
   Code,
-  ExternalLink
+  ExternalLink,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface LeadDetailDialogProps {
   lead: Lead | null;
@@ -51,35 +56,67 @@ function InfoItem({
   icon: Icon, 
   label, 
   value, 
-  isLink = false 
+  isLink = false,
+  copyable = false
 }: { 
   icon: React.ComponentType<{ className?: string }>; 
   label: string; 
   value: string | null | undefined;
   isLink?: boolean;
+  copyable?: boolean;
 }) {
+  const [copied, setCopied] = useState(false);
+
   if (!value) return null;
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      toast.success('Copiado para a área de transferência');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast.error('Erro ao copiar');
+    }
+  };
   
   return (
-    <div className="flex items-start gap-3 py-3">
+    <div className="flex items-start gap-3 py-3 group">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted shrink-0">
         <Icon className="h-4 w-4 text-muted-foreground" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
-        {isLink ? (
-          <a 
-            href={value.startsWith('http') ? value : `https://${value}`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-sm text-primary hover:underline break-all inline-flex items-center gap-1"
-          >
-            {value}
-            <ExternalLink className="h-3 w-3 shrink-0" />
-          </a>
-        ) : (
-          <p className="text-sm font-medium break-all">{value}</p>
-        )}
+        <div className="flex items-center gap-2">
+          {isLink ? (
+            <a 
+              href={value.startsWith('http') ? value : `https://${value}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline break-all inline-flex items-center gap-1"
+            >
+              {value}
+              <ExternalLink className="h-3 w-3 shrink-0" />
+            </a>
+          ) : (
+            <p className="text-sm font-medium break-all">{value}</p>
+          )}
+          {copyable && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+              onClick={handleCopy}
+            >
+              {copied ? (
+                <Check className="h-3 w-3 text-green-500" />
+              ) : (
+                <Copy className="h-3 w-3 text-muted-foreground" />
+              )}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -156,9 +193,9 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
           <div className="p-6 space-y-4">
             {/* Contact Info */}
             <Section icon={Mail} title="Informações de Contato">
-              <InfoItem icon={Mail} label="Email" value={lead.email} />
-              <InfoItem icon={Phone} label="Telefone" value={lead.phone} />
-              <InfoItem icon={MapPin} label="Endereço IP" value={lead.ip_address} />
+              <InfoItem icon={Mail} label="Email" value={lead.email} copyable />
+              <InfoItem icon={Phone} label="Telefone" value={lead.phone} copyable />
+              <InfoItem icon={MapPin} label="Endereço IP" value={lead.ip_address} copyable />
               <InfoItem icon={Building2} label="Organização" value={lead.organization} />
             </Section>
 
