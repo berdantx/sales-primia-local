@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
-import { RefreshCw, Copy, ExternalLink, AlertCircle } from 'lucide-react';
+import { RefreshCw, Copy, ExternalLink, AlertCircle, Download } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,6 +17,7 @@ import { LogDetailDialog } from '@/components/webhook/LogDetailDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const BASE_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1';
+const ITEMS_PER_PAGE = 50;
 
 export default function WebhookLogs() {
   const { toast } = useToast();
@@ -23,9 +26,25 @@ export default function WebhookLogs() {
   const [filters, setFilters] = useState<WebhookLogsFilters>({ clientId });
   const [selectedLog, setSelectedLog] = useState<WebhookLog | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: logs, isLoading: logsLoading, refetch: refetchLogs } = useWebhookLogs({ ...filters, clientId });
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useWebhookStats({ ...filters, clientId });
+
+  // Pagination
+  const totalItems = logs?.length || 0;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const paginatedLogs = useMemo(() => {
+    if (!logs) return [];
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return logs.slice(start, start + ITEMS_PER_PAGE);
+  }, [logs, currentPage]);
+
+  // Reset page when filters change
+  const handleFiltersChange = (newFilters: WebhookLogsFilters) => {
+    setFilters(newFilters);
+    setCurrentPage(1);
+  };
 
   // Generate client-specific webhook URLs
   const webhookUrls = useMemo(() => {
@@ -40,6 +59,7 @@ export default function WebhookLogs() {
   const handleRefresh = () => {
     refetchLogs();
     refetchStats();
+    setCurrentPage(1);
     toast({
       title: 'Atualizado',
       description: 'Os logs foram atualizados',
@@ -56,6 +76,40 @@ export default function WebhookLogs() {
     toast({
       title: 'Copiado!',
       description: `URL do webhook ${platform} copiada para a área de transferência`,
+    });
+  };
+
+  const handleExportCSV = () => {
+    if (!logs || logs.length === 0) {
+      toast({
+        title: 'Sem dados',
+        description: 'Não há logs para exportar',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const headers = ['Data/Hora', 'Tipo', 'Código', 'Status', 'Mensagem de Erro'];
+    const csvContent = [
+      headers.join(','),
+      ...logs.map((log) => [
+        format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
+        log.event_type,
+        log.transaction_code || '',
+        log.status,
+        log.error_message?.replace(/,/g, ';') || '',
+      ].map(field => `"${field}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `webhook-logs-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.csv`;
+    link.click();
+
+    toast({
+      title: 'Exportado!',
+      description: `${logs.length} logs exportados para CSV`,
     });
   };
 
@@ -181,18 +235,34 @@ export default function WebhookLogs() {
 
         {/* Logs Section */}
         <Card>
-          <CardHeader>
-            <CardTitle>Logs de Eventos</CardTitle>
-            <CardDescription>
-              Histórico de eventos recebidos do webhook
-            </CardDescription>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle>Logs de Eventos</CardTitle>
+              <CardDescription>
+                Histórico de eventos recebidos do webhook
+              </CardDescription>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleExportCSV}
+              disabled={!logs || logs.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            <WebhookFilters filters={filters} onFiltersChange={setFilters} />
+            <WebhookFilters filters={filters} onFiltersChange={handleFiltersChange} />
             <WebhookLogsTable
-              logs={logs || []}
+              logs={paginatedLogs}
               isLoading={logsLoading}
               onViewDetails={handleViewDetails}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={ITEMS_PER_PAGE}
+              totalItems={totalItems}
             />
           </CardContent>
         </Card>
