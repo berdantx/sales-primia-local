@@ -72,7 +72,7 @@ export function useWebhookLogs(filters: WebhookLogsFilters = {}) {
         }
       }
 
-      const { data, error } = await query.limit(500);
+      const { data, error } = await query.limit(2000);
 
       if (error) {
         console.error('Error fetching webhook logs:', error);
