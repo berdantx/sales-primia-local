@@ -22,7 +22,8 @@ import {
   X,
   Users,
   TrendingUp,
-  Globe
+  Globe,
+  FlaskConical
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 20;
@@ -31,6 +32,7 @@ function Leads() {
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [utmSourceFilter, setUtmSourceFilter] = useState<string>('all');
+  const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
   const [currentPage, setCurrentPage] = useState(1);
   
   const { clientId } = useFilter();
@@ -65,6 +67,12 @@ function Leads() {
     };
   }, [leads]);
 
+  // Check if lead is a test lead
+  const isTestLead = (tags: string | null) => {
+    if (!tags) return false;
+    return tags.includes('[TESTE]') || tags.toLowerCase().includes('teste');
+  };
+
   // Filter leads
   const filteredLeads = useMemo(() => {
     if (!leads) return [];
@@ -79,9 +87,16 @@ function Leads() {
       const matchesSource = sourceFilter === 'all' || l.source === sourceFilter;
       const matchesUtmSource = utmSourceFilter === 'all' || l.utm_source === utmSourceFilter;
       
-      return matchesSearch && matchesSource && matchesUtmSource;
+      // Test filter
+      const isTest = isTestLead(l.tags);
+      const matchesTestFilter = 
+        testFilter === 'all' || 
+        (testFilter === 'hide' && !isTest) || 
+        (testFilter === 'only' && isTest);
+      
+      return matchesSearch && matchesSource && matchesUtmSource && matchesTestFilter;
     });
-  }, [leads, search, sourceFilter, utmSourceFilter]);
+  }, [leads, search, sourceFilter, utmSourceFilter, testFilter]);
 
   // Paginate
   const paginatedLeads = useMemo(() => {
@@ -119,10 +134,11 @@ function Leads() {
     setSearch('');
     setSourceFilter('all');
     setUtmSourceFilter('all');
+    setTestFilter('hide');
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all';
+  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || testFilter !== 'hide';
 
   if (isLoading || isLoadingStats) {
     return (
@@ -237,6 +253,18 @@ function Leads() {
                     {utmSources.map(s => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={testFilter} onValueChange={(v) => { setTestFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[130px] sm:w-[140px] h-9 text-sm">
+                    <FlaskConical className="h-3 w-3 mr-1 shrink-0" />
+                    <SelectValue placeholder="Teste" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hide">Ocultar testes</SelectItem>
+                    <SelectItem value="all">Mostrar todos</SelectItem>
+                    <SelectItem value="only">Apenas testes</SelectItem>
                   </SelectContent>
                 </Select>
 
