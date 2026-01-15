@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Client } from '@/hooks/useClients';
 import {
   Dialog,
@@ -20,8 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Check, Copy, ExternalLink, Webhook, Play, Loader2 } from 'lucide-react';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Check, Copy, Webhook, Play, Loader2, ChevronDown, Code } from 'lucide-react';
 import { toast } from 'sonner';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type TestFormat = 'active_campaign' | 'hotmart' | 'eduzz';
 
@@ -31,21 +37,112 @@ interface ClientWebhookDialogProps {
   client: Client | null;
 }
 
+interface UTMParams {
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  utm_content: string;
+  utm_term: string;
+}
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhookDialogProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [testFormat, setTestFormat] = useState<TestFormat>('active_campaign');
+  const [showPreview, setShowPreview] = useState(false);
+  const [utmParams, setUtmParams] = useState<UTMParams>({
+    utm_source: 'facebook',
+    utm_medium: 'cpc',
+    utm_campaign: 'teste-campanha',
+    utm_content: 'banner-principal',
+    utm_term: 'curso-online',
+  });
 
   if (!client) return null;
 
   const webhookUrl = `${SUPABASE_URL}/functions/v1/leads-webhook/${client.slug}`;
 
+  // Generate payload based on format
+  const getPayload = useMemo(() => {
+    const timestamp = Date.now();
+    const email = `teste-${timestamp}@exemplo.com`;
+
+    if (testFormat === 'active_campaign') {
+      const data = new URLSearchParams();
+      data.append('contact[email]', email);
+      data.append('contact[first_name]', 'Lead');
+      data.append('contact[last_name]', 'de Teste');
+      data.append('contact[phone]', '+5511999999999');
+      data.append('contact[tags]', '[TESTE][WEBHOOK]');
+      data.append('source', 'active_campaign');
+      // Add UTMs as contact fields (Active Campaign format)
+      if (utmParams.utm_source) data.append('contact[fields][utm_source]', utmParams.utm_source);
+      if (utmParams.utm_medium) data.append('contact[fields][utm_medium]', utmParams.utm_medium);
+      if (utmParams.utm_campaign) data.append('contact[fields][utm_campaign]', utmParams.utm_campaign);
+      if (utmParams.utm_content) data.append('contact[fields][utm_content]', utmParams.utm_content);
+      if (utmParams.utm_term) data.append('contact[fields][utm_term]', utmParams.utm_term);
+      return data;
+    } else if (testFormat === 'hotmart') {
+      return {
+        event: 'PURCHASE_COMPLETE',
+        data: {
+          buyer: {
+            email: email,
+            name: 'Lead de Teste Hotmart',
+            phone: '+5511999999999',
+          },
+          purchase: {
+            transaction: `TEST-${timestamp}`,
+            order_date: new Date().toISOString(),
+            tracking: {
+              source_sck: utmParams.utm_source || undefined,
+              utm_source: utmParams.utm_source || undefined,
+              utm_medium: utmParams.utm_medium || undefined,
+              utm_campaign: utmParams.utm_campaign || undefined,
+              utm_content: utmParams.utm_content || undefined,
+              utm_term: utmParams.utm_term || undefined,
+            },
+          },
+          product: {
+            name: 'Produto Teste Hotmart',
+          },
+        },
+        source: 'hotmart',
+      };
+    } else {
+      return {
+        event_type: 'purchase',
+        data: {
+          client: {
+            email: email,
+            name: 'Lead de Teste Eduzz',
+            phone: '+5511999999999',
+          },
+          sale: {
+            sale_id: `EDUZZ-TEST-${timestamp}`,
+            date_create: new Date().toISOString(),
+            tracker: utmParams.utm_source || undefined,
+            utm_source: utmParams.utm_source || undefined,
+            utm_medium: utmParams.utm_medium || undefined,
+            utm_campaign: utmParams.utm_campaign || undefined,
+            utm_content: utmParams.utm_content || undefined,
+            utm_term: utmParams.utm_term || undefined,
+          },
+          product: {
+            name: 'Produto Teste Eduzz',
+          },
+        },
+        source: 'eduzz',
+      };
+    }
+  }, [testFormat, utmParams]);
+
   const copyToClipboard = async (text: string, label: string) => {
     await navigator.clipboard.writeText(text);
     setCopied(label);
-    toast.success('URL copiada!');
+    toast.success('Copiado!');
     setTimeout(() => setCopied(null), 2000);
   };
 
@@ -53,80 +150,23 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
     setIsTesting(true);
     try {
       let response: Response;
-      const testEmail = `teste-${Date.now()}@exemplo.com`;
 
       if (testFormat === 'active_campaign') {
-        // Use URLSearchParams for x-www-form-urlencoded format (compatible with Active Campaign)
-        const testData = new URLSearchParams();
-        testData.append('contact[email]', testEmail);
-        testData.append('contact[first_name]', 'Lead');
-        testData.append('contact[last_name]', 'de Teste');
-        testData.append('contact[phone]', '+5511999999999');
-        testData.append('contact[tags]', '[TESTE][WEBHOOK]');
-        testData.append('source', 'active_campaign');
-
+        const payload = getPayload as URLSearchParams;
         response = await fetch(webhookUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: testData.toString(),
-        });
-      } else if (testFormat === 'hotmart') {
-        // Hotmart JSON format
-        const hotmartPayload = {
-          event: 'PURCHASE_COMPLETE',
-          data: {
-            buyer: {
-              email: testEmail,
-              name: 'Lead de Teste Hotmart',
-              phone: '+5511999999999',
-            },
-            purchase: {
-              transaction: `TEST-${Date.now()}`,
-              order_date: new Date().toISOString(),
-            },
-            product: {
-              name: 'Produto Teste Hotmart',
-            },
-          },
-          source: 'hotmart',
-        };
-
-        response = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(hotmartPayload),
+          body: payload.toString(),
         });
       } else {
-        // Eduzz JSON format
-        const eduzzPayload = {
-          event_type: 'purchase',
-          data: {
-            client: {
-              email: testEmail,
-              name: 'Lead de Teste Eduzz',
-              phone: '+5511999999999',
-            },
-            sale: {
-              sale_id: `EDUZZ-TEST-${Date.now()}`,
-              date_create: new Date().toISOString(),
-            },
-            product: {
-              name: 'Produto Teste Eduzz',
-            },
-          },
-          source: 'eduzz',
-        };
-
         response = await fetch(webhookUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(eduzzPayload),
+          body: JSON.stringify(getPayload),
         });
       }
 
@@ -143,6 +183,19 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
     } finally {
       setIsTesting(false);
     }
+  };
+
+  const formatPayloadPreview = () => {
+    if (testFormat === 'active_campaign') {
+      const params = getPayload as URLSearchParams;
+      // Convert to readable format
+      const obj: Record<string, string> = {};
+      params.forEach((value, key) => {
+        obj[key] = value;
+      });
+      return JSON.stringify(obj, null, 2);
+    }
+    return JSON.stringify(getPayload, null, 2);
   };
 
   return (
@@ -297,10 +350,10 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Selecione o formato e clique para enviar um lead de teste:
+                Selecione o formato e configure os UTM parameters para o teste:
               </p>
               
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="test-format">Formato do teste</Label>
                   <Select value={testFormat} onValueChange={(v) => setTestFormat(v as TestFormat)}>
@@ -329,6 +382,112 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* UTM Parameters */}
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full justify-between">
+                      <span className="flex items-center gap-2">
+                        <Code className="h-4 w-4" />
+                        UTM Parameters
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="utm_source" className="text-xs">utm_source</Label>
+                        <Input
+                          id="utm_source"
+                          value={utmParams.utm_source}
+                          onChange={(e) => setUtmParams(p => ({ ...p, utm_source: e.target.value }))}
+                          placeholder="facebook"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="utm_medium" className="text-xs">utm_medium</Label>
+                        <Input
+                          id="utm_medium"
+                          value={utmParams.utm_medium}
+                          onChange={(e) => setUtmParams(p => ({ ...p, utm_medium: e.target.value }))}
+                          placeholder="cpc"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="utm_campaign" className="text-xs">utm_campaign</Label>
+                        <Input
+                          id="utm_campaign"
+                          value={utmParams.utm_campaign}
+                          onChange={(e) => setUtmParams(p => ({ ...p, utm_campaign: e.target.value }))}
+                          placeholder="campanha-teste"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="utm_content" className="text-xs">utm_content</Label>
+                        <Input
+                          id="utm_content"
+                          value={utmParams.utm_content}
+                          onChange={(e) => setUtmParams(p => ({ ...p, utm_content: e.target.value }))}
+                          placeholder="banner"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1.5 col-span-2">
+                        <Label htmlFor="utm_term" className="text-xs">utm_term</Label>
+                        <Input
+                          id="utm_term"
+                          value={utmParams.utm_term}
+                          onChange={(e) => setUtmParams(p => ({ ...p, utm_term: e.target.value }))}
+                          placeholder="palavra-chave"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Payload Preview */}
+                <Collapsible open={showPreview} onOpenChange={setShowPreview}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full justify-between">
+                      <span className="flex items-center gap-2">
+                        <Code className="h-4 w-4" />
+                        Preview do Payload
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {testFormat === 'active_campaign' ? 'Form Data' : 'JSON'}
+                        </Badge>
+                        <ChevronDown className={`h-4 w-4 transition-transform ${showPreview ? 'rotate-180' : ''}`} />
+                      </div>
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-3">
+                    <div className="relative">
+                      <ScrollArea className="h-48 w-full rounded-md border bg-muted/50">
+                        <pre className="p-3 text-xs font-mono whitespace-pre-wrap break-all">
+                          {formatPayloadPreview()}
+                        </pre>
+                      </ScrollArea>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-7 w-7"
+                        onClick={() => copyToClipboard(formatPayloadPreview(), 'payload')}
+                      >
+                        {copied === 'payload' ? (
+                          <Check className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 <Button 
                   onClick={handleTestWebhook} 
