@@ -17,8 +17,9 @@ import {
 import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
-import { getDateRangeBrasiliaUTC } from '@/lib/dateUtils';
-import { format } from 'date-fns';
+import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { DateRange } from 'react-day-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -56,18 +57,21 @@ function Leads() {
   const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  });
   
   const { clientId } = useFilter();
   const queryClient = useQueryClient();
 
   const filters = useMemo(() => {
-    const range = getDateRangeBrasiliaUTC(365);
     return {
-      startDate: range.startDate,
-      endDate: range.endDate,
+      startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
+      endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
       clientId,
     };
-  }, [clientId]);
+  }, [clientId, dateRange]);
 
   const { data: leads, isLoading } = useLeads(filters);
   const { stats, isLoading: isLoadingStats } = useLeadStats(filters);
@@ -173,10 +177,15 @@ function Leads() {
     setSourceFilter('all');
     setUtmSourceFilter('all');
     setTestFilter('hide');
+    setDateRange({ from: subDays(new Date(), 30), to: new Date() });
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || testFilter !== 'hide';
+  const defaultDateRange = { from: subDays(new Date(), 30), to: new Date() };
+  const isDateRangeChanged = dateRange?.from?.getTime() !== defaultDateRange.from.getTime() || 
+                             dateRange?.to?.getTime() !== defaultDateRange.to.getTime();
+
+  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || testFilter !== 'hide' || isDateRangeChanged;
 
   const handleDeleteTestLeads = async () => {
     if (!leads) return;
@@ -339,23 +348,35 @@ function Leads() {
         {/* Filters */}
         <Card>
           <CardContent className="p-3 sm:pt-6 sm:px-6">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar email, nome, telefone..."
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="pl-10 h-9 text-sm"
-                  />
+            <div className="flex flex-col gap-3">
+              {/* Date Range + Search Row */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <DateRangePicker
+                  dateRange={dateRange}
+                  onDateRangeChange={(range) => {
+                    setDateRange(range);
+                    setCurrentPage(1);
+                  }}
+                  className="h-9 text-sm w-full sm:w-auto"
+                />
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar email, nome, telefone..."
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="pl-10 h-9 text-sm"
+                    />
+                  </div>
                 </div>
               </div>
               
-              <div className="flex gap-2">
+              {/* Other Filters Row */}
+              <div className="flex flex-wrap gap-2">
                 <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCurrentPage(1); }}>
                   <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-sm">
                     <SelectValue placeholder="Fonte" />
