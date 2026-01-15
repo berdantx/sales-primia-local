@@ -42,17 +42,21 @@ export function ClientWebhookDialog({ open, onOpenChange, client }: ClientWebhoo
   const handleTestWebhook = async () => {
     setIsTesting(true);
     try {
-      const testData = new FormData();
+      // Use URLSearchParams for x-www-form-urlencoded format (compatible with Active Campaign)
+      const testData = new URLSearchParams();
       testData.append('contact[email]', `teste-${Date.now()}@exemplo.com`);
       testData.append('contact[first_name]', 'Lead');
       testData.append('contact[last_name]', 'de Teste');
       testData.append('contact[phone]', '+5511999999999');
       testData.append('contact[tags]', '[TESTE][WEBHOOK]');
-      testData.append('source', 'Teste Manual');
+      testData.append('source', 'active_campaign');
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
-        body: testData,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: testData.toString(),
       });
 
       if (response.ok) {
