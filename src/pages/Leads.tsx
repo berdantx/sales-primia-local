@@ -57,6 +57,7 @@ function Leads() {
   const [utmMediumFilter, setUtmMediumFilter] = useState<string>('all');
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string>('all');
   const [utmContentFilter, setUtmContentFilter] = useState<string>('all');
+  const [utmTermFilter, setUtmTermFilter] = useState<string>('all');
   const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -79,30 +80,42 @@ function Leads() {
   const { data: leads, isLoading } = useLeads(isReady ? filters : undefined);
   const { stats, isLoading: isLoadingStats } = useLeadStats(isReady ? filters : undefined);
 
-  // Get unique sources and utm values for filters
-  const { sources, utmSources, utmMediums, utmCampaigns, utmContents } = useMemo(() => {
-    if (!leads) return { sources: [], utmSources: [], utmMediums: [], utmCampaigns: [], utmContents: [] };
+  // Get unique sources and utm values for filters with counts
+  const filterOptions = useMemo(() => {
+    if (!leads) return { 
+      sources: [], utmSources: [], utmMediums: [], utmCampaigns: [], utmContents: [], utmTerms: [],
+      sourceCounts: {}, utmSourceCounts: {}, utmMediumCounts: {}, utmCampaignCounts: {}, utmContentCounts: {}, utmTermCounts: {}
+    };
     
-    const sourceSet = new Set<string>();
-    const utmSourceSet = new Set<string>();
-    const utmMediumSet = new Set<string>();
-    const utmCampaignSet = new Set<string>();
-    const utmContentSet = new Set<string>();
+    const sourceCounts: Record<string, number> = {};
+    const utmSourceCounts: Record<string, number> = {};
+    const utmMediumCounts: Record<string, number> = {};
+    const utmCampaignCounts: Record<string, number> = {};
+    const utmContentCounts: Record<string, number> = {};
+    const utmTermCounts: Record<string, number> = {};
     
     leads.forEach(l => {
-      if (l.source) sourceSet.add(l.source);
-      if (l.utm_source) utmSourceSet.add(l.utm_source);
-      if (l.utm_medium) utmMediumSet.add(l.utm_medium);
-      if (l.utm_campaign) utmCampaignSet.add(l.utm_campaign);
-      if (l.utm_content) utmContentSet.add(l.utm_content);
+      if (l.source) sourceCounts[l.source] = (sourceCounts[l.source] || 0) + 1;
+      if (l.utm_source) utmSourceCounts[l.utm_source] = (utmSourceCounts[l.utm_source] || 0) + 1;
+      if (l.utm_medium) utmMediumCounts[l.utm_medium] = (utmMediumCounts[l.utm_medium] || 0) + 1;
+      if (l.utm_campaign) utmCampaignCounts[l.utm_campaign] = (utmCampaignCounts[l.utm_campaign] || 0) + 1;
+      if (l.utm_content) utmContentCounts[l.utm_content] = (utmContentCounts[l.utm_content] || 0) + 1;
+      if (l.utm_term) utmTermCounts[l.utm_term] = (utmTermCounts[l.utm_term] || 0) + 1;
     });
     
     return {
-      sources: Array.from(sourceSet).sort(),
-      utmSources: Array.from(utmSourceSet).sort(),
-      utmMediums: Array.from(utmMediumSet).sort(),
-      utmCampaigns: Array.from(utmCampaignSet).sort(),
-      utmContents: Array.from(utmContentSet).sort(),
+      sources: Object.keys(sourceCounts).sort(),
+      utmSources: Object.keys(utmSourceCounts).sort(),
+      utmMediums: Object.keys(utmMediumCounts).sort(),
+      utmCampaigns: Object.keys(utmCampaignCounts).sort(),
+      utmContents: Object.keys(utmContentCounts).sort(),
+      utmTerms: Object.keys(utmTermCounts).sort(),
+      sourceCounts,
+      utmSourceCounts,
+      utmMediumCounts,
+      utmCampaignCounts,
+      utmContentCounts,
+      utmTermCounts,
     };
   }, [leads]);
 
@@ -128,6 +141,7 @@ function Leads() {
       const matchesUtmMedium = utmMediumFilter === 'all' || l.utm_medium === utmMediumFilter;
       const matchesUtmCampaign = utmCampaignFilter === 'all' || l.utm_campaign === utmCampaignFilter;
       const matchesUtmContent = utmContentFilter === 'all' || l.utm_content === utmContentFilter;
+      const matchesUtmTerm = utmTermFilter === 'all' || l.utm_term === utmTermFilter;
       
       // Test filter
       const isTest = isTestLead(l.tags);
@@ -136,9 +150,9 @@ function Leads() {
         (testFilter === 'hide' && !isTest) || 
         (testFilter === 'only' && isTest);
       
-      return matchesSearch && matchesSource && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesTestFilter;
+      return matchesSearch && matchesSource && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter;
     });
-  }, [leads, search, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, testFilter]);
+  }, [leads, search, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter]);
 
   // Count test leads
   const testLeadsCount = useMemo(() => {
@@ -194,6 +208,7 @@ function Leads() {
     setUtmMediumFilter('all');
     setUtmCampaignFilter('all');
     setUtmContentFilter('all');
+    setUtmTermFilter('all');
     setTestFilter('hide');
     setDateRange({ from: subDays(new Date(), 30), to: new Date() });
     setCurrentPage(1);
@@ -203,7 +218,7 @@ function Leads() {
   const isDateRangeChanged = dateRange?.from?.getTime() !== defaultDateRange.from.getTime() || 
                              dateRange?.to?.getTime() !== defaultDateRange.to.getTime();
 
-  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || testFilter !== 'hide' || isDateRangeChanged;
+  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || testFilter !== 'hide' || isDateRangeChanged;
 
   const handleDeleteTestLeads = async () => {
     if (!leads) return;
@@ -396,74 +411,98 @@ function Leads() {
               {/* Other Filters Row */}
               <div className="flex flex-wrap gap-2">
                 <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-sm">
+                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
                     <SelectValue placeholder="Fonte" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas as fontes</SelectItem>
-                    {sources.map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    <SelectItem value="all">Todas fontes ({leads?.length || 0})</SelectItem>
+                    {filterOptions.sources.map(s => (
+                      <SelectItem key={s} value={s}>
+                        {s} ({filterOptions.sourceCounts[s]})
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
                 <Select value={utmSourceFilter} onValueChange={(v) => { setUtmSourceFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-sm">
+                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
                     <SelectValue placeholder="UTM Source" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos Source</SelectItem>
-                    {utmSources.map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    {filterOptions.utmSources.map(s => (
+                      <SelectItem key={s} value={s}>
+                        {s} ({filterOptions.utmSourceCounts[s]})
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
                 <Select value={utmMediumFilter} onValueChange={(v) => { setUtmMediumFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-sm">
+                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
                     <SelectValue placeholder="UTM Medium" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos Medium</SelectItem>
-                    {utmMediums.map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    {filterOptions.utmMediums.map(s => (
+                      <SelectItem key={s} value={s}>
+                        {s} ({filterOptions.utmMediumCounts[s]})
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
                 <Select value={utmCampaignFilter} onValueChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-sm">
+                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
                     <SelectValue placeholder="UTM Campaign" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos Campaign</SelectItem>
-                    {utmCampaigns.map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    {filterOptions.utmCampaigns.map(s => (
+                      <SelectItem key={s} value={s}>
+                        {s} ({filterOptions.utmCampaignCounts[s]})
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
                 <Select value={utmContentFilter} onValueChange={(v) => { setUtmContentFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-sm">
+                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
                     <SelectValue placeholder="UTM Content" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos Content</SelectItem>
-                    {utmContents.map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    {filterOptions.utmContents.map(s => (
+                      <SelectItem key={s} value={s}>
+                        {s} ({filterOptions.utmContentCounts[s]})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={utmTermFilter} onValueChange={(v) => { setUtmTermFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
+                    <SelectValue placeholder="UTM Term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Term</SelectItem>
+                    {filterOptions.utmTerms.map(s => (
+                      <SelectItem key={s} value={s}>
+                        {s} ({filterOptions.utmTermCounts[s]})
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
                 <Select value={testFilter} onValueChange={(v) => { setTestFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[130px] sm:w-[140px] h-9 text-sm">
+                  <SelectTrigger className="w-[140px] sm:w-[150px] h-9 text-sm">
                     <FlaskConical className="h-3 w-3 mr-1 shrink-0" />
                     <SelectValue placeholder="Teste" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="hide">Ocultar testes</SelectItem>
                     <SelectItem value="all">Mostrar todos</SelectItem>
-                    <SelectItem value="only">Apenas testes</SelectItem>
+                    <SelectItem value="only">Apenas testes ({testLeadsCount})</SelectItem>
                   </SelectContent>
                 </Select>
 
