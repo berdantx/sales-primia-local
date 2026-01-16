@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DateRange } from 'react-day-picker';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -57,11 +57,22 @@ type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
 function EduzzTransactions() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [period, setPeriod] = useState<PeriodFilter>('365d');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [selectedTransaction, setSelectedTransaction] = useState<EduzzTransaction | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Debounce search to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { clientId } = useFilter();
 
@@ -85,9 +96,9 @@ function EduzzTransactions() {
   const filters = useMemo(() => ({
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     clientId,
-  }), [dateRange, search, clientId]);
+  }), [dateRange, debouncedSearch, clientId]);
 
   const { data: transactions, isLoading } = useEduzzTransactions(filters);
   const { data: stats, isLoading: isLoadingStats } = useEduzzTransactionStatsOptimized({
@@ -116,20 +127,20 @@ function EduzzTransactions() {
     return sorted[0] ? { name: sorted[0][0], total: sorted[0][1].total } : null;
   }, [transactions]);
 
-  // Filter transactions by search
+  // Filter transactions by search (use debounced for consistency)
   const filteredTransactions = useMemo(() => {
     if (!transactions) return [];
     
-    if (!search) return transactions;
+    if (!debouncedSearch) return transactions;
     
-    const lowerSearch = search.toLowerCase();
+    const lowerSearch = debouncedSearch.toLowerCase();
     return transactions.filter(t => 
       t.product?.toLowerCase().includes(lowerSearch) ||
       t.buyer_name?.toLowerCase().includes(lowerSearch) ||
       t.buyer_email?.toLowerCase().includes(lowerSearch) ||
       t.sale_id.toLowerCase().includes(lowerSearch)
     );
-  }, [transactions, search]);
+  }, [transactions, debouncedSearch]);
 
   // Paginate
   const paginatedTransactions = useMemo(() => {
@@ -277,10 +288,7 @@ function EduzzTransactions() {
                   <Input
                     placeholder="Buscar por produto, cliente, email ou ID..."
                     value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setCurrentPage(1);
-                    }}
+                    onChange={(e) => setSearch(e.target.value)}
                     className="pl-10"
                   />
                 </div>
