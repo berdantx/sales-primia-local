@@ -13,6 +13,9 @@ interface ResendRequest {
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
+  console.log("[RESEND-INVITATION] Enviando email via Resend...");
+  console.log("[RESEND-INVITATION] Destinatário:", to);
+  
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -29,13 +32,18 @@ async function sendEmail(to: string, subject: string, html: string) {
 
   if (!res.ok) {
     const error = await res.text();
+    console.error("[RESEND-INVITATION] ✗ Erro ao enviar email:", error);
     throw new Error(`Failed to send email: ${error}`);
   }
 
-  return await res.json();
+  const result = await res.json();
+  console.log("[RESEND-INVITATION] ✓ Email enviado com sucesso. ID:", result.id);
+  return result;
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log("[RESEND-INVITATION] === Iniciando reenvio ===");
+  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -43,6 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("[RESEND-INVITATION] ✗ Authorization header ausente");
       return new Response(
         JSON.stringify({ error: "Não autorizado" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -55,14 +64,18 @@ const handler = async (req: Request): Promise<Response> => {
       global: { headers: { Authorization: authHeader } },
     });
 
+    console.log("[RESEND-INVITATION] Verificando autenticação...");
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
+      console.error("[RESEND-INVITATION] ✗ Usuário não autenticado:", userError?.message);
       return new Response(
         JSON.stringify({ error: "Usuário não autenticado" }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+    console.log("[RESEND-INVITATION] ✓ Usuário autenticado:", user.email);
 
+    console.log("[RESEND-INVITATION] Verificando permissão (role)...");
     const { data: roleData, error: roleError } = await supabase
       .from("user_roles")
       .select("role")
@@ -70,15 +83,19 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (roleError || roleData?.role !== "master") {
+      console.error("[RESEND-INVITATION] ✗ Usuário não é master. Role:", roleData?.role);
       return new Response(
         JSON.stringify({ error: "Apenas masters podem reenviar convites" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+    console.log("[RESEND-INVITATION] ✓ Role verificada: master");
 
     const { invitationId }: ResendRequest = await req.json();
+    console.log("[RESEND-INVITATION] Invitation ID:", invitationId);
 
     if (!invitationId) {
+      console.error("[RESEND-INVITATION] ✗ ID do convite não fornecido");
       return new Response(
         JSON.stringify({ error: "ID do convite é obrigatório" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -89,6 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     // Get current invitation
+    console.log("[RESEND-INVITATION] Buscando convite...");
     const { data: invitation, error: fetchError } = await supabaseAdmin
       .from("invitations")
       .select("*, clients(name)")
@@ -96,13 +114,18 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (fetchError || !invitation) {
+      console.error("[RESEND-INVITATION] ✗ Convite não encontrado:", fetchError);
       return new Response(
         JSON.stringify({ error: "Convite não encontrado" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+    console.log("[RESEND-INVITATION] ✓ Convite encontrado:", invitation.email);
+    console.log("[RESEND-INVITATION] Status atual:", invitation.status);
+    console.log("[RESEND-INVITATION] Token antigo:", invitation.token?.substring(0, 8) + "...");
 
     if (invitation.status === "accepted") {
+      console.error("[RESEND-INVITATION] ✗ Convite já foi aceito");
       return new Response(
         JSON.stringify({ error: "Não é possível reenviar um convite já aceito" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -113,7 +136,10 @@ const handler = async (req: Request): Promise<Response> => {
     const newToken = crypto.randomUUID();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
+    console.log("[RESEND-INVITATION] Novo token gerado:", newToken.substring(0, 8) + "...");
+    console.log("[RESEND-INVITATION] Nova data de expiração:", expiresAt.toISOString());
 
+    console.log("[RESEND-INVITATION] Atualizando convite no banco...");
     const { error: updateError } = await supabaseAdmin
       .from("invitations")
       .update({
@@ -124,16 +150,40 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("id", invitationId);
 
     if (updateError) {
-      console.error("Error updating invitation:", updateError);
+      console.error("[RESEND-INVITATION] ✗ Erro ao atualizar convite:", updateError);
       return new Response(
         JSON.stringify({ error: "Erro ao atualizar convite" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
+    console.log("[RESEND-INVITATION] ✓ Banco atualizado com sucesso");
+
+    // Register history
+    console.log("[RESEND-INVITATION] Registrando histórico...");
+    const { error: historyError } = await supabaseAdmin
+      .from("invitation_history")
+      .insert({
+        invitation_id: invitationId,
+        action: "resent",
+        performed_by: user.id,
+        old_token: invitation.token,
+        new_token: newToken,
+        old_expires_at: invitation.expires_at,
+        new_expires_at: expiresAt.toISOString(),
+        email_sent: true,
+        notes: `Convite reenviado para ${invitation.email}`,
+      });
+
+    if (historyError) {
+      console.warn("[RESEND-INVITATION] ⚠ Erro ao registrar histórico:", historyError);
+    } else {
+      console.log("[RESEND-INVITATION] ✓ Histórico registrado");
+    }
 
     // Send email
     const origin = req.headers.get("origin") || "https://vvuhqqvjtozhwideqdnn.lovableproject.com";
     const inviteLink = `${origin}/invite/${newToken}`;
+    console.log("[RESEND-INVITATION] Link do convite:", inviteLink);
 
     const clientName = invitation.clients?.name || "";
     const clientInfo = clientName ? `<p style="color: #6B7280; text-align: center; margin-bottom: 10px;">Você terá acesso à conta: <strong>${clientName}</strong></p>` : '';
@@ -191,6 +241,8 @@ const handler = async (req: Request): Promise<Response> => {
       emailHtml
     );
 
+    console.log("[RESEND-INVITATION] === Reenvio concluído com sucesso ===");
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -202,7 +254,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("Error in resend-invitation function:", error);
+    console.error("[RESEND-INVITATION] ✗ Erro inesperado:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Erro interno do servidor" }),
       {

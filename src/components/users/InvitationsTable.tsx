@@ -22,7 +22,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, CheckCircle, XCircle, Building2, RefreshCw, Trash2, Loader2 } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Building2, RefreshCw, Trash2, Loader2, History } from 'lucide-react';
+import { InvitationHistoryDialog } from './InvitationHistoryDialog';
 
 interface Invitation {
   id: string;
@@ -54,6 +55,8 @@ export function InvitationsTable({
 }: InvitationsTableProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedInvitationId, setSelectedInvitationId] = useState<string | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedForHistory, setSelectedForHistory] = useState<{ id: string; email: string } | null>(null);
 
   if (isLoading) {
     return (
@@ -124,6 +127,11 @@ export function InvitationsTable({
     setSelectedInvitationId(null);
   };
 
+  const handleHistoryClick = (invitation: Invitation) => {
+    setSelectedForHistory({ id: invitation.id, email: invitation.email });
+    setHistoryDialogOpen(true);
+  };
+
   return (
     <>
       <Table>
@@ -161,7 +169,15 @@ export function InvitationsTable({
                 {format(new Date(invitation.expires_at), "dd/MM/yyyy", { locale: ptBR })}
               </TableCell>
               <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleHistoryClick(invitation)}
+                    title="Ver histórico"
+                  >
+                    <History className="h-4 w-4" />
+                  </Button>
                   {canResend(invitation.status, invitation.expires_at) && onResend && (
                     <Button
                       variant="ghost"
@@ -216,6 +232,13 @@ export function InvitationsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <InvitationHistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        invitationId={selectedForHistory?.id || null}
+        email={selectedForHistory?.email || ""}
+      />
     </>
   );
 }
