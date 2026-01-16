@@ -134,10 +134,52 @@ export function useInvitations() {
     },
   });
 
+  const resendInviteMutation = useMutation({
+    mutationFn: async (invitationId: string) => {
+      const { data, error } = await supabase.functions.invoke('resend-invitation', {
+        body: { invitationId },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invitations'] });
+      toast.success('Convite reenviado com sucesso');
+    },
+    onError: (error: any) => {
+      console.error('Error resending invitation:', error);
+      toast.error(error.message || 'Erro ao reenviar convite');
+    },
+  });
+
+  const deleteInviteMutation = useMutation({
+    mutationFn: async (invitationId: string) => {
+      const { data, error } = await supabase.functions.invoke('delete-invitation', {
+        body: { invitationId },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invitations'] });
+      toast.success('Convite excluído com sucesso');
+    },
+    onError: (error: any) => {
+      console.error('Error deleting invitation:', error);
+      toast.error(error.message || 'Erro ao excluir convite');
+    },
+  });
+
   return {
     invitations,
     isLoading,
     sendInvite: sendInviteMutation.mutate,
     isSending: sendInviteMutation.isPending,
+    resendInvite: resendInviteMutation.mutate,
+    isResending: resendInviteMutation.isPending,
+    deleteInvite: deleteInviteMutation.mutate,
+    isDeleting: deleteInviteMutation.isPending,
   };
 }
