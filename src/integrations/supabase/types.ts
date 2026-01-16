@@ -520,6 +520,56 @@ export type Database = {
           },
         ]
       }
+      invitation_history: {
+        Row: {
+          action: string
+          created_at: string
+          email_sent: boolean | null
+          id: string
+          invitation_id: string
+          new_expires_at: string | null
+          new_token: string | null
+          notes: string | null
+          old_expires_at: string | null
+          old_token: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          email_sent?: boolean | null
+          id?: string
+          invitation_id: string
+          new_expires_at?: string | null
+          new_token?: string | null
+          notes?: string | null
+          old_expires_at?: string | null
+          old_token?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          email_sent?: boolean | null
+          id?: string
+          invitation_id?: string
+          new_expires_at?: string | null
+          new_token?: string | null
+          notes?: string | null
+          old_expires_at?: string | null
+          old_token?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_history_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
