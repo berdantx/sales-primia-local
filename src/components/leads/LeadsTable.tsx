@@ -17,9 +17,10 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { formatDateTimeBR } from '@/lib/dateUtils';
-import { FileSpreadsheet, Eye, FlaskConical } from 'lucide-react';
+import { FileSpreadsheet, Eye, FlaskConical, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LeadDetailDialog } from './LeadDetailDialog';
+import { useClients } from '@/hooks/useClients';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -118,11 +119,14 @@ function LeadCard({ lead, onViewDetails }: { lead: Lead; onViewDetails: (lead: L
 export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const { data: clients } = useClients();
 
   const handleViewDetails = (lead: Lead) => {
     setSelectedLead(lead);
     setDetailOpen(true);
   };
+
+  const hasMultipleClients = clients && clients.length > 1;
 
   if (leads.length === 0) {
     return (
@@ -132,9 +136,15 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
           <p className="text-muted-foreground">
             {hasActiveFilters 
               ? 'Nenhum lead encontrado com os filtros aplicados'
-              : 'Nenhum lead ainda. Configure um webhook para começar a receber leads.'
+              : 'Nenhum lead encontrado para este cliente.'
             }
           </p>
+          {!hasActiveFilters && hasMultipleClients && (
+            <p className="text-sm text-muted-foreground mt-2 flex items-center justify-center gap-1">
+              <Building2 className="h-4 w-4" />
+              Experimente alternar para outro cliente usando o botão "Alterar cliente" acima.
+            </p>
+          )}
         </CardContent>
       </Card>
     );
