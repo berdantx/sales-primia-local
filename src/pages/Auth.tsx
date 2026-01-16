@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { TrendingUp, Target, ArrowRight, Loader2, Users, Zap } from 'lucide-react';
+import { TrendingUp, Target, ArrowRight, Loader2, Users, Zap, Eye, EyeOff } from 'lucide-react';
 import { suggestDomainCorrection, EmailSuggestion as EmailSuggestionType } from '@/lib/emailValidator';
 import { EmailSuggestion } from '@/components/auth/EmailSuggestion';
 import { useBrandingSettings } from '@/hooks/useBrandingSettings';
@@ -43,6 +43,7 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [emailSuggestion, setEmailSuggestion] = useState<EmailSuggestionType | null>(null);
   const [suggestionDismissed, setSuggestionDismissed] = useState(false);
   const { signIn, signUp, user, loading } = useAuth();
@@ -300,14 +301,24 @@ export default function Auth() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="login-password">Senha</Label>
-                        <Input
-                          id="login-password"
-                          type="password"
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          disabled={isLoading}
-                        />
+                        <div className="relative">
+                          <Input
+                            id="login-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            disabled={isLoading}
+                            className="pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
                       <Button type="submit" className="w-full" disabled={isLoading}>
                         {isLoading ? (
@@ -363,14 +374,24 @@ export default function Auth() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="signup-password">Senha</Label>
-                        <Input
-                          id="signup-password"
-                          type="password"
-                          placeholder="Mínimo 6 caracteres"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          disabled={isLoading}
-                        />
+                        <div className="relative">
+                          <Input
+                            id="signup-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Mínimo 6 caracteres"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            disabled={isLoading}
+                            className="pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
                       <Button type="submit" className="w-full" disabled={isLoading}>
                         {isLoading ? (
@@ -407,14 +428,24 @@ export default function Auth() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password">Senha</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
