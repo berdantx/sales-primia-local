@@ -15,7 +15,7 @@ const PAGE_SIZE = 20;
 
 export default function Users() {
   const { users, isLoading: usersLoading, updateRole, isUpdating } = useUsers();
-  const { invitations, isLoading: invitationsLoading } = useInvitations();
+  const { invitations, isLoading: invitationsLoading, resendInvite, isResending, deleteInvite, isDeleting } = useInvitations();
   
   // Access logs state
   const [filters, setFilters] = useState<FiltersType>({});
@@ -92,6 +92,10 @@ export default function Users() {
                 <InvitationsTable
                   invitations={invitations}
                   isLoading={invitationsLoading}
+                  onResend={resendInvite}
+                  onDelete={deleteInvite}
+                  isResending={isResending}
+                  isDeleting={isDeleting}
                 />
               </CardContent>
             </Card>

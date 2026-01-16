@@ -8,9 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface InvitationRequest {
-  email: string;
-  clientId?: string;
+interface ResendRequest {
+  invitationId: string;
 }
 
 async function sendEmail(to: string, subject: string, html: string) {
@@ -37,13 +36,11 @@ async function sendEmail(to: string, subject: string, html: string) {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get auth header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -52,14 +49,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create Supabase client with user's token
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return new Response(
@@ -68,7 +63,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user is master
     const { data: roleData, error: roleError } = await supabase
       .from("user_roles")
       .select("role")
@@ -77,85 +71,73 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (roleError || roleData?.role !== "master") {
       return new Response(
-        JSON.stringify({ error: "Apenas masters podem enviar convites" }),
+        JSON.stringify({ error: "Apenas masters podem reenviar convites" }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const { email, clientId }: InvitationRequest = await req.json();
+    const { invitationId }: ResendRequest = await req.json();
 
-    if (!email) {
+    if (!invitationId) {
       return new Response(
-        JSON.stringify({ error: "Email é obrigatório" }),
+        JSON.stringify({ error: "ID do convite é obrigatório" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Check if email already has pending and non-expired invitation
-    const { data: existingInvite } = await supabase
-      .from("invitations")
-      .select("id, status, expires_at")
-      .eq("email", email.toLowerCase())
-      .eq("status", "pending")
-      .gt("expires_at", new Date().toISOString())
-      .single();
-
-    if (existingInvite) {
-      return new Response(
-        JSON.stringify({ error: "Já existe um convite pendente e válido para este email" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    // Generate unique token
-    const token = crypto.randomUUID();
-    
-    // Create invitation using service role client for insert
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: invitation, error: insertError } = await supabaseAdmin
+    // Get current invitation
+    const { data: invitation, error: fetchError } = await supabaseAdmin
       .from("invitations")
-      .insert({
-        email: email.toLowerCase(),
-        invited_by: user.id,
-        token,
-        status: "pending",
-        role: "user",
-        client_id: clientId || null,
-      })
-      .select()
+      .select("*, clients(name)")
+      .eq("id", invitationId)
       .single();
 
-    if (insertError) {
-      console.error("Error inserting invitation:", insertError);
+    if (fetchError || !invitation) {
       return new Response(
-        JSON.stringify({ error: "Erro ao criar convite" }),
+        JSON.stringify({ error: "Convite não encontrado" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (invitation.status === "accepted") {
+      return new Response(
+        JSON.stringify({ error: "Não é possível reenviar um convite já aceito" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Generate new token and update expiration
+    const newToken = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const { error: updateError } = await supabaseAdmin
+      .from("invitations")
+      .update({
+        token: newToken,
+        expires_at: expiresAt.toISOString(),
+        status: "pending",
+      })
+      .eq("id", invitationId);
+
+    if (updateError) {
+      console.error("Error updating invitation:", updateError);
+      return new Response(
+        JSON.stringify({ error: "Erro ao atualizar convite" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Get client name if clientId is provided
-    let clientName = "";
-    if (clientId) {
-      const { data: clientData } = await supabaseAdmin
-        .from("clients")
-        .select("name")
-        .eq("id", clientId)
-        .single();
-      
-      if (clientData) {
-        clientName = clientData.name;
-      }
-    }
-
-    // Get the app URL from request origin or use default
-    const origin = req.headers.get("origin") || "https://vvuhqqvjtozhwideqdnn.lovableproject.com";
-    const inviteLink = `${origin}/invite/${token}`;
-
     // Send email
+    const origin = req.headers.get("origin") || "https://vvuhqqvjtozhwideqdnn.lovableproject.com";
+    const inviteLink = `${origin}/invite/${newToken}`;
+
+    const clientName = invitation.clients?.name || "";
     const clientInfo = clientName ? `<p style="color: #6B7280; text-align: center; margin-bottom: 10px;">Você terá acesso à conta: <strong>${clientName}</strong></p>` : '';
-    
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -173,11 +155,11 @@ const handler = async (req: Request): Promise<Response> => {
         </div>
         
         <h1 style="color: #0F1724; text-align: center; margin-bottom: 20px;">
-          Você foi convidado! 🎉
+          Convite Reenviado! 🎉
         </h1>
         
         <p style="color: #6B7280; text-align: center; margin-bottom: 10px;">
-          Você recebeu um convite para acessar o <strong>Sales Analytics</strong>, 
+          Você recebeu novamente um convite para acessar o <strong>Sales Analytics</strong>, 
           uma plataforma de análise de vendas.
         </p>
         
@@ -203,19 +185,16 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    const emailResponse = await sendEmail(
-      email,
-      "Você foi convidado para o Sales Analytics!",
+    await sendEmail(
+      invitation.email,
+      "Convite reenviado - Sales Analytics",
       emailHtml
     );
-
-    console.log("Email sent successfully:", emailResponse);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Convite enviado com sucesso",
-        invitation_id: invitation.id 
+        message: "Convite reenviado com sucesso" 
       }),
       {
         status: 200,
@@ -223,7 +202,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("Error in send-invitation function:", error);
+    console.error("Error in resend-invitation function:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Erro interno do servidor" }),
       {

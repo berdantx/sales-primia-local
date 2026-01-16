@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.leads-webhook]
 verify_jwt = false
+
+[functions.resend-invitation]
+verify_jwt = false
+
+[functions.delete-invitation]
+verify_jwt = false
