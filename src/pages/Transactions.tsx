@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
@@ -89,11 +89,22 @@ function TransactionCard({ transaction, onClick }: { transaction: Transaction; o
 
 function Transactions() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Debounce search to avoid excessive updates
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
   
   const { clientId, setClientId } = useFilter();
 
@@ -135,23 +146,23 @@ function Transactions() {
     };
   }, [transactions]);
 
-  // Filter transactions
+  // Filter transactions (use debounced search for consistency)
   const filteredTransactions = useMemo(() => {
     if (!transactions) return [];
     
     return transactions.filter(t => {
-      const matchesSearch = !search || 
-        t.product?.toLowerCase().includes(search.toLowerCase()) ||
-        t.buyer_name?.toLowerCase().includes(search.toLowerCase()) ||
-        t.buyer_email?.toLowerCase().includes(search.toLowerCase()) ||
-        t.transaction_code.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = !debouncedSearch || 
+        t.product?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        t.buyer_name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        t.buyer_email?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        t.transaction_code.toLowerCase().includes(debouncedSearch.toLowerCase());
       
       const matchesCurrency = currencyFilter === 'all' || t.currency === currencyFilter;
       const matchesCountry = countryFilter === 'all' || t.country === countryFilter;
       
       return matchesSearch && matchesCurrency && matchesCountry;
     });
-  }, [transactions, search, currencyFilter, countryFilter]);
+  }, [transactions, debouncedSearch, currencyFilter, countryFilter]);
 
   // Paginate
   const paginatedTransactions = useMemo(() => {
@@ -299,10 +310,7 @@ function Transactions() {
                   <Input
                     placeholder="Buscar produto, cliente..."
                     value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setCurrentPage(1);
-                    }}
+                    onChange={(e) => setSearch(e.target.value)}
                     className="pl-10 h-9 text-sm"
                   />
                 </div>

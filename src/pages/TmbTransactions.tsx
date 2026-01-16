@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DateRange } from 'react-day-picker';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -58,6 +58,7 @@ type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
 function TmbTransactions() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [period, setPeriod] = useState<PeriodFilter>('365d');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
@@ -69,6 +70,16 @@ function TmbTransactions() {
   const [utmSourceFilter, setUtmSourceFilter] = useState<string | null>(null);
   const [utmMediumFilter, setUtmMediumFilter] = useState<string | null>(null);
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string | null>(null);
+
+  // Debounce search to avoid excessive updates
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { clientId, setClientId } = useFilter();
 
@@ -92,9 +103,9 @@ function TmbTransactions() {
   const filters = useMemo(() => ({
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
     clientId,
-  }), [dateRange, search, clientId]);
+  }), [dateRange, debouncedSearch, clientId]);
 
   const { data: transactions, isLoading, error } = useTmbTransactions(filters);
   const { data: stats, isLoading: isLoadingStats } = useTmbTransactionStatsOptimized({
@@ -123,14 +134,14 @@ function TmbTransactions() {
     return sorted[0] ? { name: sorted[0][0], total: sorted[0][1].total } : null;
   }, [transactions]);
 
-  // Filter transactions by search and advanced filters
+  // Filter transactions by search and advanced filters (use debounced for consistency)
   const filteredTransactions = useMemo(() => {
     if (!transactions) return [];
     
     return transactions.filter(t => {
       // Text search
-      if (search) {
-        const lowerSearch = search.toLowerCase();
+      if (debouncedSearch) {
+        const lowerSearch = debouncedSearch.toLowerCase();
         const matchesSearch = 
           t.product?.toLowerCase().includes(lowerSearch) ||
           t.buyer_name?.toLowerCase().includes(lowerSearch) ||
@@ -147,7 +158,7 @@ function TmbTransactions() {
       
       return true;
     });
-  }, [transactions, search, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter]);
+  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter]);
 
   // Paginate
   const paginatedTransactions = useMemo(() => {
@@ -311,10 +322,7 @@ function TmbTransactions() {
                   <Input
                     placeholder="Buscar por produto, cliente, email ou ID..."
                     value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setCurrentPage(1);
-                    }}
+                    onChange={(e) => setSearch(e.target.value)}
                     className="pl-10"
                   />
                 </div>
