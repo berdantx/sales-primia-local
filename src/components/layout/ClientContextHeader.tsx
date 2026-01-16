@@ -24,6 +24,10 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
 
   const selectedClient = clients?.find(c => c.id === clientId);
   const displayName = selectedClient?.name || 'Todos os clientes';
+  
+  // Show client selector for master users OR non-master users with multiple clients
+  const hasMultipleClients = clients && clients.length > 1;
+  const showClientSelector = isMaster || hasMultipleClients;
 
   return (
     <div className="space-y-2">
@@ -32,7 +36,7 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
           {title}
         </h1>
 
-        {isMaster && clients && clients.length > 0 && (
+        {showClientSelector && clients && clients.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
@@ -46,13 +50,18 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 bg-popover">
-              <DropdownMenuItem 
-                onClick={() => setClientId(null)}
-                className={!clientId ? 'bg-accent' : ''}
-              >
-                Todos os clientes
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {/* Only masters can see "All clients" option */}
+              {isMaster && (
+                <>
+                  <DropdownMenuItem 
+                    onClick={() => setClientId(null)}
+                    className={!clientId ? 'bg-accent' : ''}
+                  >
+                    Todos os clientes
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               {clients.map(client => (
                 <DropdownMenuItem 
                   key={client.id} 
@@ -67,7 +76,8 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
         )}
       </div>
 
-      {isMaster && (
+      {/* Show badge for masters OR non-master users with multiple clients */}
+      {showClientSelector && (
         <div className="flex items-center gap-2">
           <Badge 
             variant="outline" 
