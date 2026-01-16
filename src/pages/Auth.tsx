@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -317,6 +317,14 @@ export default function Auth() {
                         )}
                         Entrar
                       </Button>
+                      <div className="text-center">
+                        <Link 
+                          to="/reset-password" 
+                          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          Esqueci minha senha
+                        </Link>
+                      </div>
                     </form>
                   </TabsContent>
 
@@ -416,6 +424,14 @@ export default function Auth() {
                     )}
                     Entrar
                   </Button>
+                  <div className="text-center">
+                    <Link 
+                      to="/reset-password" 
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      Esqueci minha senha
+                    </Link>
+                  </div>
                 </form>
               )}
             </CardContent>

@@ -22,6 +22,7 @@ import Users from "./pages/Users";
 import Clients from "./pages/Clients";
 import Leads from "./pages/Leads";
 import AcceptInvite from "./pages/AcceptInvite";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ const App = () => (
             } />
             <Route path="/leads" element={<Leads />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
