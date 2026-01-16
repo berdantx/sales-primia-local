@@ -141,13 +141,13 @@ export default function ResetPassword() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        <div className="flex items-center gap-2 mb-6 sm:mb-8 justify-center">
+        <div className="flex flex-col items-center gap-3 mb-6 sm:mb-8">
           <img 
             src={currentLogo} 
             alt={branding.appName} 
-            className="h-8 w-auto object-contain"
+            className="h-10 w-auto object-contain"
           />
-          <span className="text-xl sm:text-2xl font-bold">{branding.appName}</span>
+          <span className="text-xl sm:text-2xl font-bold text-center">{branding.appName}</span>
         </div>
 
         <Card className="border-0 shadow-medium">
