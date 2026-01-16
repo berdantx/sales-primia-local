@@ -63,9 +63,10 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const { data: clients } = useClients();
   const { isMaster } = useUserRole();
 
-  // Auto-set clientId for non-master users (they only have access to one client)
+  // Auto-set clientId for non-master users
+  // If they have one or more clients and no clientId is set, select the first one
   useEffect(() => {
-    if (!isMaster && clients && clients.length === 1 && !clientId) {
+    if (!isMaster && clients && clients.length > 0 && !clientId) {
       setClientId(clients[0].id);
     }
   }, [isMaster, clients, clientId]);
