@@ -19,8 +19,8 @@ interface ClientContextHeaderProps {
 
 export function ClientContextHeader({ title, description }: ClientContextHeaderProps) {
   const { clientId, setClientId } = useFilter();
-  const { data: clients } = useClients();
-  const { isMaster } = useUserRole();
+  const { data: clients, isLoading: isLoadingClients } = useClients();
+  const { isMaster, isLoading: isLoadingRole } = useUserRole();
 
   const selectedClient = clients?.find(c => c.id === clientId);
   const displayName = selectedClient?.name || 'Todos os clientes';
@@ -28,6 +28,16 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
   // Show client selector for master users OR non-master users with multiple clients
   const hasMultipleClients = clients && clients.length > 1;
   const showClientSelector = isMaster || hasMultipleClients;
+  
+  // Debug log
+  console.log('ClientContextHeader Debug:', { 
+    clientsCount: clients?.length, 
+    hasMultipleClients, 
+    isMaster, 
+    showClientSelector,
+    isLoadingClients,
+    isLoadingRole
+  });
 
   return (
     <div className="space-y-2">
@@ -36,7 +46,7 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
           {title}
         </h1>
 
-        {showClientSelector && clients && clients.length > 0 && (
+        {showClientSelector && clients && clients.length > 0 && !isLoadingClients && !isLoadingRole && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
