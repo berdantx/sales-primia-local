@@ -6,10 +6,19 @@ interface SidebarPreviewProps {
   appName: string;
   appSubtitle: string;
   logoUrl: string | null;
+  logoUrlDark: string | null;
   primaryColor: string;
+  previewTheme: 'light' | 'dark';
 }
 
-export function SidebarPreview({ appName, appSubtitle, logoUrl, primaryColor }: SidebarPreviewProps) {
+export function SidebarPreview({ 
+  appName, 
+  appSubtitle, 
+  logoUrl, 
+  logoUrlDark,
+  primaryColor,
+  previewTheme
+}: SidebarPreviewProps) {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', active: true },
     { icon: FileText, label: 'Transações', active: false },
@@ -20,13 +29,28 @@ export function SidebarPreview({ appName, appSubtitle, logoUrl, primaryColor }: 
   // Convert HSL string to CSS hsl() format
   const primaryColorCss = `hsl(${primaryColor})`;
 
+  // Determine which logo to show based on preview theme
+  const currentLogo = previewTheme === 'dark'
+    ? (logoUrlDark || logoUrl || defaultLogo)
+    : (logoUrl || defaultLogo);
+
+  const isDark = previewTheme === 'dark';
+
   return (
-    <div className="w-full max-w-[200px] bg-sidebar rounded-lg border overflow-hidden shadow-lg">
+    <div 
+      className={cn(
+        "w-full max-w-[200px] rounded-lg border overflow-hidden shadow-lg transition-colors",
+        isDark ? "bg-slate-900 border-slate-700" : "bg-sidebar border-sidebar-border"
+      )}
+    >
       {/* Header */}
-      <div className="p-3 border-b border-sidebar-border">
+      <div className={cn(
+        "p-3 border-b",
+        isDark ? "border-slate-700" : "border-sidebar-border"
+      )}>
         <div className="flex flex-col items-center gap-1">
           <img 
-            src={logoUrl || defaultLogo} 
+            src={currentLogo} 
             alt="Logo" 
             className="h-10 w-auto object-contain max-w-full"
           />
@@ -35,15 +59,22 @@ export function SidebarPreview({ appName, appSubtitle, logoUrl, primaryColor }: 
 
       {/* Menu items */}
       <div className="p-2 space-y-1">
-        <p className="text-[10px] text-muted-foreground px-2 py-1">Visão Geral</p>
+        <p className={cn(
+          "text-[10px] px-2 py-1",
+          isDark ? "text-slate-400" : "text-muted-foreground"
+        )}>
+          Visão Geral
+        </p>
         {menuItems.map((item) => (
           <div
             key={item.label}
             className={cn(
               "flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors",
               item.active 
-                ? "text-sidebar-accent-foreground" 
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                ? "" 
+                : isDark 
+                  ? "text-slate-300 hover:bg-slate-800" 
+                  : "text-sidebar-foreground hover:bg-sidebar-accent/50"
             )}
             style={item.active ? { 
               backgroundColor: `hsl(${primaryColor} / 0.1)`,
@@ -57,12 +88,24 @@ export function SidebarPreview({ appName, appSubtitle, logoUrl, primaryColor }: 
       </div>
 
       {/* Footer */}
-      <div className="p-3 border-t border-sidebar-border mt-2">
+      <div className={cn(
+        "p-3 border-t mt-2",
+        isDark ? "border-slate-700" : "border-sidebar-border"
+      )}>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-            <User className="w-3 h-3 text-muted-foreground" />
+          <div className={cn(
+            "w-6 h-6 rounded-full flex items-center justify-center",
+            isDark ? "bg-slate-700" : "bg-muted"
+          )}>
+            <User className={cn(
+              "w-3 h-3",
+              isDark ? "text-slate-400" : "text-muted-foreground"
+            )} />
           </div>
-          <span className="text-[10px] text-muted-foreground truncate">
+          <span className={cn(
+            "text-[10px] truncate",
+            isDark ? "text-slate-400" : "text-muted-foreground"
+          )}>
             usuario@email.com
           </span>
         </div>

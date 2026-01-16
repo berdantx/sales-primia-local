@@ -1,4 +1,6 @@
 import { useLocation } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useTheme } from 'next-themes';
 import { NavLink } from '@/components/NavLink';
 import {
   Sidebar,
@@ -98,6 +100,25 @@ export function AppSidebar() {
   const { settings: branding } = useBrandingSettings();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  const { resolvedTheme } = useTheme();
+
+  // Determine which logo to use based on current theme
+  const currentLogo = useMemo(() => {
+    const isDark = resolvedTheme === 'dark';
+    
+    // If dark mode and we have a dark logo, use it
+    if (isDark && branding.logoUrlDark) {
+      return branding.logoUrlDark;
+    }
+    
+    // If light mode and we have a light logo, use it
+    if (!isDark && branding.logoUrl) {
+      return branding.logoUrl;
+    }
+    
+    // Fallback: use whichever logo is available, or default
+    return branding.logoUrl || branding.logoUrlDark || defaultLogo;
+  }, [branding.logoUrl, branding.logoUrlDark, resolvedTheme]);
 
   const isActive = (path: string) => {
     if (path === '/') {
@@ -111,7 +132,7 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex flex-col items-center gap-2">
           <img 
-            src={branding.logoUrl || defaultLogo} 
+            src={currentLogo} 
             alt="Logo" 
             className={collapsed ? "h-8 w-8 object-contain" : "h-12 w-auto object-contain max-w-full"}
           />
