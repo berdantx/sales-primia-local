@@ -18,7 +18,6 @@ import { useUserRole, AppRole } from '@/hooks/useUserRole';
 import { useBrandingSettings } from '@/hooks/useBrandingSettings';
 import { Button } from '@/components/ui/button';
 import {
-  BarChart3,
   Upload,
   FileText,
   Target,
@@ -36,6 +35,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import defaultLogo from '@/assets/default-logo.png';
 
 interface MenuItem {
   title: string;
@@ -109,24 +109,12 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary rounded-lg overflow-hidden">
-            {branding.logoUrl ? (
-              <img 
-                src={branding.logoUrl} 
-                alt="Logo" 
-                className="h-5 w-5 object-cover"
-              />
-            ) : (
-              <BarChart3 className="h-5 w-5 text-primary-foreground" />
-            )}
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="font-bold text-lg">{branding.appName}</span>
-              <span className="text-xs text-muted-foreground">{branding.appSubtitle}</span>
-            </div>
-          )}
+        <div className="flex flex-col items-center gap-2">
+          <img 
+            src={branding.logoUrl || defaultLogo} 
+            alt="Logo" 
+            className={collapsed ? "h-8 w-8 object-contain" : "h-12 w-auto object-contain max-w-full"}
+          />
         </div>
       </SidebarHeader>
 
