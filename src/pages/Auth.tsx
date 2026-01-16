@@ -183,107 +183,6 @@ export default function Auth() {
     );
   }
 
-  // Login form component to avoid repetition
-  const LoginForm = () => (
-    <form onSubmit={handleSignIn} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="seu@email.com"
-          value={email}
-          onChange={(e) => handleEmailChange(e.target.value)}
-          disabled={isLoading}
-        />
-        <AnimatePresence>
-          {emailSuggestion && (
-            <EmailSuggestion
-              suggestion={emailSuggestion}
-              onAccept={acceptSuggestion}
-              onDismiss={dismissSuggestion}
-            />
-          )}
-        </AnimatePresence>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Senha</Label>
-        <Input
-          id="password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-        />
-      </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-        ) : (
-          <ArrowRight className="h-4 w-4 mr-2" />
-        )}
-        Entrar
-      </Button>
-    </form>
-  );
-
-  // Signup form component
-  const SignupForm = () => (
-    <form onSubmit={handleSignUp} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="fullName">Nome completo</Label>
-        <Input
-          id="fullName"
-          type="text"
-          placeholder="Seu nome"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          disabled={isLoading}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="signupEmail">Email</Label>
-        <Input
-          id="signupEmail"
-          type="email"
-          placeholder="seu@email.com"
-          value={email}
-          onChange={(e) => handleEmailChange(e.target.value)}
-          disabled={isLoading}
-        />
-        <AnimatePresence>
-          {emailSuggestion && (
-            <EmailSuggestion
-              suggestion={emailSuggestion}
-              onAccept={acceptSuggestion}
-              onDismiss={dismissSuggestion}
-            />
-          )}
-        </AnimatePresence>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="signupPassword">Senha</Label>
-        <Input
-          id="signupPassword"
-          type="password"
-          placeholder="Mínimo 6 caracteres"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={isLoading}
-        />
-      </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-        ) : (
-          <ArrowRight className="h-4 w-4 mr-2" />
-        )}
-        Criar conta
-      </Button>
-    </form>
-  );
-
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side - Branding */}
@@ -378,15 +277,146 @@ export default function Auth() {
                   </TabsList>
 
                   <TabsContent value="login">
-                    <LoginForm />
+                    <form onSubmit={handleSignIn} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="login-email">Email</Label>
+                        <Input
+                          id="login-email"
+                          type="email"
+                          placeholder="seu@email.com"
+                          value={email}
+                          onChange={(e) => handleEmailChange(e.target.value)}
+                          disabled={isLoading}
+                        />
+                        <AnimatePresence>
+                          {emailSuggestion && (
+                            <EmailSuggestion
+                              suggestion={emailSuggestion}
+                              onAccept={acceptSuggestion}
+                              onDismiss={dismissSuggestion}
+                            />
+                          )}
+                        </AnimatePresence>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="login-password">Senha</Label>
+                        <Input
+                          id="login-password"
+                          type="password"
+                          placeholder="••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                        )}
+                        Entrar
+                      </Button>
+                    </form>
                   </TabsContent>
 
                   <TabsContent value="signup">
-                    <SignupForm />
+                    <form onSubmit={handleSignUp} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-fullName">Nome completo</Label>
+                        <Input
+                          id="signup-fullName"
+                          type="text"
+                          placeholder="Seu nome"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">Email</Label>
+                        <Input
+                          id="signup-email"
+                          type="email"
+                          placeholder="seu@email.com"
+                          value={email}
+                          onChange={(e) => handleEmailChange(e.target.value)}
+                          disabled={isLoading}
+                        />
+                        <AnimatePresence>
+                          {emailSuggestion && (
+                            <EmailSuggestion
+                              suggestion={emailSuggestion}
+                              onAccept={acceptSuggestion}
+                              onDismiss={dismissSuggestion}
+                            />
+                          )}
+                        </AnimatePresence>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">Senha</Label>
+                        <Input
+                          id="signup-password"
+                          type="password"
+                          placeholder="Mínimo 6 caracteres"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <Button type="submit" className="w-full" disabled={isLoading}>
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                        )}
+                        Criar conta
+                      </Button>
+                    </form>
                   </TabsContent>
                 </Tabs>
               ) : (
-                <LoginForm />
+                <form onSubmit={handleSignIn} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    <AnimatePresence>
+                      {emailSuggestion && (
+                        <EmailSuggestion
+                          suggestion={emailSuggestion}
+                          onAccept={acceptSuggestion}
+                          onDismiss={dismissSuggestion}
+                        />
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Senha</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                    )}
+                    Entrar
+                  </Button>
+                </form>
               )}
             </CardContent>
           </Card>
