@@ -12,10 +12,12 @@ import { ptBR } from 'date-fns/locale';
 import { LLMIntegrationsCard } from '@/components/settings/LLMIntegrationsCard';
 import { ChangePasswordCard } from '@/components/settings/ChangePasswordCard';
 import { BrandingSettingsCard } from '@/components/settings/BrandingSettingsCard';
+import { SignupSettingsCard } from '@/components/settings/SignupSettingsCard';
 
 export default function Settings() {
   const { user } = useAuth();
   const { role } = useUserRole();
+  const isMasterOrAdmin = role === 'master' || role === 'admin';
   const isMaster = role === 'master';
 
   return (
@@ -34,6 +36,9 @@ export default function Settings() {
 
         {/* Branding Settings - Only for Masters */}
         {isMaster && <BrandingSettingsCard />}
+
+        {/* Signup Settings - Only for Admin/Master */}
+        {isMasterOrAdmin && <SignupSettingsCard />}
 
         {/* Profile Card */}
         <motion.div

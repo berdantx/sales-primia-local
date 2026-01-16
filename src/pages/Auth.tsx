@@ -37,6 +37,7 @@ const features = [
     description: 'Resumos automáticos para Slack, Discord e CRMs'
   }
 ];
+
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -182,6 +183,107 @@ export default function Auth() {
     );
   }
 
+  // Login form component to avoid repetition
+  const LoginForm = () => (
+    <form onSubmit={handleSignIn} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="seu@email.com"
+          value={email}
+          onChange={(e) => handleEmailChange(e.target.value)}
+          disabled={isLoading}
+        />
+        <AnimatePresence>
+          {emailSuggestion && (
+            <EmailSuggestion
+              suggestion={emailSuggestion}
+              onAccept={acceptSuggestion}
+              onDismiss={dismissSuggestion}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">Senha</Label>
+        <Input
+          id="password"
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={isLoading}
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        ) : (
+          <ArrowRight className="h-4 w-4 mr-2" />
+        )}
+        Entrar
+      </Button>
+    </form>
+  );
+
+  // Signup form component
+  const SignupForm = () => (
+    <form onSubmit={handleSignUp} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="fullName">Nome completo</Label>
+        <Input
+          id="fullName"
+          type="text"
+          placeholder="Seu nome"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          disabled={isLoading}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="signupEmail">Email</Label>
+        <Input
+          id="signupEmail"
+          type="email"
+          placeholder="seu@email.com"
+          value={email}
+          onChange={(e) => handleEmailChange(e.target.value)}
+          disabled={isLoading}
+        />
+        <AnimatePresence>
+          {emailSuggestion && (
+            <EmailSuggestion
+              suggestion={emailSuggestion}
+              onAccept={acceptSuggestion}
+              onDismiss={dismissSuggestion}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="signupPassword">Senha</Label>
+        <Input
+          id="signupPassword"
+          type="password"
+          placeholder="Mínimo 6 caracteres"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={isLoading}
+        />
+      </div>
+      <Button type="submit" className="w-full" disabled={isLoading}>
+        {isLoading ? (
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        ) : (
+          <ArrowRight className="h-4 w-4 mr-2" />
+        )}
+        Criar conta
+      </Button>
+    </form>
+  );
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side - Branding */}
@@ -193,14 +295,15 @@ export default function Auth() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="flex items-center gap-3 mb-8">
+            <div className="mb-10">
               <img 
                 src={currentLogo} 
                 alt={branding.appName} 
                 className="h-12 w-auto object-contain brightness-0 invert"
               />
-              <span className="text-3xl font-bold">{branding.appName}</span>
             </div>
+            
+            <h2 className="text-3xl font-bold mb-4">{branding.appName}</h2>
             
             <h1 className="text-4xl font-bold mb-6 leading-tight">
               Inteligência de Vendas<br />para Infoprodutores
@@ -260,115 +363,31 @@ export default function Auth() {
             <CardHeader className="space-y-1 pb-4 px-4 sm:px-6">
               <CardTitle className="text-xl sm:text-2xl font-bold">Bem-vindo</CardTitle>
               <CardDescription className="text-sm">
-                Entre na sua conta ou crie uma nova para começar
+                {branding.signupEnabled 
+                  ? 'Entre na sua conta ou crie uma nova para começar'
+                  : 'Entre na sua conta para continuar'
+                }
               </CardDescription>
             </CardHeader>
             <CardContent className="px-4 sm:px-6">
-              <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
-                  <TabsTrigger value="login" className="text-sm">Entrar</TabsTrigger>
-                  <TabsTrigger value="signup" className="text-sm">Cadastrar</TabsTrigger>
-                </TabsList>
+              {branding.signupEnabled ? (
+                <Tabs defaultValue="login" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
+                    <TabsTrigger value="login" className="text-sm">Entrar</TabsTrigger>
+                    <TabsTrigger value="signup" className="text-sm">Cadastrar</TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="login">
-                  <form onSubmit={handleSignIn} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={email}
-                        onChange={(e) => handleEmailChange(e.target.value)}
-                        disabled={isLoading}
-                      />
-                      <AnimatePresence>
-                        {emailSuggestion && (
-                          <EmailSuggestion
-                            suggestion={emailSuggestion}
-                            onAccept={acceptSuggestion}
-                            onDismiss={dismissSuggestion}
-                          />
-                        )}
-                      </AnimatePresence>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Senha</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                      )}
-                      Entrar
-                    </Button>
-                  </form>
-                </TabsContent>
+                  <TabsContent value="login">
+                    <LoginForm />
+                  </TabsContent>
 
-                <TabsContent value="signup">
-                  <form onSubmit={handleSignUp} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Nome completo</Label>
-                      <Input
-                        id="fullName"
-                        type="text"
-                        placeholder="Seu nome"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signupEmail">Email</Label>
-                      <Input
-                        id="signupEmail"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={email}
-                        onChange={(e) => handleEmailChange(e.target.value)}
-                        disabled={isLoading}
-                      />
-                      <AnimatePresence>
-                        {emailSuggestion && (
-                          <EmailSuggestion
-                            suggestion={emailSuggestion}
-                            onAccept={acceptSuggestion}
-                            onDismiss={dismissSuggestion}
-                          />
-                        )}
-                      </AnimatePresence>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signupPassword">Senha</Label>
-                      <Input
-                        id="signupPassword"
-                        type="password"
-                        placeholder="Mínimo 6 caracteres"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                      )}
-                      Criar conta
-                    </Button>
-                  </form>
-                </TabsContent>
-              </Tabs>
+                  <TabsContent value="signup">
+                    <SignupForm />
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                <LoginForm />
+              )}
             </CardContent>
           </Card>
         </motion.div>

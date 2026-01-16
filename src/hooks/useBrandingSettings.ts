@@ -10,6 +10,7 @@ export interface BrandingSettings {
   logoUrlDark: string | null;
   primaryColor: string; // HSL format e.g., "217 100% 50%"
   primaryColorDark: string;
+  signupEnabled: boolean;
 }
 
 const DEFAULT_SETTINGS: BrandingSettings = {
@@ -19,6 +20,7 @@ const DEFAULT_SETTINGS: BrandingSettings = {
   logoUrlDark: null,
   primaryColor: '160 100% 35%',
   primaryColorDark: '160 100% 40%',
+  signupEnabled: false,
 };
 
 const SETTINGS_KEYS = [
@@ -28,6 +30,7 @@ const SETTINGS_KEYS = [
   'logo_url_dark',
   'primary_color',
   'primary_color_dark',
+  'signup_enabled',
 ] as const;
 
 type SettingKey = typeof SETTINGS_KEYS[number];
@@ -40,6 +43,7 @@ function mapKeyToProperty(key: SettingKey): keyof BrandingSettings {
     logo_url_dark: 'logoUrlDark',
     primary_color: 'primaryColor',
     primary_color_dark: 'primaryColorDark',
+    signup_enabled: 'signupEnabled',
   };
   return map[key];
 }
@@ -52,6 +56,7 @@ function mapPropertyToKey(property: keyof BrandingSettings): SettingKey {
     logoUrlDark: 'logo_url_dark',
     primaryColor: 'primary_color',
     primaryColorDark: 'primary_color_dark',
+    signupEnabled: 'signup_enabled',
   };
   return map[property];
 }
@@ -75,6 +80,8 @@ export function useBrandingSettings() {
         const property = mapKeyToProperty(row.key as SettingKey);
         if (property === 'logoUrl' || property === 'logoUrlDark') {
           result[property] = row.value || null;
+        } else if (property === 'signupEnabled') {
+          result[property] = row.value === 'true';
         } else {
           (result as any)[property] = row.value;
         }
@@ -96,7 +103,9 @@ export function useBrandingSettings() {
     mutationFn: async (newSettings: Partial<BrandingSettings>) => {
       const updates = Object.entries(newSettings).map(([property, value]) => {
         const key = mapPropertyToKey(property as keyof BrandingSettings);
-        return { key, value: value ?? '' };
+        // Convert boolean to string for storage
+        const stringValue = typeof value === 'boolean' ? String(value) : (value ?? '');
+        return { key, value: stringValue };
       });
 
       for (const update of updates) {
