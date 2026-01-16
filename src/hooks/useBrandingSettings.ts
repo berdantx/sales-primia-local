@@ -7,6 +7,7 @@ export interface BrandingSettings {
   appName: string;
   appSubtitle: string;
   logoUrl: string | null;
+  logoUrlDark: string | null;
   primaryColor: string; // HSL format e.g., "217 100% 50%"
   primaryColorDark: string;
 }
@@ -15,6 +16,7 @@ const DEFAULT_SETTINGS: BrandingSettings = {
   appName: 'Primia - Analytics',
   appSubtitle: 'Gestão de Leads e Vendas',
   logoUrl: null,
+  logoUrlDark: null,
   primaryColor: '160 100% 35%',
   primaryColorDark: '160 100% 40%',
 };
@@ -23,6 +25,7 @@ const SETTINGS_KEYS = [
   'app_name',
   'app_subtitle',
   'logo_url',
+  'logo_url_dark',
   'primary_color',
   'primary_color_dark',
 ] as const;
@@ -34,6 +37,7 @@ function mapKeyToProperty(key: SettingKey): keyof BrandingSettings {
     app_name: 'appName',
     app_subtitle: 'appSubtitle',
     logo_url: 'logoUrl',
+    logo_url_dark: 'logoUrlDark',
     primary_color: 'primaryColor',
     primary_color_dark: 'primaryColorDark',
   };
@@ -45,6 +49,7 @@ function mapPropertyToKey(property: keyof BrandingSettings): SettingKey {
     appName: 'app_name',
     appSubtitle: 'app_subtitle',
     logoUrl: 'logo_url',
+    logoUrlDark: 'logo_url_dark',
     primaryColor: 'primary_color',
     primaryColorDark: 'primary_color_dark',
   };
@@ -68,7 +73,7 @@ export function useBrandingSettings() {
 
       data?.forEach((row) => {
         const property = mapKeyToProperty(row.key as SettingKey);
-        if (property === 'logoUrl') {
+        if (property === 'logoUrl' || property === 'logoUrlDark') {
           result[property] = row.value || null;
         } else {
           (result as any)[property] = row.value;
