@@ -28,16 +28,6 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
   // Show client selector for master users OR non-master users with multiple clients
   const hasMultipleClients = clients && clients.length > 1;
   const showClientSelector = isMaster || hasMultipleClients;
-  
-  // Debug log
-  console.log('ClientContextHeader Debug:', { 
-    clientsCount: clients?.length, 
-    hasMultipleClients, 
-    isMaster, 
-    showClientSelector,
-    isLoadingClients,
-    isLoadingRole
-  });
 
   return (
     <div className="space-y-2">
