@@ -47,6 +47,19 @@ export default function Auth() {
   const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { settings: branding } = useBrandingSettings();
+  const { resolvedTheme } = useTheme();
+
+  const currentLogo = useMemo(() => {
+    const isDark = resolvedTheme === 'dark';
+    if (isDark && branding.logoUrlDark) {
+      return branding.logoUrlDark;
+    }
+    if (branding.logoUrl) {
+      return branding.logoUrl;
+    }
+    return defaultLogo;
+  }, [branding, resolvedTheme]);
 
   // Verifica sugestão de email com debounce
   const checkEmailSuggestion = useCallback((value: string) => {
@@ -168,20 +181,6 @@ export default function Auth() {
       </div>
     );
   }
-
-  const { settings: branding } = useBrandingSettings();
-  const { resolvedTheme } = useTheme();
-
-  const currentLogo = useMemo(() => {
-    const isDark = resolvedTheme === 'dark';
-    if (isDark && branding.logoUrlDark) {
-      return branding.logoUrlDark;
-    }
-    if (branding.logoUrl) {
-      return branding.logoUrl;
-    }
-    return defaultLogo;
-  }, [branding, resolvedTheme]);
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
