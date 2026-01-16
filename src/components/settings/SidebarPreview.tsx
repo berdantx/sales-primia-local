@@ -1,5 +1,6 @@
 import { LayoutDashboard, FileText, Target, Settings, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import defaultLogo from '@/assets/default-logo.png';
 
 interface SidebarPreviewProps {
   appName: string;
@@ -23,41 +24,12 @@ export function SidebarPreview({ appName, appSubtitle, logoUrl, primaryColor }: 
     <div className="w-full max-w-[200px] bg-sidebar rounded-lg border overflow-hidden shadow-lg">
       {/* Header */}
       <div className="p-3 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden"
-            style={{ backgroundColor: primaryColorCss }}
-          >
-            {logoUrl ? (
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <svg 
-                className="w-4 h-4 text-white" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
-                />
-              </svg>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-xs truncate text-sidebar-foreground">
-              {appName || 'Sales Analytics'}
-            </p>
-            <p className="text-[10px] text-muted-foreground truncate">
-              {appSubtitle || 'Análise de Vendas'}
-            </p>
-          </div>
+        <div className="flex flex-col items-center gap-1">
+          <img 
+            src={logoUrl || defaultLogo} 
+            alt="Logo" 
+            className="h-10 w-auto object-contain max-w-full"
+          />
         </div>
       </div>
 

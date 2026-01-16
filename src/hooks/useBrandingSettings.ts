@@ -12,11 +12,11 @@ export interface BrandingSettings {
 }
 
 const DEFAULT_SETTINGS: BrandingSettings = {
-  appName: 'Sales Analytics',
-  appSubtitle: 'Análise de Vendas',
+  appName: 'Primia - Analytics',
+  appSubtitle: 'Gestão de Leads e Vendas',
   logoUrl: null,
-  primaryColor: '217 100% 50%',
-  primaryColorDark: '217 100% 55%',
+  primaryColor: '160 100% 35%',
+  primaryColorDark: '160 100% 40%',
 };
 
 const SETTINGS_KEYS = [
