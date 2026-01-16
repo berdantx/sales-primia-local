@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,10 +8,35 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { BarChart3, TrendingUp, Target, ArrowRight, Loader2 } from 'lucide-react';
+import { TrendingUp, Target, ArrowRight, Loader2, Users, Zap } from 'lucide-react';
 import { suggestDomainCorrection, EmailSuggestion as EmailSuggestionType } from '@/lib/emailValidator';
 import { EmailSuggestion } from '@/components/auth/EmailSuggestion';
+import { useBrandingSettings } from '@/hooks/useBrandingSettings';
+import { useTheme } from 'next-themes';
+import defaultLogo from '@/assets/default-logo.png';
 
+const features = [
+  {
+    icon: TrendingUp,
+    title: 'Dashboard Multi-Plataforma',
+    description: 'Hotmart, TMB e Eduzz unificados em um só lugar'
+  },
+  {
+    icon: Target,
+    title: 'Gestão de Metas Inteligente',
+    description: 'Projeções automáticas e acompanhamento visual'
+  },
+  {
+    icon: Users,
+    title: 'Gestão de Leads Completa',
+    description: 'Rastreamento de UTMs e análise de campanhas'
+  },
+  {
+    icon: Zap,
+    title: 'Automações e Webhooks',
+    description: 'Resumos automáticos para Slack, Discord e CRMs'
+  }
+];
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -144,6 +169,20 @@ export default function Auth() {
     );
   }
 
+  const { settings: branding } = useBrandingSettings();
+  const { resolvedTheme } = useTheme();
+
+  const currentLogo = useMemo(() => {
+    const isDark = resolvedTheme === 'dark';
+    if (isDark && branding.logoUrlDark) {
+      return branding.logoUrlDark;
+    }
+    if (branding.logoUrl) {
+      return branding.logoUrl;
+    }
+    return defaultLogo;
+  }, [branding, resolvedTheme]);
+
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side - Branding */}
@@ -156,49 +195,41 @@ export default function Auth() {
             transition={{ duration: 0.5 }}
           >
             <div className="flex items-center gap-3 mb-8">
-              <BarChart3 className="h-10 w-10" />
-              <span className="text-3xl font-bold">Sales Analytics</span>
+              <img 
+                src={currentLogo} 
+                alt={branding.appName} 
+                className="h-12 w-auto object-contain brightness-0 invert"
+              />
+              <span className="text-3xl font-bold">{branding.appName}</span>
             </div>
             
             <h1 className="text-4xl font-bold mb-6 leading-tight">
-              Transforme suas planilhas em insights acionáveis
+              Inteligência de Vendas<br />para Infoprodutores
             </h1>
             
             <p className="text-lg opacity-90 mb-12 max-w-md">
-              Importe vendas Hotmart, visualize KPIs por moeda e país, 
-              e acompanhe suas metas em tempo real.
+              Centralize dados de múltiplas plataformas, acompanhe metas em tempo real 
+              e tome decisões baseadas em dados.
             </p>
 
-            <div className="space-y-6">
-              <motion.div 
-                className="flex items-center gap-4"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <div className="p-3 bg-primary-foreground/10 rounded-lg">
-                  <TrendingUp className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="font-semibold">Dashboard inteligente</p>
-                  <p className="text-sm opacity-75">KPIs por moeda, país e período</p>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                className="flex items-center gap-4"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="p-3 bg-primary-foreground/10 rounded-lg">
-                  <Target className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="font-semibold">Gestão de metas</p>
-                  <p className="text-sm opacity-75">Acompanhe quanto falta vender por dia, semana e mês</p>
-                </div>
-              </motion.div>
+            <div className="space-y-5">
+              {features.map((feature, index) => (
+                <motion.div 
+                  key={feature.title}
+                  className="flex items-center gap-4"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 + index * 0.1 }}
+                >
+                  <div className="p-3 bg-primary-foreground/10 rounded-lg">
+                    <feature.icon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{feature.title}</p>
+                    <p className="text-sm opacity-75">{feature.description}</p>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         </div>
@@ -218,8 +249,12 @@ export default function Auth() {
           className="w-full max-w-md"
         >
           <div className="lg:hidden flex items-center gap-2 mb-6 sm:mb-8 justify-center">
-            <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-            <span className="text-xl sm:text-2xl font-bold">Sales Analytics</span>
+            <img 
+              src={currentLogo} 
+              alt={branding.appName} 
+              className="h-8 w-auto object-contain"
+            />
+            <span className="text-xl sm:text-2xl font-bold">{branding.appName}</span>
           </div>
 
           <Card className="border-0 shadow-medium">
