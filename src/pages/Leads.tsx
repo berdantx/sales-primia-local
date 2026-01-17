@@ -369,16 +369,7 @@ function Leads() {
           />
         </motion.div>
 
-        {/* Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <LeadsByDayChart data={stats?.byDay || {}} isLoading={isLoadingStats} />
-        </motion.div>
-
-        {/* Filters */}
+        {/* Filters - moved above chart */}
         <Card>
           <CardContent className="p-3 sm:pt-6 sm:px-6">
             <div className="flex flex-col gap-3">
@@ -515,6 +506,16 @@ function Leads() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <LeadsByDayChart data={stats?.byDay || {}} isLoading={isLoadingStats} />
+        </motion.div>
+
 
         {/* Table */}
         <motion.div
