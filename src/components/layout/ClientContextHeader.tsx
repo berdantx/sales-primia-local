@@ -1,7 +1,8 @@
-import { Building2, ChevronDown } from 'lucide-react';
+import { Building2, ChevronDown, Users } from 'lucide-react';
 import { useFilter } from '@/contexts/FilterContext';
 import { useClients } from '@/hooks/useClients';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useClientLeadCounts } from '@/hooks/useClientLeadCounts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -21,6 +22,7 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
   const { clientId, setClientId } = useFilter();
   const { data: clients, isLoading: isLoadingClients } = useClients();
   const { isMaster, isLoading: isLoadingRole } = useUserRole();
+  const { data: leadCounts } = useClientLeadCounts();
 
   const selectedClient = clients?.find(c => c.id === clientId);
   const displayName = selectedClient?.name || 'Todos os clientes';
@@ -62,15 +64,22 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
                   <DropdownMenuSeparator />
                 </>
               )}
-              {clients.map(client => (
-                <DropdownMenuItem 
-                  key={client.id} 
-                  onClick={() => setClientId(client.id)}
-                  className={clientId === client.id ? 'bg-accent' : ''}
-                >
-                  {client.name}
-                </DropdownMenuItem>
-              ))}
+              {clients.map(client => {
+                const leadCount = leadCounts?.[client.id] || 0;
+                return (
+                  <DropdownMenuItem 
+                    key={client.id} 
+                    onClick={() => setClientId(client.id)}
+                    className={`flex items-center justify-between ${clientId === client.id ? 'bg-accent' : ''}`}
+                  >
+                    <span>{client.name}</span>
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
+                      <Users className="h-3 w-3" />
+                      {leadCount}
+                    </span>
+                  </DropdownMenuItem>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
