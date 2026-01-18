@@ -8,6 +8,15 @@ import { ColoredKPICard } from './ColoredKPICard';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
 import { Card } from '@/components/ui/card';
 
+interface ProjectionBreakdown {
+  hotmartRealBRL: number;
+  hotmartPendingBRL: number;
+  hotmartUSD: number;
+  hotmartUSDConverted: number;
+  tmbBRL: number;
+  eduzzBRL: number;
+}
+
 interface ColoredDashboardCardsProps {
   totalBRL: number;
   projectedBRL: number;
@@ -22,6 +31,7 @@ interface ColoredDashboardCardsProps {
   onLeadsClick: () => void;
   salesByDate?: Record<string, Record<string, number>>;
   dollarRate?: number;
+  projectionBreakdown?: ProjectionBreakdown;
 }
 
 export function ColoredDashboardCards({
@@ -34,6 +44,7 @@ export function ColoredDashboardCards({
   onLeadsClick,
   salesByDate,
   dollarRate,
+  projectionBreakdown,
 }: ColoredDashboardCardsProps) {
   // Process chart data from salesByDate
   const chartData = useMemo(() => {
@@ -122,6 +133,59 @@ export function ColoredDashboardCards({
             icon={TrendingUp}
             variant="cyan"
             delay={1}
+            tooltipContent={
+              projectionBreakdown ? (
+                <div className="space-y-2 text-sm min-w-[220px]">
+                  <p className="font-medium border-b pb-1 mb-2">Composição do Valor</p>
+                  
+                  {/* Hotmart já processado */}
+                  {projectionBreakdown.hotmartRealBRL > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span>Hotmart (já processado):</span>
+                      <span className="font-medium">{formatCurrency(projectionBreakdown.hotmartRealBRL, 'BRL')}</span>
+                    </div>
+                  )}
+                  
+                  {/* Hotmart a receber - destaque em amber */}
+                  {projectionBreakdown.hotmartPendingBRL > 0 && (
+                    <div className="flex justify-between gap-4 text-amber-500">
+                      <span>Hotmart (a receber):</span>
+                      <span className="font-medium">{formatCurrency(projectionBreakdown.hotmartPendingBRL, 'BRL')}</span>
+                    </div>
+                  )}
+                  
+                  {/* TMB */}
+                  {projectionBreakdown.tmbBRL > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span>TMB:</span>
+                      <span className="font-medium">{formatCurrency(projectionBreakdown.tmbBRL, 'BRL')}</span>
+                    </div>
+                  )}
+                  
+                  {/* Eduzz */}
+                  {projectionBreakdown.eduzzBRL > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span>Eduzz:</span>
+                      <span className="font-medium">{formatCurrency(projectionBreakdown.eduzzBRL, 'BRL')}</span>
+                    </div>
+                  )}
+                  
+                  {/* Hotmart USD convertido - destaque em azul */}
+                  {projectionBreakdown.hotmartUSD > 0 && (
+                    <div className="flex justify-between gap-4 text-blue-400">
+                      <span>Hotmart (USD convertido):</span>
+                      <span className="font-medium">{formatCurrency(projectionBreakdown.hotmartUSDConverted, 'BRL')}</span>
+                    </div>
+                  )}
+                  
+                  {/* Explicação de cálculo */}
+                  <div className="border-t pt-2 mt-2 text-muted-foreground text-xs">
+                    <p className="font-medium text-foreground">Como é calculado:</p>
+                    <p>Soma dos valores já processados + parcelas futuras de transações parceladas.</p>
+                  </div>
+                </div>
+              ) : undefined
+            }
           />
         )}
 

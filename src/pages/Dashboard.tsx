@@ -316,6 +316,9 @@ export default function Dashboard() {
             
             // If no active goal, show colored styled cards
             if (!hasActiveGoal) {
+              // Calcular valor pendente (a receber)
+              const hotmartPendingBRL = hotmartProjectedBRL - hotmartRealBRL;
+              
               return (
                 <ColoredDashboardCards
                   totalBRL={combinedRealBRL + usdConvertedToBRL}
@@ -327,6 +330,14 @@ export default function Dashboard() {
                   onLeadsClick={() => navigate('/leads')}
                   salesByDate={salesByDate}
                   dollarRate={dollarRate?.rate}
+                  projectionBreakdown={{
+                    hotmartRealBRL,
+                    hotmartPendingBRL,
+                    hotmartUSD,
+                    hotmartUSDConverted: usdConvertedToBRL,
+                    tmbBRL,
+                    eduzzBRL,
+                  }}
                 />
               );
             }
