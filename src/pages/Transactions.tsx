@@ -411,6 +411,13 @@ function Transactions() {
             variant="cyan"
             delay={1}
             className="text-sm sm:text-base"
+            tooltipContent={
+              <div className="space-y-1 text-sm">
+                <p className="font-medium">Como é calculado:</p>
+                <p>Soma do valor realizado + valor futuro de parcelas pendentes de transações parceladas.</p>
+                <p className="text-muted-foreground text-xs mt-1">Ex: Uma venda de 12x de R$ 100 com 3 parcelas pagas projeta R$ 1.200 no total.</p>
+              </div>
+            }
           />
           {summaryStats.totalUSD > 0 && (
             <ColoredKPICard
