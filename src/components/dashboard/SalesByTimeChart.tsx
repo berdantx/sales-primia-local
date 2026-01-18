@@ -7,8 +7,10 @@ import {
 } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, TrendingDown, BarChart3, AreaChart as AreaChartIcon, PieChart as PieChartIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, AreaChart as AreaChartIcon, PieChart as PieChartIcon, ChevronDown } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 
 interface SalesByTimeChartProps {
   data: Record<string, Record<string, number>>;
@@ -25,6 +27,7 @@ type ChartType = 'line' | 'bar' | 'area' | 'pie';
 
 export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
   const [chartType, setChartType] = useState<ChartType>('line');
+  const [isOpen, setIsOpen] = useState(false);
   
   const chartData = useMemo(() => {
     return Object.entries(data)
@@ -309,66 +312,79 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
     >
-      <Card className="flex flex-col min-h-[400px] sm:min-h-[500px]">
-        <CardHeader className="pb-2 space-y-2 sm:space-y-3 px-3 sm:px-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <CardTitle className="text-sm sm:text-base font-semibold">Evolução do Faturamento</CardTitle>
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Últimos 30 dias</p>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <Card>
+          <CardHeader className="pb-3 px-3 sm:px-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm sm:text-base font-semibold">Evolução do Faturamento</CardTitle>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Últimos 30 dias</p>
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  {isOpen ? 'Ocultar Gráficos' : 'Mostrar Gráficos'}
+                  <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
             </div>
-            <ToggleGroup 
-              type="single" 
-              value={chartType} 
-              onValueChange={(v) => v && setChartType(v as ChartType)}
-              className="bg-muted/50 rounded-lg p-0.5 self-start sm:self-auto"
-            >
-              <ToggleGroupItem value="line" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
-                <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="bar" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
-                <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="area" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
-                <AreaChartIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="pie" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
-                <PieChartIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </div>
+          </CardHeader>
           
-          {/* Compact totals */}
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            {currencies.map((currency) => {
-              const { total, growth } = totals[currency] || { total: 0, growth: 0 };
-              const isPositive = growth >= 0;
-              
-              return (
-                <div key={currency} className="flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-2.5 sm:py-1.5 bg-muted/50 rounded-lg">
-                  <span className="text-xs sm:text-sm font-bold" style={{ color: COLORS[currency] }}>
-                    {formatCurrencyValue(total, currency)}
-                  </span>
-                  <div className={`flex items-center gap-0.5 text-[9px] sm:text-[10px] font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>
-                    {isPositive ? (
-                      <TrendingUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                    ) : (
-                      <TrendingDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                    )}
-                    <span>{isPositive ? '+' : ''}{growth.toFixed(0)}%</span>
-                  </div>
+          <CollapsibleContent>
+            <CardHeader className="pt-0 pb-2 space-y-2 sm:space-y-3 px-3 sm:px-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex flex-wrap gap-2 sm:gap-3">
+                  {currencies.map((currency) => {
+                    const { total, growth } = totals[currency] || { total: 0, growth: 0 };
+                    const isPositive = growth >= 0;
+                    
+                    return (
+                      <div key={currency} className="flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-2.5 sm:py-1.5 bg-muted/50 rounded-lg">
+                        <span className="text-xs sm:text-sm font-bold" style={{ color: COLORS[currency] }}>
+                          {formatCurrencyValue(total, currency)}
+                        </span>
+                        <div className={`flex items-center gap-0.5 text-[9px] sm:text-[10px] font-medium ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                          {isPositive ? (
+                            <TrendingUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                          ) : (
+                            <TrendingDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                          )}
+                          <span>{isPositive ? '+' : ''}{growth.toFixed(0)}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </CardHeader>
-        <CardContent className="pb-2 sm:pb-4 px-1 sm:px-2">
-          <div className="h-[280px] sm:h-[350px]">
-            <ResponsiveContainer width="100%" height="100%">
-              {renderChart()}
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+                <ToggleGroup 
+                  type="single" 
+                  value={chartType} 
+                  onValueChange={(v) => v && setChartType(v as ChartType)}
+                  className="bg-muted/50 rounded-lg p-0.5 self-start sm:self-auto"
+                >
+                  <ToggleGroupItem value="line" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
+                    <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="bar" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
+                    <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="area" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
+                    <AreaChartIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="pie" size="sm" className="h-6 w-6 sm:h-7 sm:w-7 p-0 data-[state=on]:bg-background">
+                    <PieChartIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            </CardHeader>
+            <CardContent className="pb-2 sm:pb-4 px-1 sm:px-2">
+              <div className="h-[280px] sm:h-[350px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  {renderChart()}
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
     </motion.div>
   );
 }
