@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
 import { formatDateTimeBR } from '@/lib/dateUtils';
+import { differenceInSeconds, differenceInMinutes, differenceInHours } from 'date-fns';
 import { 
   Receipt, 
   User, 
@@ -14,7 +16,9 @@ import {
   Link,
   Hash,
   DollarSign,
-  FileText
+  FileText,
+  HelpCircle,
+  Clock
 } from 'lucide-react';
 import type { TmbTransaction } from '@/hooks/useTmbTransactions';
 
@@ -168,11 +172,94 @@ export function TmbTransactionDetailDialog({
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <InfoRow 
-                  icon={Calendar} 
-                  label="Registrado em" 
-                  value={formatDateTimeBR(transaction.created_at, 'dd/MM/yyyy HH:mm:ss')} 
-                />
+                {/* Registrado em with tooltip */}
+                <div className="flex items-start gap-3 py-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs text-muted-foreground">Registrado em</p>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[250px]">
+                            <p className="text-xs">
+                              Este é o momento em que o webhook foi recebido pelo sistema, 
+                              não a data em que a transação ocorreu no TMB.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <p className="text-sm font-medium">
+                      {formatDateTimeBR(transaction.created_at, 'dd/MM/yyyy HH:mm:ss')}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Webhook Latency Indicator */}
+                {transaction.effective_date && transaction.created_at && (() => {
+                  const effectiveDate = new Date(transaction.effective_date);
+                  const createdAt = new Date(transaction.created_at);
+                  const totalSeconds = differenceInSeconds(createdAt, effectiveDate);
+                  const hours = differenceInHours(createdAt, effectiveDate);
+                  const minutes = differenceInMinutes(createdAt, effectiveDate) % 60;
+                  const seconds = totalSeconds % 60;
+                  
+                  // Determine color based on latency
+                  let colorClass = 'text-green-600 bg-green-500/10 border-green-500/20';
+                  let statusText = 'Normal';
+                  if (hours >= 6) {
+                    colorClass = 'text-red-600 bg-red-500/10 border-red-500/20';
+                    statusText = 'Alto';
+                  } else if (hours >= 1) {
+                    colorClass = 'text-amber-600 bg-amber-500/10 border-amber-500/20';
+                    statusText = 'Moderado';
+                  }
+                  
+                  const formattedLatency = hours > 0 
+                    ? `${hours}h ${minutes}min ${seconds}s`
+                    : minutes > 0 
+                      ? `${minutes}min ${seconds}s`
+                      : `${seconds}s`;
+                  
+                  return (
+                    <>
+                      <Separator className="my-2" />
+                      <div className="flex items-start gap-3 py-2">
+                        <Clock className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs text-muted-foreground">Latência do Webhook</p>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[250px]">
+                                  <p className="text-xs">
+                                    Tempo entre a transação no TMB e o recebimento do webhook 
+                                    pelo sistema. Atrasos podem ocorrer por processamento 
+                                    em lote ou filas do TMB.
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className={colorClass}>
+                              {formattedLatency}
+                            </Badge>
+                            <span className={`text-xs ${colorClass.split(' ')[0]}`}>
+                              {statusText}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>
