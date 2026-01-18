@@ -267,7 +267,7 @@ Deno.serve(async (req) => {
 
     console.log("Upserting Eduzz transaction:", JSON.stringify(transactionData));
 
-    // Upsert transaction (uses unique constraint on user_id + sale_id)
+    // Try to insert the transaction - if it's a duplicate, it will be handled by the unique index
     const { data: transaction, error: transactionError } = await supabase
       .from("eduzz_transactions")
       .upsert(transactionData, {
@@ -277,10 +277,42 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
+    // Check if error is due to duplicate based on our unique index (client_id, buyer_email, sale_value, product, sale_date)
     if (transactionError) {
+      const isDuplicateError = transactionError.message.includes('idx_eduzz_unique_transaction') ||
+                               transactionError.message.includes('duplicate key') ||
+                               transactionError.code === '23505';
+      
+      if (isDuplicateError) {
+        console.log(`Duplicate transaction detected for sale ${saleId} - ignoring duplicate webhook`);
+        
+        // Log as duplicate (not error)
+        await supabase.from("webhook_logs").insert({
+          user_id: webhookUserId,
+          client_id: webhookClientId || null,
+          event_type: eventType,
+          transaction_code: saleId,
+          status: "duplicate",
+          payload: body,
+          error_message: "Transação duplicada ignorada - mesmos dados já existem",
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: `Duplicate transaction ${saleId} ignored`,
+            duplicate: true,
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
       console.error("Failed to upsert Eduzz transaction:", transactionError);
 
-      // Log error
+      // Log real error
       await supabase.from("webhook_logs").insert({
         user_id: webhookUserId,
         client_id: webhookClientId || null,
