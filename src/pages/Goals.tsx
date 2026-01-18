@@ -4,6 +4,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal, Goal } from '@/hooks/useGoals';
 import { useTransactionStats } from '@/hooks/useTransactions';
+import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsOptimized';
+import { useEduzzTransactionStatsOptimized } from '@/hooks/useEduzzTransactionStatsOptimized';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useFilter } from '@/contexts/FilterContext';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -37,11 +39,23 @@ export default function Goals() {
   const { clientId, setClientId } = useFilter();
   const { isMaster } = useUserRole();
   const { data: goals, isLoading } = useGoals(clientId);
-  const { stats } = useTransactionStats();
+  const { stats: hotmartStats } = useTransactionStats({ clientId });
+  const { data: tmbStats } = useTmbTransactionStatsOptimized({ clientId: clientId || undefined });
+  const { data: eduzzStats } = useEduzzTransactionStatsOptimized({ clientId: clientId || undefined });
   const { data: dollarRate } = useDollarRate();
   const createGoal = useCreateGoal();
   const updateGoal = useUpdateGoal();
   const deleteGoal = useDeleteGoal();
+  
+  // Combinar estatísticas de todas as plataformas
+  const combinedStats = {
+    totalByCurrency: {
+      BRL: (hotmartStats?.totalByCurrency?.['BRL'] || 0) + 
+           (tmbStats?.totalBRL || 0) + 
+           (eduzzStats?.totalBRL || 0),
+      USD: hotmartStats?.totalByCurrency?.['USD'] || 0,
+    }
+  };
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -256,9 +270,9 @@ export default function Goals() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {activeGoals.map((goal, index) => {
                 // For BRL goals, include USD sales converted at current rate
-                const baseTotalSold = stats?.totalByCurrency[goal.currency] || 0;
+                const baseTotalSold = combinedStats?.totalByCurrency[goal.currency as keyof typeof combinedStats.totalByCurrency] || 0;
                 const totalSold = goal.currency === 'BRL' && dollarRate
-                  ? baseTotalSold + ((stats?.totalByCurrency['USD'] || 0) * dollarRate.rate)
+                  ? baseTotalSold + ((combinedStats?.totalByCurrency['USD'] || 0) * dollarRate.rate)
                   : baseTotalSold;
                 const progress = calculateGoalProgress(goal, totalSold);
 
