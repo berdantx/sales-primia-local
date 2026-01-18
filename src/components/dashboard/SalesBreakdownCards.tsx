@@ -10,6 +10,7 @@ interface SalesBreakdownCardsProps {
   onCategoryClick?: (category: string) => void;
   selectedCategory?: string | null;
   isLoading?: boolean;
+  gridCols?: 3 | 5;
 }
 
 const CATEGORY_CONFIG: Record<string, {
@@ -77,8 +78,12 @@ export function SalesBreakdownCards({
   data, 
   onCategoryClick, 
   selectedCategory,
-  isLoading 
+  isLoading,
+  gridCols = 5
 }: SalesBreakdownCardsProps) {
+  const gridClass = gridCols === 3 
+    ? 'grid-cols-2 sm:grid-cols-3' 
+    : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5';
   // Sort data by our predefined order
   const sortedData = [...data].sort((a, b) => {
     const orderA = CATEGORY_ORDER.indexOf(a.category);
@@ -88,7 +93,7 @@ export function SalesBreakdownCards({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+      <div className={`grid ${gridClass} gap-2 sm:gap-3`}>
         {[1, 2, 3, 4, 5].map((i) => (
           <Card key={i} className="animate-pulse">
             <CardContent className="p-3">
@@ -121,7 +126,7 @@ export function SalesBreakdownCards({
         )}
       </div>
       
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+      <div className={`grid ${gridClass} gap-2 sm:gap-3`}>
         {sortedData.map((item, index) => {
           const config = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.outro;
           const Icon = config.icon;

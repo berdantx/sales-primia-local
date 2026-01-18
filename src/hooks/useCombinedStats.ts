@@ -28,10 +28,8 @@ export interface CombinedFilters {
 }
 
 export function useCombinedStats(filters: CombinedFilters, platform: PlatformType) {
-  // Hotmart stats
-  const { data: hotmartStats, isLoading: hotmartLoading } = useTransactionStatsOptimized(
-    platform !== 'tmb' && platform !== 'eduzz' ? filters : { startDate: undefined, endDate: undefined }
-  );
+  // Always fetch Hotmart stats for combined calculations
+  const { data: hotmartStats, isLoading: hotmartLoading } = useTransactionStatsOptimized(filters);
   const { data: hotmartTopCustomers, isLoading: hotmartCustomersLoading } = useTopCustomersOptimized(
     platform !== 'tmb' && platform !== 'eduzz' ? filters : { startDate: undefined, endDate: undefined }
   );
@@ -41,9 +39,8 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
 
   // TMB stats (simplified filters, no advanced filters for TMB)
   const tmbFilters = { startDate: filters.startDate, endDate: filters.endDate, clientId: filters.clientId };
-  const { data: tmbStats, isLoading: tmbLoading } = useTmbTransactionStatsOptimized(
-    platform !== 'hotmart' && platform !== 'eduzz' ? tmbFilters : { startDate: undefined, endDate: undefined }
-  );
+  // Always fetch TMB stats for combined calculations
+  const { data: tmbStats, isLoading: tmbLoading } = useTmbTransactionStatsOptimized(tmbFilters);
   const { data: tmbTopCustomers, isLoading: tmbCustomersLoading } = useTmbTopCustomersOptimized(
     platform !== 'hotmart' && platform !== 'eduzz' ? tmbFilters : { startDate: undefined, endDate: undefined }
   );
@@ -53,9 +50,8 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
 
   // Eduzz stats (simplified filters, like TMB)
   const eduzzFilters = { startDate: filters.startDate, endDate: filters.endDate, clientId: filters.clientId };
-  const { data: eduzzStats, isLoading: eduzzLoading } = useEduzzTransactionStatsOptimized(
-    platform !== 'hotmart' && platform !== 'tmb' ? eduzzFilters : { startDate: undefined, endDate: undefined }
-  );
+  // Always fetch Eduzz stats for combined calculations
+  const { data: eduzzStats, isLoading: eduzzLoading } = useEduzzTransactionStatsOptimized(eduzzFilters);
   const { data: eduzzTopCustomers, isLoading: eduzzCustomersLoading } = useEduzzTopCustomersOptimized(
     platform !== 'hotmart' && platform !== 'tmb' ? eduzzFilters : { startDate: undefined, endDate: undefined }
   );
