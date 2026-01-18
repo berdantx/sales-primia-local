@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar as CalendarIcon } from 'lucide-react';
@@ -42,6 +42,14 @@ export function LeadsPeriodFilter({
   className,
 }: LeadsPeriodFilterProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(dateRange);
+
+  // Sync temp state when calendar opens
+  useEffect(() => {
+    if (isCalendarOpen) {
+      setTempDateRange(dateRange);
+    }
+  }, [isCalendarOpen, dateRange]);
 
   const handlePeriodChange = (value: string) => {
     onPeriodChange(value);
@@ -68,10 +76,19 @@ export function LeadsPeriodFilter({
   };
 
   const handleDateSelect = (range: DateRange | undefined) => {
-    onDateRangeChange(range);
-    if (range?.from && range?.to) {
+    setTempDateRange(range);
+  };
+
+  const handleApply = () => {
+    if (tempDateRange?.from && tempDateRange?.to) {
+      onDateRangeChange(tempDateRange);
       setIsCalendarOpen(false);
     }
+  };
+
+  const handleCancel = () => {
+    setTempDateRange(dateRange);
+    setIsCalendarOpen(false);
   };
 
   const getDisplayLabel = () => {
@@ -99,7 +116,13 @@ export function LeadsPeriodFilter({
       </Select>
 
       {selectedPeriod === 'custom' && (
-        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+        <Popover open={isCalendarOpen} onOpenChange={(open) => {
+          if (!open) {
+            handleCancel();
+          } else {
+            setIsCalendarOpen(true);
+          }
+        }}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -112,12 +135,28 @@ export function LeadsPeriodFilter({
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="range"
-              defaultMonth={dateRange?.from}
-              selected={dateRange}
+              defaultMonth={tempDateRange?.from || dateRange?.from}
+              selected={tempDateRange}
               onSelect={handleDateSelect}
               numberOfMonths={2}
               locale={ptBR}
             />
+            <div className="flex justify-end gap-2 p-3 border-t">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleCancel}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                size="sm"
+                disabled={!tempDateRange?.from || !tempDateRange?.to}
+                onClick={handleApply}
+              >
+                Aplicar
+              </Button>
+            </div>
           </PopoverContent>
         </Popover>
       )}
