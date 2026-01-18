@@ -958,6 +958,105 @@ export type Database = {
           },
         ]
       }
+      transactions_backup_20260118: {
+        Row: {
+          backup_created_at: string | null
+          billing_type: string | null
+          business_model: string | null
+          buyer_email: string | null
+          buyer_name: string | null
+          client_id: string | null
+          computed_value: number | null
+          country: string | null
+          created_at: string | null
+          currency: string | null
+          date_next_charge: string | null
+          gross_value_with_taxes: number | null
+          id: string | null
+          import_id: string | null
+          marketplace_commission: number | null
+          offer_code: string | null
+          payment_method: string | null
+          producer_commission: number | null
+          product: string | null
+          product_id: string | null
+          product_ucode: string | null
+          purchase_date: string | null
+          recurrence_number: number | null
+          sck_code: string | null
+          source: string | null
+          subscriber_code: string | null
+          subscription_status: string | null
+          total_installments: number | null
+          transaction_code: string | null
+          user_id: string | null
+        }
+        Insert: {
+          backup_created_at?: string | null
+          billing_type?: string | null
+          business_model?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          client_id?: string | null
+          computed_value?: number | null
+          country?: string | null
+          created_at?: string | null
+          currency?: string | null
+          date_next_charge?: string | null
+          gross_value_with_taxes?: number | null
+          id?: string | null
+          import_id?: string | null
+          marketplace_commission?: number | null
+          offer_code?: string | null
+          payment_method?: string | null
+          producer_commission?: number | null
+          product?: string | null
+          product_id?: string | null
+          product_ucode?: string | null
+          purchase_date?: string | null
+          recurrence_number?: number | null
+          sck_code?: string | null
+          source?: string | null
+          subscriber_code?: string | null
+          subscription_status?: string | null
+          total_installments?: number | null
+          transaction_code?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          backup_created_at?: string | null
+          billing_type?: string | null
+          business_model?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          client_id?: string | null
+          computed_value?: number | null
+          country?: string | null
+          created_at?: string | null
+          currency?: string | null
+          date_next_charge?: string | null
+          gross_value_with_taxes?: number | null
+          id?: string | null
+          import_id?: string | null
+          marketplace_commission?: number | null
+          offer_code?: string | null
+          payment_method?: string | null
+          producer_commission?: number | null
+          product?: string | null
+          product_id?: string | null
+          product_ucode?: string | null
+          purchase_date?: string | null
+          recurrence_number?: number | null
+          sck_code?: string | null
+          source?: string | null
+          subscriber_code?: string | null
+          subscription_status?: string | null
+          total_installments?: number | null
+          transaction_code?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
