@@ -267,117 +267,45 @@ export default function Dashboard() {
           const combinedProjectedBRL = hotmartProjectedBRL + tmbBRL + eduzzBRL;
           const usdConvertedToBRL = dollarRate ? hotmartUSD * dollarRate.rate : 0;
           
-          // For 'all' platform: show combined values
+          // For 'all' platform: show combined values (3 cards: Faturamento, Projeção, Transações)
           if (platform === 'all') {
             const hasProjection = combinedProjectedBRL > combinedRealBRL;
             
-            if (currencyView === 'combined') {
-              return (
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-                  <KPICard
-                    title="Faturamento Atual"
-                    value={formatCurrency(combinedRealBRL + usdConvertedToBRL, 'BRL')}
-                    subtitle="Hotmart + TMB + Eduzz"
-                    icon={DollarSign}
-                    delay={0}
-                    className="border-l-4 border-l-green-500"
-                  />
-                  {hasProjection && (
-                    <KPICard
-                      title="Projeção de Faturamento"
-                      value={formatCurrency(combinedProjectedBRL + usdConvertedToBRL, 'BRL')}
-                      subtitle="Inclui recorrências futuras"
-                      icon={TrendingUp}
-                      delay={1}
-                      className="border-l-4 border-l-amber-500"
-                    />
-                  )}
-                  <KPICard
-                    title="Total Transações"
-                    value={formatNumber(stats?.totalTransactions || 0)}
-                    icon={ShoppingCart}
-                    delay={hasProjection ? 2 : 1}
-                  />
-                  <KPICard
-                    title="Total de Leads"
-                    value={formatNumber(leadCount || 0)}
-                    subtitle="no período"
-                    icon={UserPlus}
-                    delay={hasProjection ? 3 : 2}
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => navigate('/leads')}
-                  />
-                </div>
-              );
-            }
-            
-            // BRL-only view for 'all' platform
-            if (currencyView === 'brl-only') {
-              return (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
-                  <KPICard
-                    title="Faturamento Atual"
-                    value={formatCurrency(combinedRealBRL, 'BRL')}
-                    subtitle="Hotmart + TMB + Eduzz"
-                    icon={DollarSign}
-                    delay={0}
-                    className="border-l-4 border-l-green-500"
-                  />
-                  <KPICard
-                    title="Total Transações"
-                    value={formatNumber(stats?.totalTransactions || 0)}
-                    icon={ShoppingCart}
-                    delay={1}
-                  />
-                  <KPICard
-                    title="Total de Leads"
-                    value={formatNumber(leadCount || 0)}
-                    subtitle="no período"
-                    icon={UserPlus}
-                    delay={2}
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => navigate('/leads')}
-                  />
-                </div>
-              );
-            }
-            
-            // Separated view for 'all' platform
             return (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
                 <KPICard
-                  title="Vendas em Reais"
-                  value={formatCurrency(combinedRealBRL, 'BRL')}
+                  title="Faturamento Atual"
+                  value={formatCurrency(combinedRealBRL + usdConvertedToBRL, 'BRL')}
                   subtitle="Hotmart + TMB + Eduzz"
                   icon={DollarSign}
                   delay={0}
+                  className="border-l-4 border-l-green-500"
                 />
-                {hotmartUSD > 0 && (
+                {hasProjection ? (
                   <KPICard
-                    title="Vendas em Dólares"
-                    value={formatCurrency(hotmartUSD, 'USD')}
-                    subtitle={dollarRate ? 
-                      `≈ ${formatCurrency(usdConvertedToBRL, 'BRL')}` : 
-                      undefined
-                    }
-                    icon={DollarSign}
+                    title="Projeção Faturamento"
+                    value={formatCurrency(combinedProjectedBRL + usdConvertedToBRL, 'BRL')}
+                    subtitle="Inclui recorrências"
+                    icon={TrendingUp}
                     delay={1}
+                    className="border-l-4 border-l-amber-500"
+                  />
+                ) : (
+                  <KPICard
+                    title="Total de Leads"
+                    value={formatNumber(leadCount || 0)}
+                    subtitle="no período"
+                    icon={UserPlus}
+                    delay={1}
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => navigate('/leads')}
                   />
                 )}
                 <KPICard
-                  title="Total Transações"
+                  title="Transações"
                   value={formatNumber(stats?.totalTransactions || 0)}
                   icon={ShoppingCart}
                   delay={2}
-                />
-                <KPICard
-                  title="Total de Leads"
-                  value={formatNumber(leadCount || 0)}
-                  subtitle="no período"
-                  icon={UserPlus}
-                  delay={3}
-                  className="cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => navigate('/leads')}
                 />
               </div>
             );
