@@ -46,6 +46,7 @@ import {
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
 import { BillingTypeBadge } from '@/components/transactions/BillingTypeBadge';
+import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 
 
 const ITEMS_PER_PAGE = 20;
@@ -239,6 +240,36 @@ function Transactions() {
     };
   }, [statsFromDB, filteredTransactions, dollarRate]);
 
+  // Chart data - aggregate sales by date for the chart
+  const salesByDateData = useMemo(() => {
+    if (!filteredTransactions) return {};
+    
+    return filteredTransactions.reduce((acc, t) => {
+      if (t.purchase_date) {
+        const date = t.purchase_date.split('T')[0];
+        if (!acc[date]) {
+          acc[date] = {};
+        }
+        acc[date][t.currency] = (acc[date][t.currency] || 0) + Number(t.computed_value);
+      }
+      return acc;
+    }, {} as Record<string, Record<string, number>>);
+  }, [filteredTransactions]);
+
+  // Get unique currencies for the chart
+  const chartCurrencies = useMemo(() => {
+    const currencySet = new Set<string>();
+    filteredTransactions.forEach(t => currencySet.add(t.currency));
+    return Array.from(currencySet).sort((a, b) => {
+      // BRL first, then USD, then others
+      if (a === 'BRL') return -1;
+      if (b === 'BRL') return 1;
+      if (a === 'USD') return -1;
+      if (b === 'USD') return 1;
+      return a.localeCompare(b);
+    });
+  }, [filteredTransactions]);
+
   const handleExportCSV = () => {
     const headers = ['Código', 'Produto', 'Comprador', 'Email', 'Moeda', 'País', 'Valor', 'Data'];
     const rows = filteredTransactions.map(t => [
@@ -379,6 +410,14 @@ function Transactions() {
             className={summaryStats.totalUSD > 0 ? "text-sm sm:text-base" : "col-span-2 sm:col-span-1 text-sm sm:text-base"}
           />
         </motion.div>
+
+        {/* Sales Evolution Chart */}
+        {Object.keys(salesByDateData).length > 0 && chartCurrencies.length > 0 && (
+          <SalesByTimeChart 
+            data={salesByDateData} 
+            currencies={chartCurrencies}
+          />
+        )}
 
         {/* Filters */}
         <Card>
