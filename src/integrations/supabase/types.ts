@@ -850,6 +850,7 @@ export type Database = {
       transactions: {
         Row: {
           billing_type: string | null
+          business_model: string | null
           buyer_email: string | null
           buyer_name: string | null
           client_id: string | null
@@ -857,20 +858,30 @@ export type Database = {
           country: string | null
           created_at: string
           currency: string
+          date_next_charge: string | null
           gross_value_with_taxes: number
           id: string
           import_id: string | null
+          marketplace_commission: number | null
+          offer_code: string | null
           payment_method: string | null
+          producer_commission: number | null
           product: string | null
+          product_id: string | null
+          product_ucode: string | null
           purchase_date: string | null
+          recurrence_number: number | null
           sck_code: string | null
           source: string | null
+          subscriber_code: string | null
+          subscription_status: string | null
           total_installments: number | null
           transaction_code: string
           user_id: string
         }
         Insert: {
           billing_type?: string | null
+          business_model?: string | null
           buyer_email?: string | null
           buyer_name?: string | null
           client_id?: string | null
@@ -878,20 +889,30 @@ export type Database = {
           country?: string | null
           created_at?: string
           currency?: string
+          date_next_charge?: string | null
           gross_value_with_taxes?: number
           id?: string
           import_id?: string | null
+          marketplace_commission?: number | null
+          offer_code?: string | null
           payment_method?: string | null
+          producer_commission?: number | null
           product?: string | null
+          product_id?: string | null
+          product_ucode?: string | null
           purchase_date?: string | null
+          recurrence_number?: number | null
           sck_code?: string | null
           source?: string | null
+          subscriber_code?: string | null
+          subscription_status?: string | null
           total_installments?: number | null
           transaction_code: string
           user_id: string
         }
         Update: {
           billing_type?: string | null
+          business_model?: string | null
           buyer_email?: string | null
           buyer_name?: string | null
           client_id?: string | null
@@ -899,14 +920,23 @@ export type Database = {
           country?: string | null
           created_at?: string
           currency?: string
+          date_next_charge?: string | null
           gross_value_with_taxes?: number
           id?: string
           import_id?: string | null
+          marketplace_commission?: number | null
+          offer_code?: string | null
           payment_method?: string | null
+          producer_commission?: number | null
           product?: string | null
+          product_id?: string | null
+          product_ucode?: string | null
           purchase_date?: string | null
+          recurrence_number?: number | null
           sck_code?: string | null
           source?: string | null
+          subscriber_code?: string | null
+          subscription_status?: string | null
           total_installments?: number | null
           transaction_code?: string
           user_id?: string

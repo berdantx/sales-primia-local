@@ -19,6 +19,13 @@ const PAYMENT_TYPE_MAP: Record<string, string> = {
   'CASH_PAYMENT': 'Pagamento em Dinheiro',
 };
 
+// Business model mapping
+const BUSINESS_MODEL_MAP: Record<string, string> = {
+  'I': 'Individual',
+  'A': 'Afiliado',
+  'P': 'Produtor',
+};
+
 // Common structures used in both payload formats
 interface PurchaseData {
   transaction?: string;
@@ -42,9 +49,15 @@ interface PurchaseData {
   origin?: {
     sck?: string;
   };
+  business_model?: string;
+  offer?: {
+    code?: string;
+  };
 }
 
 interface ProductData {
+  id?: number;
+  ucode?: string;
   name?: string;
 }
 
@@ -53,8 +66,26 @@ interface BuyerData {
   name?: string;
 }
 
+interface CommissionData {
+  source?: string;
+  value?: number;
+  currency_value?: string;
+}
+
+interface SubscriptionData {
+  subscriber?: {
+    code?: string;
+  };
+  status?: string;
+  plan?: {
+    recurrence_number?: number;
+    name?: string;
+  };
+  date_next_charge?: number;
+}
+
 // Hotmart webhook can come in two formats:
-// Format v2: { event: "PURCHASE_APPROVED", data: { purchase, product, buyer } }
+// Format v2: { event: "PURCHASE_APPROVED", data: { purchase, product, buyer, subscription, commissions } }
 // Format v1: { purchase: { status: "APPROVED", ... }, product, buyer }
 interface HotmartWebhookEvent {
   // v2 format fields
@@ -63,11 +94,47 @@ interface HotmartWebhookEvent {
     purchase?: PurchaseData;
     product?: ProductData;
     buyer?: BuyerData;
+    subscription?: SubscriptionData;
+    commissions?: CommissionData[];
   };
   // v1 format fields (at root level)
   purchase?: PurchaseData;
   product?: ProductData;
   buyer?: BuyerData;
+  subscription?: SubscriptionData;
+  commissions?: CommissionData[];
+}
+
+// Helper function to determine billing type
+function determineBillingType(
+  subscription: SubscriptionData | undefined,
+  installmentsNumber: number
+): string {
+  if (subscription && (subscription.subscriber?.code || subscription.status)) {
+    // É uma recorrência/assinatura
+    return 'Recorrência';
+  } else if (installmentsNumber > 1) {
+    // Parcelamento padrão (mais de 1 parcela)
+    return 'Parcelamento Padrão';
+  } else {
+    // Pagamento à vista
+    return 'À Vista';
+  }
+}
+
+// Helper function to extract commissions
+function extractCommissions(commissions: CommissionData[] | undefined): {
+  marketplaceCommission: number;
+  producerCommission: number;
+} {
+  if (!commissions || !Array.isArray(commissions)) {
+    return { marketplaceCommission: 0, producerCommission: 0 };
+  }
+
+  const marketplaceCommission = commissions.find(c => c.source === 'MARKETPLACE')?.value || 0;
+  const producerCommission = commissions.find(c => c.source === 'PRODUCER')?.value || 0;
+
+  return { marketplaceCommission, producerCommission };
 }
 
 // Helper function to log webhook events
@@ -175,13 +242,17 @@ serve(async (req) => {
       let purchase: PurchaseData | undefined;
       let product: ProductData | undefined;
       let buyer: BuyerData | undefined;
+      let subscription: SubscriptionData | undefined;
+      let commissions: CommissionData[] | undefined;
 
       if (event.event && event.data) {
-        // Format v2: { event: "PURCHASE_APPROVED", data: { purchase, product, buyer } }
+        // Format v2: { event: "PURCHASE_APPROVED", data: { purchase, product, buyer, subscription, commissions } }
         eventType = event.event;
         purchase = event.data.purchase;
         product = event.data.product;
         buyer = event.data.buyer;
+        subscription = event.data.subscription;
+        commissions = event.data.commissions;
         console.log('Detected v2 format with event:', eventType);
       } else if (event.purchase) {
         // Format v1: { purchase: { status: "APPROVED", ... }, product, buyer }
@@ -190,6 +261,8 @@ serve(async (req) => {
         purchase = event.purchase;
         product = event.product;
         buyer = event.buyer;
+        subscription = event.subscription;
+        commissions = event.commissions;
         console.log('Detected v1 format with status:', status, '-> eventType:', eventType);
       } else {
         eventType = 'unknown';
@@ -250,7 +323,26 @@ serve(async (req) => {
         const paymentType = purchase.payment?.type || '';
         const paymentMethod = PAYMENT_TYPE_MAP[paymentType] || paymentType || null;
 
-        // Prepare transaction record
+        // Get installments number
+        const installmentsNumber = purchase.payment?.installments_number || 1;
+
+        // Determine billing type (Recorrência, Parcelamento Padrão, or À Vista)
+        const billingType = determineBillingType(subscription, installmentsNumber);
+        console.log(`Billing type determined: ${billingType} (subscription: ${!!subscription}, installments: ${installmentsNumber})`);
+
+        // Extract commissions
+        const { marketplaceCommission, producerCommission } = extractCommissions(commissions);
+        console.log(`Commissions - Marketplace: ${marketplaceCommission}, Producer: ${producerCommission}`);
+
+        // Extract subscription data
+        const subscriberCode = subscription?.subscriber?.code || null;
+        const subscriptionStatus = subscription?.status || null;
+        const recurrenceNumber = subscription?.plan?.recurrence_number || null;
+        const dateNextCharge = subscription?.date_next_charge 
+          ? new Date(subscription.date_next_charge).toISOString() 
+          : null;
+
+        // Prepare transaction record with CORRECTED field mapping
         const transactionData = {
           user_id: webhookUserId,
           client_id: webhookClientId || null,
@@ -259,15 +351,29 @@ serve(async (req) => {
           buyer_email: buyer?.email || null,
           buyer_name: buyer?.name || null,
           currency: purchase.price?.currency_value || 'BRL',
-          gross_value_with_taxes: purchase.price?.value || 0,
-          computed_value: purchase.full_price?.value || purchase.price?.value || 0,
-          total_installments: purchase.payment?.installments_number || 1,
+          // CORREÇÃO: gross_value_with_taxes = full_price (valor bruto com taxas)
+          gross_value_with_taxes: purchase.full_price?.value || purchase.price?.value || 0,
+          // CORREÇÃO: computed_value = price (valor líquido que o produtor recebe)
+          computed_value: purchase.price?.value || 0,
+          total_installments: installmentsNumber,
           payment_method: paymentMethod,
           country: purchase.checkout_country?.name || null,
           sck_code: purchase.origin?.sck || null,
           purchase_date: purchaseDate,
-          billing_type: 'Webhook',
+          // CORREÇÃO: billing_type dinâmico baseado na presença de subscription
+          billing_type: billingType,
           source: 'webhook',
+          // NOVOS CAMPOS
+          business_model: purchase.business_model || null,
+          offer_code: purchase.offer?.code || null,
+          product_id: product?.id?.toString() || null,
+          product_ucode: product?.ucode || null,
+          marketplace_commission: marketplaceCommission,
+          producer_commission: producerCommission,
+          recurrence_number: recurrenceNumber,
+          subscriber_code: subscriberCode,
+          subscription_status: subscriptionStatus,
+          date_next_charge: dateNextCharge,
         };
 
         console.log('Inserting transaction:', JSON.stringify(transactionData, null, 2));
