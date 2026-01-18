@@ -267,45 +267,74 @@ export default function Dashboard() {
           const combinedProjectedBRL = hotmartProjectedBRL + tmbBRL + eduzzBRL;
           const usdConvertedToBRL = dollarRate ? hotmartUSD * dollarRate.rate : 0;
           
-          // For 'all' platform: show combined values (3 cards: Faturamento, Projeção, Transações)
+          // For 'all' platform: show KPI cards (conditional based on active goal)
+          // If there's an active goal, GoalSummarySection already shows "Faturamento Atual"
+          // so we only show Projeção and Transações to avoid duplication
           if (platform === 'all') {
             const hasProjection = combinedProjectedBRL > combinedRealBRL;
+            const hasActiveGoal = !!primaryGoal;
             
+            // If no active goal, show 3 cards: Faturamento, Projeção/Leads, Transações
+            if (!hasActiveGoal) {
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+                  <KPICard
+                    title="Faturamento Atual"
+                    value={formatCurrency(combinedRealBRL + usdConvertedToBRL, 'BRL')}
+                    subtitle="Hotmart + TMB + Eduzz"
+                    icon={DollarSign}
+                    delay={0}
+                    className="border-l-4 border-l-green-500"
+                  />
+                  {hasProjection ? (
+                    <KPICard
+                      title="Projeção Faturamento"
+                      value={formatCurrency(combinedProjectedBRL + usdConvertedToBRL, 'BRL')}
+                      subtitle="Inclui recorrências"
+                      icon={TrendingUp}
+                      delay={1}
+                      className="border-l-4 border-l-amber-500"
+                    />
+                  ) : (
+                    <KPICard
+                      title="Total de Leads"
+                      value={formatNumber(leadCount || 0)}
+                      subtitle="no período"
+                      icon={UserPlus}
+                      delay={1}
+                      className="cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => navigate('/leads')}
+                    />
+                  )}
+                  <KPICard
+                    title="Transações"
+                    value={formatNumber(stats?.totalTransactions || 0)}
+                    icon={ShoppingCart}
+                    delay={2}
+                  />
+                </div>
+              );
+            }
+            
+            // If there's an active goal, show only 2 cards: Projeção and Transações
+            // (Faturamento Atual is already shown in GoalSummarySection)
             return (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
-                <KPICard
-                  title="Faturamento Atual"
-                  value={formatCurrency(combinedRealBRL + usdConvertedToBRL, 'BRL')}
-                  subtitle="Hotmart + TMB + Eduzz"
-                  icon={DollarSign}
-                  delay={0}
-                  className="border-l-4 border-l-green-500"
-                />
-                {hasProjection ? (
+              <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                {hasProjection && (
                   <KPICard
                     title="Projeção Faturamento"
                     value={formatCurrency(combinedProjectedBRL + usdConvertedToBRL, 'BRL')}
                     subtitle="Inclui recorrências"
                     icon={TrendingUp}
-                    delay={1}
+                    delay={0}
                     className="border-l-4 border-l-amber-500"
-                  />
-                ) : (
-                  <KPICard
-                    title="Total de Leads"
-                    value={formatNumber(leadCount || 0)}
-                    subtitle="no período"
-                    icon={UserPlus}
-                    delay={1}
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => navigate('/leads')}
                   />
                 )}
                 <KPICard
                   title="Transações"
                   value={formatNumber(stats?.totalTransactions || 0)}
                   icon={ShoppingCart}
-                  delay={2}
+                  delay={hasProjection ? 1 : 0}
                 />
               </div>
             );
