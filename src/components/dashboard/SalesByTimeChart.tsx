@@ -361,8 +361,8 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
             })}
           </div>
         </CardHeader>
-        <CardContent className="flex-1 pb-1 sm:pb-2 px-1 sm:px-2">
-          <div className="h-full min-h-[280px] sm:min-h-[380px]">
+        <CardContent className="pb-2 sm:pb-4 px-1 sm:px-2">
+          <div className="h-[280px] sm:h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               {renderChart()}
             </ResponsiveContainer>
