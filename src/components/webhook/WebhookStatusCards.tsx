@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Inbox, CheckCircle, AlertCircle, XCircle, Loader2 } from 'lucide-react';
+import { Inbox, CheckCircle, AlertCircle, XCircle, Copy, Loader2 } from 'lucide-react';
 import type { WebhookStats } from '@/hooks/useWebhookLogs';
 
 interface WebhookStatusCardsProps {
@@ -37,10 +37,17 @@ export function WebhookStatusCards({ stats, isLoading }: WebhookStatusCardsProps
       color: 'text-red-500',
       bgColor: 'bg-red-500/10',
     },
+    {
+      title: 'Duplicatas',
+      value: stats?.duplicates || 0,
+      icon: Copy,
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-500/10',
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
       {cards.map((card) => (
         <Card key={card.title} className="border-border/50">
           <CardContent className="p-3 sm:p-4">
