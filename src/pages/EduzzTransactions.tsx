@@ -45,11 +45,12 @@ import {
   X,
   DollarSign,
   Receipt,
-  Package,
   Calendar
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { EduzzTransactionDetailDialog } from '@/components/eduzz/EduzzTransactionDetailDialog';
+import { EduzzTransactionCard } from '@/components/eduzz/EduzzTransactionCard';
+import { EduzzAdvancedFilters } from '@/components/dashboard/EduzzAdvancedFilters';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -63,6 +64,12 @@ function EduzzTransactions() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [selectedTransaction, setSelectedTransaction] = useState<EduzzTransaction | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  
+  // Advanced filters
+  const [productFilter, setProductFilter] = useState<string | null>(null);
+  const [utmSourceFilter, setUtmSourceFilter] = useState<string | null>(null);
+  const [utmMediumFilter, setUtmMediumFilter] = useState<string | null>(null);
+  const [utmCampaignFilter, setUtmCampaignFilter] = useState<string | null>(null);
 
   // Debounce search to avoid excessive API calls
   useEffect(() => {
@@ -107,40 +114,31 @@ function EduzzTransactions() {
     clientId,
   });
 
-  // Get top product
-  const topProduct = useMemo(() => {
-    if (!transactions || transactions.length === 0) return null;
-    
-    const productMap = new Map<string, { total: number; count: number }>();
-    transactions.forEach(t => {
-      const product = t.product || 'Desconhecido';
-      const current = productMap.get(product) || { total: 0, count: 0 };
-      productMap.set(product, {
-        total: current.total + Number(t.sale_value),
-        count: current.count + 1,
-      });
-    });
-
-    const sorted = Array.from(productMap.entries())
-      .sort(([, a], [, b]) => b.total - a.total);
-    
-    return sorted[0] ? { name: sorted[0][0], total: sorted[0][1].total } : null;
-  }, [transactions]);
-
-  // Filter transactions by search (use debounced for consistency)
+  // Filter transactions by search and advanced filters (use debounced for consistency)
   const filteredTransactions = useMemo(() => {
     if (!transactions) return [];
     
-    if (!debouncedSearch) return transactions;
-    
-    const lowerSearch = debouncedSearch.toLowerCase();
-    return transactions.filter(t => 
-      t.product?.toLowerCase().includes(lowerSearch) ||
-      t.buyer_name?.toLowerCase().includes(lowerSearch) ||
-      t.buyer_email?.toLowerCase().includes(lowerSearch) ||
-      t.sale_id.toLowerCase().includes(lowerSearch)
-    );
-  }, [transactions, debouncedSearch]);
+    return transactions.filter(t => {
+      // Text search
+      if (debouncedSearch) {
+        const lowerSearch = debouncedSearch.toLowerCase();
+        const matchesSearch = 
+          t.product?.toLowerCase().includes(lowerSearch) ||
+          t.buyer_name?.toLowerCase().includes(lowerSearch) ||
+          t.buyer_email?.toLowerCase().includes(lowerSearch) ||
+          t.sale_id.toLowerCase().includes(lowerSearch);
+        if (!matchesSearch) return false;
+      }
+      
+      // Advanced filters
+      if (productFilter && t.product !== productFilter) return false;
+      if (utmSourceFilter && t.utm_source !== utmSourceFilter) return false;
+      if (utmMediumFilter && t.utm_medium !== utmMediumFilter) return false;
+      if (utmCampaignFilter && t.utm_campaign !== utmCampaignFilter) return false;
+      
+      return true;
+    });
+  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter]);
 
   // Paginate
   const paginatedTransactions = useMemo(() => {
@@ -176,10 +174,14 @@ function EduzzTransactions() {
 
   const clearFilters = () => {
     setSearch('');
+    setProductFilter(null);
+    setUtmSourceFilter(null);
+    setUtmMediumFilter(null);
+    setUtmCampaignFilter(null);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = !!search;
+  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter;
 
   if (isLoading || isLoadingStats) {
     return (
@@ -215,34 +217,26 @@ function EduzzTransactions() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4"
         >
           <ColoredKPICard
-            title="Total em Reais"
+            title="Faturamento Total (BRL)"
             value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
             subtitle={`${stats?.totalTransactions || 0} transações`}
             icon={DollarSign}
             variant="green"
             delay={0}
+            className="text-sm sm:text-base"
           />
           <ColoredKPICard
             title="Total de Transações"
             value={(stats?.totalTransactions || 0).toString()}
-            subtitle="no período"
+            subtitle="no período filtrado"
             icon={Receipt}
             variant="purple"
             delay={1}
+            className="text-sm sm:text-base"
           />
-          {topProduct && (
-            <ColoredKPICard
-              title="Top Produto"
-              value={topProduct.name.length > 25 ? topProduct.name.slice(0, 25) + '...' : topProduct.name}
-              subtitle={formatCurrency(topProduct.total, 'BRL')}
-              icon={Package}
-              variant="blue"
-              delay={2}
-            />
-          )}
         </motion.div>
 
         {/* Period Selector */}
@@ -278,10 +272,23 @@ function EduzzTransactions() {
           </div>
         </motion.div>
 
-        {/* Filters */}
+        {/* Advanced Filters */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4">
+          <CardContent className="pt-6 space-y-4">
+            <EduzzAdvancedFilters
+              product={productFilter}
+              utmSource={utmSourceFilter}
+              utmMedium={utmMediumFilter}
+              utmCampaign={utmCampaignFilter}
+              onProductChange={(v) => { setProductFilter(v); setCurrentPage(1); }}
+              onUtmSourceChange={(v) => { setUtmSourceFilter(v); setCurrentPage(1); }}
+              onUtmMediumChange={(v) => { setUtmMediumFilter(v); setCurrentPage(1); }}
+              onUtmCampaignChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(1); }}
+              totalFilteredTransactions={filteredTransactions.length}
+            />
+            
+            {/* Search Bar */}
+            <div className="flex flex-wrap gap-4 pt-2 border-t">
               <div className="flex-1 min-w-[200px]">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -297,25 +304,53 @@ function EduzzTransactions() {
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   <X className="h-4 w-4 mr-1" />
-                  Limpar
+                  Limpar Tudo
                 </Button>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Table */}
-        <Card>
+        {/* Mobile: Card View */}
+        <div className="md:hidden">
+          {paginatedTransactions.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground text-sm">
+                  {hasActiveFilters 
+                    ? 'Nenhuma transação encontrada com os filtros aplicados'
+                    : 'Nenhuma transação Eduzz ainda. Importe um arquivo para começar.'
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            paginatedTransactions.map((transaction) => (
+              <EduzzTransactionCard 
+                key={transaction.id} 
+                transaction={transaction} 
+                onClick={() => {
+                  setSelectedTransaction(transaction);
+                  setIsDetailOpen(true);
+                }}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Desktop: Table View */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs sm:text-sm">ID Venda</TableHead>
-                  <TableHead className="text-xs sm:text-sm">Produto</TableHead>
-                  <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Cliente</TableHead>
-                  <TableHead className="text-right text-xs sm:text-sm">Valor</TableHead>
-                  <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Data (BRT)</TableHead>
-                  <TableHead className="hidden md:table-cell text-xs sm:text-sm">UTM Source</TableHead>
+                  <TableHead className="min-w-[100px]">ID Venda</TableHead>
+                  <TableHead className="min-w-[150px]">Produto</TableHead>
+                  <TableHead className="min-w-[150px]">Cliente</TableHead>
+                  <TableHead className="text-right min-w-[100px]">Valor</TableHead>
+                  <TableHead className="min-w-[100px]">Data (BRT)</TableHead>
+                  <TableHead className="hidden lg:table-cell">UTM Source</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -328,14 +363,13 @@ function EduzzTransactions() {
                       setIsDetailOpen(true);
                     }}
                   >
-                    <TableCell className="font-mono text-xs p-2 sm:p-4">
-                      <span className="hidden sm:inline">{transaction.sale_id.slice(0, 15)}...</span>
-                      <span className="sm:hidden">{transaction.sale_id.slice(0, 8)}...</span>
+                    <TableCell className="font-mono text-xs">
+                      {transaction.sale_id.slice(0, 12)}...
                     </TableCell>
-                    <TableCell className="max-w-[120px] sm:max-w-[200px] truncate text-xs sm:text-sm p-2 sm:p-4">
+                    <TableCell className="max-w-[200px] truncate">
                       {transaction.product || '-'}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell p-2 sm:p-4">
+                    <TableCell>
                       <div className="max-w-[180px]">
                         <p className="truncate font-medium text-sm">
                           {transaction.buyer_name || '-'}
@@ -345,10 +379,10 @@ function EduzzTransactions() {
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-medium text-xs sm:text-sm p-2 sm:p-4">
+                    <TableCell className="text-right font-medium">
                       {formatCurrency(Number(transaction.sale_value), 'BRL')}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-xs sm:text-sm p-2 sm:p-4">
+                    <TableCell className="text-xs">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -370,7 +404,7 @@ function EduzzTransactions() {
                         </Tooltip>
                       </TooltipProvider>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell p-2 sm:p-4">
+                    <TableCell className="hidden lg:table-cell">
                       {transaction.utm_source ? (
                         <Badge variant="outline" className="text-xs">
                           {transaction.utm_source}
@@ -381,9 +415,9 @@ function EduzzTransactions() {
                 ))}
                 {paginatedTransactions.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 sm:py-12">
-                      <FileSpreadsheet className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-                      <p className="text-muted-foreground text-sm sm:text-base">
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
                         {hasActiveFilters 
                           ? 'Nenhuma transação encontrada com os filtros aplicados'
                           : 'Nenhuma transação Eduzz ainda. Importe um arquivo para começar.'

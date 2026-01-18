@@ -46,11 +46,11 @@ import {
   X,
   DollarSign,
   Receipt,
-  Package,
   Calendar
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { TmbTransactionDetailDialog } from '@/components/tmb/TmbTransactionDetailDialog';
+import { TmbTransactionCard } from '@/components/tmb/TmbTransactionCard';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -113,26 +113,6 @@ function TmbTransactions() {
     endDate: dateRange.endDate,
     clientId,
   });
-
-  // Get top product
-  const topProduct = useMemo(() => {
-    if (!transactions || transactions.length === 0) return null;
-    
-    const productMap = new Map<string, { total: number; count: number }>();
-    transactions.forEach(t => {
-      const product = t.product || 'Desconhecido';
-      const current = productMap.get(product) || { total: 0, count: 0 };
-      productMap.set(product, {
-        total: current.total + Number(t.ticket_value),
-        count: current.count + 1,
-      });
-    });
-
-    const sorted = Array.from(productMap.entries())
-      .sort(([, a], [, b]) => b.total - a.total);
-    
-    return sorted[0] ? { name: sorted[0][0], total: sorted[0][1].total } : null;
-  }, [transactions]);
 
   // Filter transactions by search and advanced filters (use debounced for consistency)
   const filteredTransactions = useMemo(() => {
@@ -236,34 +216,26 @@ function TmbTransactions() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+          className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4"
         >
           <ColoredKPICard
-            title="Total em Reais"
+            title="Faturamento Total (BRL)"
             value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
             subtitle={`${stats?.totalTransactions || 0} transações`}
             icon={DollarSign}
             variant="green"
             delay={0}
+            className="text-sm sm:text-base"
           />
           <ColoredKPICard
             title="Total de Transações"
             value={(stats?.totalTransactions || 0).toString()}
-            subtitle="no período"
+            subtitle="no período filtrado"
             icon={Receipt}
             variant="purple"
             delay={1}
+            className="text-sm sm:text-base"
           />
-          {topProduct && (
-            <ColoredKPICard
-              title="Top Produto"
-              value={topProduct.name.length > 25 ? topProduct.name.slice(0, 25) + '...' : topProduct.name}
-              subtitle={formatCurrency(topProduct.total, 'BRL')}
-              icon={Package}
-              variant="blue"
-              delay={2}
-            />
-          )}
         </motion.div>
 
         {/* Period Selector */}
@@ -338,18 +310,46 @@ function TmbTransactions() {
           </CardContent>
         </Card>
 
-        {/* Table */}
-        <Card>
+        {/* Mobile: Card View */}
+        <div className="md:hidden">
+          {paginatedTransactions.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground text-sm">
+                  {hasActiveFilters 
+                    ? 'Nenhuma transação encontrada com os filtros aplicados'
+                    : 'Nenhuma transação TMB ainda. Importe um arquivo para começar.'
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            paginatedTransactions.map((transaction) => (
+              <TmbTransactionCard 
+                key={transaction.id} 
+                transaction={transaction} 
+                onClick={() => {
+                  setSelectedTransaction(transaction);
+                  setIsDetailOpen(true);
+                }}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Desktop: Table View */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs sm:text-sm">ID Pedido</TableHead>
-                  <TableHead className="text-xs sm:text-sm">Produto</TableHead>
-                  <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Cliente</TableHead>
-                  <TableHead className="text-right text-xs sm:text-sm">Valor</TableHead>
-                  <TableHead className="hidden sm:table-cell text-xs sm:text-sm">Data (BRT)</TableHead>
-                  <TableHead className="hidden md:table-cell text-xs sm:text-sm">UTM Source</TableHead>
+                  <TableHead className="min-w-[100px]">ID Pedido</TableHead>
+                  <TableHead className="min-w-[150px]">Produto</TableHead>
+                  <TableHead className="min-w-[150px]">Cliente</TableHead>
+                  <TableHead className="text-right min-w-[100px]">Valor</TableHead>
+                  <TableHead className="min-w-[100px]">Data (BRT)</TableHead>
+                  <TableHead className="hidden lg:table-cell">UTM Source</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -362,14 +362,13 @@ function TmbTransactions() {
                       setIsDetailOpen(true);
                     }}
                   >
-                    <TableCell className="font-mono text-xs p-2 sm:p-4">
-                      <span className="hidden sm:inline">{transaction.order_id.slice(0, 15)}...</span>
-                      <span className="sm:hidden">{transaction.order_id.slice(0, 8)}...</span>
+                    <TableCell className="font-mono text-xs">
+                      {transaction.order_id.slice(0, 12)}...
                     </TableCell>
-                    <TableCell className="max-w-[120px] sm:max-w-[200px] truncate text-xs sm:text-sm p-2 sm:p-4">
+                    <TableCell className="max-w-[200px] truncate">
                       {transaction.product || '-'}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell p-2 sm:p-4">
+                    <TableCell>
                       <div className="max-w-[180px]">
                         <p className="truncate font-medium text-sm">
                           {transaction.buyer_name || '-'}
@@ -379,10 +378,10 @@ function TmbTransactions() {
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-medium text-xs sm:text-sm p-2 sm:p-4">
+                    <TableCell className="text-right font-medium">
                       {formatCurrency(Number(transaction.ticket_value), 'BRL')}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-xs sm:text-sm p-2 sm:p-4">
+                    <TableCell className="text-xs">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -404,7 +403,7 @@ function TmbTransactions() {
                         </Tooltip>
                       </TooltipProvider>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell p-2 sm:p-4">
+                    <TableCell className="hidden lg:table-cell">
                       {transaction.utm_source ? (
                         <Badge variant="outline" className="text-xs">
                           {transaction.utm_source}
@@ -415,9 +414,9 @@ function TmbTransactions() {
                 ))}
                 {paginatedTransactions.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 sm:py-12">
-                      <FileSpreadsheet className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
-                      <p className="text-muted-foreground text-sm sm:text-base">
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
                         {hasActiveFilters 
                           ? 'Nenhuma transação encontrada com os filtros aplicados'
                           : 'Nenhuma transação TMB ainda. Importe um arquivo para começar.'
