@@ -49,11 +49,19 @@ export function calculateGoalProgress(
   
   // Calculate if on track
   const totalDays = differenceInDays(endDate, startDate);
-  const daysElapsed = differenceInDays(today, startDate);
+  const daysElapsed = Math.max(0, differenceInDays(today, startDate));
+  const percentTimeElapsed = totalDays > 0 ? (daysElapsed / totalDays) * 100 : 0;
   const expectedByNow = totalDays > 0 
     ? (goal.target_value * daysElapsed) / totalDays
     : goal.target_value;
-  const isOnTrack = totalSoldInCurrency >= expectedByNow;
+  
+  // Consider "on track" if:
+  // 1. Less than 5% of time has elapsed (too early to judge)
+  // 2. Progress is at least 80% of the linear expectation
+  // 3. Already achieved or exceeded the expected value
+  const isOnTrack = percentTimeElapsed < 5 || 
+    totalSoldInCurrency >= expectedByNow * 0.8 ||
+    totalSoldInCurrency >= expectedByNow;
   
   return {
     totalSold: totalSoldInCurrency,
