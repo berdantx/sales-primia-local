@@ -11,6 +11,7 @@ import { ptBR } from 'date-fns/locale';
 
 interface PlatformBreakdown {
   hotmartBRL: number;
+  hotmartPendingBRL?: number; // Valor a receber (recorrências futuras)
   hotmartUSD: number;
   tmbBRL: number;
   eduzzBRL: number;
@@ -59,16 +60,36 @@ export function GoalSummarySection({
     const hasTmb = platformBreakdown.tmbBRL > 0;
     const hasEduzz = platformBreakdown.eduzzBRL > 0;
     const hasUsdConversion = platformBreakdown.usdConvertedBRL > 0;
+    const hasPending = (platformBreakdown.hotmartPendingBRL ?? 0) > 0;
     
     return (
-      <div className="space-y-1.5 text-sm">
+      <div className="space-y-1.5 text-sm min-w-[220px]">
         <p className="font-medium border-b pb-1 mb-2">Composição do Valor</p>
-        {hasHotmart && (
+        
+        {/* Para o card de Projeção, mostrar separação processado/a receber */}
+        {includeProjection && hasHotmart && (
+          <>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Hotmart (já processado):</span>
+              <span className="font-medium">{formatCurrency(platformBreakdown.hotmartBRL, 'BRL')}</span>
+            </div>
+            {hasPending && (
+              <div className="flex justify-between gap-4 text-amber-500">
+                <span>Hotmart (a receber):</span>
+                <span className="font-medium">{formatCurrency(platformBreakdown.hotmartPendingBRL!, 'BRL')}</span>
+              </div>
+            )}
+          </>
+        )}
+        
+        {/* Para o card de Faturamento Atual, mostrar apenas o valor processado */}
+        {!includeProjection && hasHotmart && (
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Hotmart (BRL):</span>
             <span className="font-medium">{formatCurrency(platformBreakdown.hotmartBRL, 'BRL')}</span>
           </div>
         )}
+        
         {hasTmb && (
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">TMB:</span>
@@ -88,12 +109,20 @@ export function GoalSummarySection({
                 <span className="text-muted-foreground">Hotmart (USD):</span>
                 <span className="font-medium">{formatCurrency(platformBreakdown.hotmartUSD, 'USD')}</span>
               </div>
-              <div className="flex justify-between gap-4 text-xs text-muted-foreground">
+              <div className="flex justify-between gap-4 text-xs text-blue-400">
                 <span>Convertido ({dollarRate ? `$1 = R$${dollarRate.toFixed(2)}` : 'USD→BRL'}):</span>
                 <span>{formatCurrency(platformBreakdown.usdConvertedBRL, 'BRL')}</span>
               </div>
             </div>
           </>
+        )}
+        
+        {/* Explicação de cálculo - apenas para projeção */}
+        {includeProjection && (
+          <div className="border-t pt-2 mt-2 text-muted-foreground text-xs">
+            <p className="font-medium text-foreground">Como é calculado:</p>
+            <p>Soma dos valores já processados + parcelas futuras de transações parceladas.</p>
+          </div>
         )}
       </div>
     );
