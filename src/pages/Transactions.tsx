@@ -236,7 +236,9 @@ function Transactions() {
     const totalCombinedBRL = totalBRL + usdConvertedToBRL;
     
     // Projection stats (includes recurrences)
+    const realBRL = projectionStats?.totalRealBRL || totalBRL;
     const projectedBRL = projectionStats?.totalProjectedBRL || 0;
+    const pendingBRL = projectedBRL - realBRL; // Valor a receber
     const projectedUSD = projectionStats?.totalProjectedUSD || 0;
     const projectedUSDConvertedToBRL = dollarRate ? projectedUSD * dollarRate.rate : 0;
     const totalProjectedCombinedBRL = projectedBRL + projectedUSDConvertedToBRL;
@@ -253,6 +255,10 @@ function Transactions() {
       totalProjectedCombinedBRL,
       countBRL: brlTransactions.length,
       countUSD: usdTransactions.length,
+      // Breakdown for tooltip
+      realBRL,
+      pendingBRL,
+      projectedUSDConvertedToBRL,
     };
   }, [statsFromDB, filteredTransactions, dollarRate, projectionStats]);
 
@@ -412,10 +418,38 @@ function Transactions() {
             delay={1}
             className="text-sm sm:text-base"
             tooltipContent={
-              <div className="space-y-1 text-sm">
-                <p className="font-medium">Como é calculado:</p>
-                <p>Soma do valor realizado + valor futuro de parcelas pendentes de transações parceladas.</p>
-                <p className="text-muted-foreground text-xs mt-1">Ex: Uma venda de 12x de R$ 100 com 3 parcelas pagas projeta R$ 1.200 no total.</p>
+              <div className="space-y-2 text-sm min-w-[220px]">
+                <p className="font-medium border-b pb-1 mb-2">Composição do Valor</p>
+                
+                {/* Hotmart já processado */}
+                {summaryStats.realBRL > 0 && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Já processado:</span>
+                    <span className="font-medium">{formatCurrency(summaryStats.realBRL, 'BRL')}</span>
+                  </div>
+                )}
+                
+                {/* Hotmart a receber - destaque em amber */}
+                {summaryStats.pendingBRL > 0 && (
+                  <div className="flex justify-between gap-4 text-amber-500">
+                    <span>A receber (recorrências):</span>
+                    <span className="font-medium">{formatCurrency(summaryStats.pendingBRL, 'BRL')}</span>
+                  </div>
+                )}
+                
+                {/* USD convertido - destaque em azul */}
+                {summaryStats.totalUSD > 0 && summaryStats.projectedUSDConvertedToBRL > 0 && (
+                  <div className="flex justify-between gap-4 text-blue-400">
+                    <span>USD convertido:</span>
+                    <span className="font-medium">{formatCurrency(summaryStats.projectedUSDConvertedToBRL, 'BRL')}</span>
+                  </div>
+                )}
+                
+                {/* Explicação de cálculo */}
+                <div className="border-t pt-2 mt-2 text-muted-foreground text-xs">
+                  <p className="font-medium text-foreground">Como é calculado:</p>
+                  <p>Soma dos valores já processados + parcelas futuras de transações parceladas.</p>
+                </div>
               </div>
             }
           />

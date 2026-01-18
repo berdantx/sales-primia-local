@@ -30,7 +30,10 @@ import {
   TrendingUp,
   TrendingDown,
   Loader2,
-  Clock
+  Clock,
+  Flame,
+  Package,
+  Gem
 } from 'lucide-react';
 
 const CURRENCIES = ['BRL', 'USD', 'EUR'];
@@ -48,12 +51,24 @@ export default function Goals() {
   const deleteGoal = useDeleteGoal();
   
   // Combinar estatísticas de todas as plataformas
+  const hotmartBRL = hotmartStats?.totalByCurrency?.['BRL'] || 0;
+  const hotmartUSD = hotmartStats?.totalByCurrency?.['USD'] || 0;
+  const tmbBRL = tmbStats?.totalBRL || 0;
+  const eduzzBRL = eduzzStats?.totalBRL || 0;
+  const usdConvertedBRL = dollarRate ? hotmartUSD * dollarRate.rate : 0;
+  
   const combinedStats = {
     totalByCurrency: {
-      BRL: (hotmartStats?.totalByCurrency?.['BRL'] || 0) + 
-           (tmbStats?.totalBRL || 0) + 
-           (eduzzStats?.totalBRL || 0),
-      USD: hotmartStats?.totalByCurrency?.['USD'] || 0,
+      BRL: hotmartBRL + tmbBRL + eduzzBRL,
+      USD: hotmartUSD,
+    },
+    // Breakdown por plataforma
+    breakdown: {
+      hotmartBRL,
+      hotmartUSD,
+      tmbBRL,
+      eduzzBRL,
+      usdConvertedBRL,
     }
   };
 
@@ -341,6 +356,38 @@ export default function Goals() {
                             <p className="text-xs text-muted-foreground">por mês</p>
                           </div>
                         </div>
+
+                        {/* Platform Breakdown */}
+                        {(combinedStats.breakdown.hotmartBRL > 0 || combinedStats.breakdown.tmbBRL > 0 || combinedStats.breakdown.eduzzBRL > 0) && (
+                          <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Composição por Plataforma</p>
+                            <div className="flex flex-wrap gap-2">
+                              {combinedStats.breakdown.hotmartBRL > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full px-2 py-1">
+                                  <Flame className="h-3 w-3" />
+                                  <span className="font-medium">{formatCurrency(combinedStats.breakdown.hotmartBRL, 'BRL')}</span>
+                                </div>
+                              )}
+                              {combinedStats.breakdown.tmbBRL > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full px-2 py-1">
+                                  <Package className="h-3 w-3" />
+                                  <span className="font-medium">{formatCurrency(combinedStats.breakdown.tmbBRL, 'BRL')}</span>
+                                </div>
+                              )}
+                              {combinedStats.breakdown.eduzzBRL > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full px-2 py-1">
+                                  <Gem className="h-3 w-3" />
+                                  <span className="font-medium">{formatCurrency(combinedStats.breakdown.eduzzBRL, 'BRL')}</span>
+                                </div>
+                              )}
+                              {combinedStats.breakdown.usdConvertedBRL > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full px-2 py-1">
+                                  <span className="font-medium">USD: {formatCurrency(combinedStats.breakdown.usdConvertedBRL, 'BRL')}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Time remaining */}
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
