@@ -1,6 +1,11 @@
 import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export type CardColorVariant = 'blue' | 'green' | 'orange' | 'purple' | 'gray' | 'yellow';
 
@@ -12,6 +17,7 @@ interface ColoredKPICardProps {
   variant?: CardColorVariant;
   delay?: number;
   className?: string;
+  tooltipContent?: React.ReactNode;
 }
 
 const variantStyles: Record<CardColorVariant, string> = {
@@ -31,8 +37,9 @@ export function ColoredKPICard({
   variant = 'blue',
   delay = 0,
   className,
+  tooltipContent,
 }: ColoredKPICardProps) {
-  return (
+  const cardContent = (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -40,6 +47,7 @@ export function ColoredKPICard({
       className={cn(
         'rounded-lg p-2.5 sm:p-5 shadow-medium transition-transform hover:scale-[1.02]',
         variantStyles[variant],
+        tooltipContent && 'cursor-help',
         className
       )}
     >
@@ -59,4 +67,19 @@ export function ColoredKPICard({
       </div>
     </motion.div>
   );
+
+  if (tooltipContent) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {cardContent}
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs bg-popover text-popover-foreground border shadow-lg p-3">
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return cardContent;
 }

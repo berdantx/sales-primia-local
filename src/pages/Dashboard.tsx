@@ -168,9 +168,10 @@ export default function Dashboard() {
     return baseSales;
   }, [primaryGoal, stats, dollarRate]);
 
-  // Calculate projection value for GoalSummarySection
-  const projectionValueForGoal = useMemo(() => {
-    if (!primaryGoal) return 0;
+  // Calculate projection value and platform breakdown for GoalSummarySection
+  const { projectionValueForGoal, platformBreakdown } = useMemo(() => {
+    if (!primaryGoal) return { projectionValueForGoal: 0, platformBreakdown: undefined };
+    
     const hotmartRealBRL = projectionStats?.totalRealBRL || (hotmartStats?.totalByCurrency?.['BRL'] || 0);
     const hotmartUSD = hotmartStats?.totalByCurrency?.['USD'] || 0;
     const hotmartProjectedBRL = projectionStats?.totalProjectedBRL || hotmartRealBRL;
@@ -178,7 +179,17 @@ export default function Dashboard() {
     const eduzzBRL = eduzzStats?.totalBRL || 0;
     const combinedProjectedBRL = hotmartProjectedBRL + tmbBRL + eduzzBRL;
     const usdConvertedToBRL = dollarRate ? hotmartUSD * dollarRate.rate : 0;
-    return combinedProjectedBRL + usdConvertedToBRL;
+    
+    return {
+      projectionValueForGoal: combinedProjectedBRL + usdConvertedToBRL,
+      platformBreakdown: {
+        hotmartBRL: hotmartRealBRL,
+        hotmartUSD,
+        tmbBRL,
+        eduzzBRL,
+        usdConvertedBRL: usdConvertedToBRL,
+      },
+    };
   }, [primaryGoal, projectionStats, hotmartStats, tmbStats, eduzzStats, dollarRate]);
 
   if (isLoading) {
@@ -263,6 +274,9 @@ export default function Dashboard() {
             goal={primaryGoal} 
             totalSold={primaryGoalSales}
             projectionValue={projectionValueForGoal}
+            platformBreakdown={platformBreakdown}
+            salesByDate={salesByDate}
+            dollarRate={dollarRate?.rate}
           />
         )}
 
