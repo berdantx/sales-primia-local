@@ -353,8 +353,8 @@ serve(async (req) => {
           currency: purchase.price?.currency_value || 'BRL',
           // CORREÇÃO: gross_value_with_taxes = full_price (valor bruto com taxas)
           gross_value_with_taxes: purchase.full_price?.value || purchase.price?.value || 0,
-          // CORREÇÃO: computed_value = price (valor líquido que o produtor recebe)
-          computed_value: purchase.price?.value || 0,
+          // CORREÇÃO: computed_value = price (valor líquido), limitado a R$ 1.997,03
+          computed_value: Math.min(purchase.price?.value || 0, 1997.03),
           total_installments: installmentsNumber,
           payment_method: paymentMethod,
           country: purchase.checkout_country?.name || null,
