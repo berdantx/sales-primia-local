@@ -5,11 +5,13 @@ import { useCombinedStats, PlatformType } from '@/hooks/useCombinedStats';
 import { useActiveGoals } from '@/hooks/useGoals';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useLeadCount } from '@/hooks/useLeads';
+import { useSalesBreakdown, useProjectionStats } from '@/hooks/useSalesBreakdown';
 import { useFilter } from '@/contexts/FilterContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
+import { SalesBreakdownCards } from '@/components/dashboard/SalesBreakdownCards';
 
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 
@@ -32,6 +34,7 @@ import {
   Calendar,
   AlertTriangle,
   UserPlus,
+  TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -121,6 +124,19 @@ export default function Dashboard() {
   
   // Fetch lead count for the period
   const { data: leadCount } = useLeadCount({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    clientId,
+  });
+  
+  // Fetch sales breakdown by type and projection stats
+  const { data: salesBreakdown, isLoading: isLoadingBreakdown } = useSalesBreakdown({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    clientId,
+  });
+  
+  const { data: projectionStats } = useProjectionStats({
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
     clientId,
@@ -243,50 +259,53 @@ export default function Dashboard() {
           const usdConvertedToBRL = dollarRate ? usdTotal * dollarRate.rate : 0;
           const totalCombinedBRL = brlTotal + usdConvertedToBRL;
           
-          // Combined view: single card with BRL + USD converted
-          if (currencyView === 'combined') {
-            return (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+        // Combined view: show Faturamento Real and Projeção side by side
+        if (currencyView === 'combined') {
+          const totalRealBRL = projectionStats?.totalRealBRL || brlTotal;
+          const totalProjectedBRL = projectionStats?.totalProjectedBRL || brlTotal;
+          const hasProjection = totalProjectedBRL > totalRealBRL;
+          
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+              <KPICard
+                title="Faturamento Real"
+                value={formatCurrency(totalRealBRL + usdConvertedToBRL, 'BRL')}
+                subtitle={usdTotal > 0 && dollarRate ? 
+                  `Inclui ${formatCurrency(usdTotal, 'USD')}` : 
+                  "Vendas recebidas"
+                }
+                icon={DollarSign}
+                delay={0}
+                className="border-l-4 border-l-green-500"
+              />
+              {hasProjection && (
                 <KPICard
-                  title="Faturamento Total (BRL)"
-                  value={formatCurrency(totalCombinedBRL, 'BRL')}
-                  subtitle={usdTotal > 0 && dollarRate ? 
-                    `Inclui ${formatCurrency(usdTotal, 'USD')} (R$ ${dollarRate.rate.toFixed(2)})` : 
-                    undefined
-                  }
-                  icon={DollarSign}
-                  delay={0}
+                  title="Projeção de Faturamento"
+                  value={formatCurrency(totalProjectedBRL + usdConvertedToBRL, 'BRL')}
+                  subtitle="Inclui recorrências futuras"
+                  icon={TrendingUp}
+                  delay={1}
+                  className="border-l-4 border-l-amber-500"
                 />
-                {usdTotal > 0 && (
-                  <KPICard
-                    title="Vendas em Dólares"
-                    value={formatCurrency(usdTotal, 'USD')}
-                    subtitle={dollarRate ? 
-                      `≈ ${formatCurrency(usdConvertedToBRL, 'BRL')}` : 
-                      undefined
-                    }
-                    icon={DollarSign}
-                    delay={1}
-                  />
-                )}
-                <KPICard
-                  title="Total Transações"
-                  value={formatNumber(stats.totalTransactions)}
-                  icon={ShoppingCart}
-                  delay={2}
-                />
-                <KPICard
-                  title="Total de Leads"
-                  value={formatNumber(leadCount || 0)}
-                  subtitle="no período"
-                  icon={UserPlus}
-                  delay={3}
-                  className="cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => navigate('/leads')}
-                />
-              </div>
-            );
-          }
+              )}
+              <KPICard
+                title="Total Transações"
+                value={formatNumber(stats.totalTransactions)}
+                icon={ShoppingCart}
+                delay={hasProjection ? 2 : 1}
+              />
+              <KPICard
+                title="Total de Leads"
+                value={formatNumber(leadCount || 0)}
+                subtitle="no período"
+                icon={UserPlus}
+                delay={hasProjection ? 3 : 2}
+                className="cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => navigate('/leads')}
+              />
+            </div>
+          );
+        }
           
           // BRL-only view: single card with just BRL
           if (currencyView === 'brl-only') {
@@ -356,6 +375,21 @@ export default function Dashboard() {
             </div>
           );
         })()}
+
+        {/* Sales Breakdown by Type (only for Hotmart) */}
+        {hasData && platform !== 'tmb' && platform !== 'eduzz' && salesBreakdown && salesBreakdown.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            className="p-3 sm:p-4 bg-muted/20 rounded-lg border"
+          >
+            <SalesBreakdownCards 
+              data={salesBreakdown}
+              isLoading={isLoadingBreakdown}
+            />
+          </motion.div>
+        )}
 
         {/* Saved Filter Views */}
         <motion.div

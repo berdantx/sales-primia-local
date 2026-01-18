@@ -869,6 +869,7 @@ export type Database = {
           product: string | null
           product_id: string | null
           product_ucode: string | null
+          projected_value: number | null
           purchase_date: string | null
           recurrence_number: number | null
           sck_code: string | null
@@ -900,6 +901,7 @@ export type Database = {
           product?: string | null
           product_id?: string | null
           product_ucode?: string | null
+          projected_value?: number | null
           purchase_date?: string | null
           recurrence_number?: number | null
           sck_code?: string | null
@@ -931,6 +933,7 @@ export type Database = {
           product?: string | null
           product_id?: string | null
           product_ucode?: string | null
+          projected_value?: number | null
           purchase_date?: string | null
           recurrence_number?: number | null
           sck_code?: string | null
@@ -1156,6 +1159,108 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions_inverted_backup: {
+        Row: {
+          backup_created_at: string | null
+          billing_type: string | null
+          business_model: string | null
+          buyer_email: string | null
+          buyer_name: string | null
+          client_id: string | null
+          computed_value: number | null
+          country: string | null
+          created_at: string | null
+          currency: string | null
+          date_next_charge: string | null
+          gross_value_with_taxes: number | null
+          id: string | null
+          import_id: string | null
+          marketplace_commission: number | null
+          offer_code: string | null
+          payment_method: string | null
+          producer_commission: number | null
+          product: string | null
+          product_id: string | null
+          product_ucode: string | null
+          projected_value: number | null
+          purchase_date: string | null
+          recurrence_number: number | null
+          sck_code: string | null
+          source: string | null
+          subscriber_code: string | null
+          subscription_status: string | null
+          total_installments: number | null
+          transaction_code: string | null
+          user_id: string | null
+        }
+        Insert: {
+          backup_created_at?: string | null
+          billing_type?: string | null
+          business_model?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          client_id?: string | null
+          computed_value?: number | null
+          country?: string | null
+          created_at?: string | null
+          currency?: string | null
+          date_next_charge?: string | null
+          gross_value_with_taxes?: number | null
+          id?: string | null
+          import_id?: string | null
+          marketplace_commission?: number | null
+          offer_code?: string | null
+          payment_method?: string | null
+          producer_commission?: number | null
+          product?: string | null
+          product_id?: string | null
+          product_ucode?: string | null
+          projected_value?: number | null
+          purchase_date?: string | null
+          recurrence_number?: number | null
+          sck_code?: string | null
+          source?: string | null
+          subscriber_code?: string | null
+          subscription_status?: string | null
+          total_installments?: number | null
+          transaction_code?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          backup_created_at?: string | null
+          billing_type?: string | null
+          business_model?: string | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          client_id?: string | null
+          computed_value?: number | null
+          country?: string | null
+          created_at?: string | null
+          currency?: string | null
+          date_next_charge?: string | null
+          gross_value_with_taxes?: number | null
+          id?: string | null
+          import_id?: string | null
+          marketplace_commission?: number | null
+          offer_code?: string | null
+          payment_method?: string | null
+          producer_commission?: number | null
+          product?: string | null
+          product_id?: string | null
+          product_ucode?: string | null
+          projected_value?: number | null
+          purchase_date?: string | null
+          recurrence_number?: number | null
+          sck_code?: string | null
+          source?: string | null
+          subscriber_code?: string | null
+          subscription_status?: string | null
+          total_installments?: number | null
+          transaction_code?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1310,6 +1415,14 @@ export type Database = {
         Args: { p_client_id?: string }
         Returns: Json
       }
+      get_sales_breakdown_by_type: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
       get_sales_by_date: {
         Args: {
           p_billing_type?: string
@@ -1383,6 +1496,18 @@ export type Database = {
       }
       get_transaction_stats_by_user: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
+        Returns: Json
+      }
+      get_transaction_stats_with_projection: {
+        Args: {
+          p_billing_type?: string
+          p_client_id?: string
+          p_end_date?: string
+          p_payment_method?: string
+          p_product?: string
+          p_sck_code?: string
+          p_start_date?: string
+        }
         Returns: Json
       }
       get_user_clients: {

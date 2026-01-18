@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
+import { BillingTypeBadge } from '@/components/transactions/BillingTypeBadge';
 
 
 const ITEMS_PER_PAGE = 20;
@@ -56,6 +57,13 @@ function TransactionCard({ transaction, onClick }: { transaction: Transaction; o
             <p className="text-xs text-muted-foreground truncate">{transaction.buyer_name || '-'}</p>
           </div>
           <Badge variant="outline" className="ml-2 text-xs shrink-0">{transaction.currency}</Badge>
+        </div>
+        <div className="flex justify-between items-center mb-2">
+          <BillingTypeBadge 
+            billingType={transaction.billing_type} 
+            paymentMethod={transaction.payment_method}
+            showPaymentMethod={false}
+          />
         </div>
         <div className="flex justify-between items-end">
           <TooltipProvider>
@@ -389,6 +397,7 @@ function Transactions() {
                     <TableHead className="min-w-[100px]">Código</TableHead>
                     <TableHead className="min-w-[150px]">Produto</TableHead>
                     <TableHead className="min-w-[150px]">Comprador</TableHead>
+                    <TableHead className="min-w-[100px]">Tipo</TableHead>
                     <TableHead>Moeda</TableHead>
                     <TableHead className="hidden lg:table-cell">País</TableHead>
                     <TableHead className="text-right min-w-[100px]">Valor</TableHead>
@@ -420,6 +429,12 @@ function Transactions() {
                             {transaction.buyer_email}
                           </p>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <BillingTypeBadge 
+                          billingType={transaction.billing_type} 
+                          paymentMethod={transaction.payment_method}
+                        />
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{transaction.currency}</Badge>

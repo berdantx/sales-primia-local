@@ -342,6 +342,29 @@ serve(async (req) => {
           ? new Date(subscription.date_next_charge).toISOString() 
           : null;
 
+        // Valores base
+        const grossValue = purchase.full_price?.value || purchase.price?.value || 0;
+        const priceValue = purchase.price?.value || 0;
+        
+        // Identificar se é pagamento mensal (Recuperador ou Parcelamento Inteligente)
+        const isMonthlyPayment = billingType === 'Recuperador Inteligente' || 
+                                 billingType === 'Parcelamento Inteligente';
+        
+        // computed_value = valor REALMENTE recebido agora
+        // Para pagamentos mensais: usa o valor da parcela (grossValue)
+        // Para pagamentos à vista/parcelamento padrão: usa o valor líquido limitado
+        const computedValue = isMonthlyPayment 
+          ? grossValue  // valor da parcela recebida
+          : Math.min(priceValue, 1997.03);  // valor à vista/parcelamento padrão
+        
+        // projected_value = valor TOTAL projetado
+        // Para pagamentos mensais na primeira parcela: grossValue * totalInstallments
+        // Para outras parcelas ou vendas à vista: igual ao computedValue
+        let projectedValue = computedValue;
+        if (isMonthlyPayment && recurrenceNumber === 1 && installmentsNumber > 1) {
+          projectedValue = grossValue * installmentsNumber;
+        }
+
         // Prepare transaction record with CORRECTED field mapping
         const transactionData = {
           user_id: webhookUserId,
@@ -351,19 +374,19 @@ serve(async (req) => {
           buyer_email: buyer?.email || null,
           buyer_name: buyer?.name || null,
           currency: purchase.price?.currency_value || 'BRL',
-          // CORREÇÃO: gross_value_with_taxes = full_price (valor bruto com taxas)
-          gross_value_with_taxes: purchase.full_price?.value || purchase.price?.value || 0,
-          // CORREÇÃO: computed_value = price (valor líquido), limitado a R$ 1.997,03
-          computed_value: Math.min(purchase.price?.value || 0, 1997.03),
+          // gross_value_with_taxes = full_price (valor bruto com taxas / valor da parcela)
+          gross_value_with_taxes: grossValue,
+          // computed_value = valor REALMENTE recebido agora
+          computed_value: computedValue,
+          // projected_value = valor TOTAL projetado (para recorrências)
+          projected_value: projectedValue,
           total_installments: installmentsNumber,
           payment_method: paymentMethod,
           country: purchase.checkout_country?.name || null,
           sck_code: purchase.origin?.sck || null,
           purchase_date: purchaseDate,
-          // CORREÇÃO: billing_type dinâmico baseado na presença de subscription
           billing_type: billingType,
           source: 'webhook',
-          // NOVOS CAMPOS
           business_model: purchase.business_model || null,
           offer_code: purchase.offer?.code || null,
           product_id: product?.id?.toString() || null,
