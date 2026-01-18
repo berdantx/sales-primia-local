@@ -325,6 +325,8 @@ export default function Dashboard() {
                   transactionCounts={transactionCounts}
                   hasProjection={hasProjection}
                   onLeadsClick={() => navigate('/leads')}
+                  salesByDate={salesByDate}
+                  dollarRate={dollarRate?.rate}
                 />
               );
             }
