@@ -10,6 +10,7 @@ import { useFilter } from '@/contexts/FilterContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { KPICard } from '@/components/dashboard/KPICard';
+import { ColoredDashboardCards } from '@/components/dashboard/ColoredDashboardCards';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 import { SalesBreakdownDialog } from '@/components/dashboard/SalesBreakdownDialog';
 
@@ -313,45 +314,18 @@ export default function Dashboard() {
             const hasProjection = combinedProjectedBRL > combinedRealBRL;
             const hasActiveGoal = !!primaryGoal;
             
-            // If no active goal, show 3 cards: Faturamento, Projeção/Leads, Transações
+            // If no active goal, show colored styled cards
             if (!hasActiveGoal) {
               return (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
-                  <KPICard
-                    title="Faturamento Atual"
-                    value={formatCurrency(combinedRealBRL + usdConvertedToBRL, 'BRL')}
-                    subtitle="Hotmart + TMB + Eduzz"
-                    icon={DollarSign}
-                    delay={0}
-                    className="border-l-4 border-l-green-500"
-                  />
-                  {hasProjection ? (
-                    <KPICard
-                      title="Projeção Faturamento"
-                      value={formatCurrency(combinedProjectedBRL + usdConvertedToBRL, 'BRL')}
-                      subtitle="Inclui recorrências"
-                      icon={TrendingUp}
-                      delay={1}
-                      className="border-l-4 border-l-amber-500"
-                    />
-                  ) : (
-                    <KPICard
-                      title="Total de Leads"
-                      value={formatNumber(leadCount || 0)}
-                      subtitle="no período"
-                      icon={UserPlus}
-                      delay={1}
-                      className="cursor-pointer hover:border-primary/50 transition-colors"
-                      onClick={() => navigate('/leads')}
-                    />
-                  )}
-                  <KPICard
-                    title="Transações"
-                    value={formatNumber(stats?.totalTransactions || 0)}
-                    icon={ShoppingCart}
-                    delay={2}
-                  />
-                </div>
+                <ColoredDashboardCards
+                  totalBRL={combinedRealBRL + usdConvertedToBRL}
+                  projectedBRL={combinedProjectedBRL + usdConvertedToBRL}
+                  leadCount={leadCount || 0}
+                  totalTransactions={stats?.totalTransactions || 0}
+                  transactionCounts={transactionCounts}
+                  hasProjection={hasProjection}
+                  onLeadsClick={() => navigate('/leads')}
+                />
               );
             }
             
