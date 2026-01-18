@@ -4,18 +4,36 @@ import { calculateGoalProgress, formatCurrency, formatPercent } from '@/lib/calc
 import { ColoredKPICard } from './ColoredKPICard';
 import { GoalProgressBar } from './GoalProgressBar';
 import { ProjectionCards } from './ProjectionCards';
-import { Target, TrendingUp, AlertCircle, TrendingUp as ProjectionIcon } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+interface PlatformBreakdown {
+  hotmartBRL: number;
+  hotmartUSD: number;
+  tmbBRL: number;
+  eduzzBRL: number;
+  usdConvertedBRL: number;
+}
 
 interface GoalSummarySectionProps {
   goal: Goal;
   totalSold: number;
   projectionValue?: number;
+  platformBreakdown?: PlatformBreakdown;
+  salesByDate?: Record<string, Record<string, number>>;
+  dollarRate?: number;
 }
 
-export function GoalSummarySection({ goal, totalSold, projectionValue }: GoalSummarySectionProps) {
+export function GoalSummarySection({ 
+  goal, 
+  totalSold, 
+  projectionValue, 
+  platformBreakdown,
+  salesByDate,
+  dollarRate,
+}: GoalSummarySectionProps) {
   const progress = calculateGoalProgress(goal, totalSold);
   
   const statusText = progress.progressPercent >= 100 
@@ -23,6 +41,54 @@ export function GoalSummarySection({ goal, totalSold, projectionValue }: GoalSum
     : progress.isOnTrack 
       ? 'Em progresso' 
       : 'Atenção necessária';
+
+  // Build tooltip content for breakdown
+  const buildBreakdownTooltip = (includeProjection = false) => {
+    if (!platformBreakdown) return null;
+    
+    const hasHotmart = platformBreakdown.hotmartBRL > 0 || platformBreakdown.hotmartUSD > 0;
+    const hasTmb = platformBreakdown.tmbBRL > 0;
+    const hasEduzz = platformBreakdown.eduzzBRL > 0;
+    const hasUsdConversion = platformBreakdown.usdConvertedBRL > 0;
+    
+    return (
+      <div className="space-y-1.5 text-sm">
+        <p className="font-medium border-b pb-1 mb-2">Composição do Valor</p>
+        {hasHotmart && (
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Hotmart (BRL):</span>
+            <span className="font-medium">{formatCurrency(platformBreakdown.hotmartBRL, 'BRL')}</span>
+          </div>
+        )}
+        {hasTmb && (
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">TMB:</span>
+            <span className="font-medium">{formatCurrency(platformBreakdown.tmbBRL, 'BRL')}</span>
+          </div>
+        )}
+        {hasEduzz && (
+          <div className="flex justify-between gap-4">
+            <span className="text-muted-foreground">Eduzz:</span>
+            <span className="font-medium">{formatCurrency(platformBreakdown.eduzzBRL, 'BRL')}</span>
+          </div>
+        )}
+        {hasUsdConversion && (
+          <>
+            <div className="border-t pt-1.5 mt-1.5">
+              <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Hotmart (USD):</span>
+                <span className="font-medium">{formatCurrency(platformBreakdown.hotmartUSD, 'USD')}</span>
+              </div>
+              <div className="flex justify-between gap-4 text-xs text-muted-foreground">
+                <span>Convertido ({dollarRate ? `$1 = R$${dollarRate.toFixed(2)}` : 'USD→BRL'}):</span>
+                <span>{formatCurrency(platformBreakdown.usdConvertedBRL, 'BRL')}</span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -61,6 +127,7 @@ export function GoalSummarySection({ goal, totalSold, projectionValue }: GoalSum
           icon={TrendingUp}
           variant="green"
           delay={1}
+          tooltipContent={buildBreakdownTooltip()}
         />
         <ColoredKPICard
           title="Projeção Faturamento"
@@ -69,6 +136,7 @@ export function GoalSummarySection({ goal, totalSold, projectionValue }: GoalSum
           icon={TrendingUp}
           variant="yellow"
           delay={2}
+          tooltipContent={buildBreakdownTooltip(true)}
         />
         <ColoredKPICard
           title="Restante para Meta"
@@ -80,8 +148,13 @@ export function GoalSummarySection({ goal, totalSold, projectionValue }: GoalSum
         />
       </div>
 
-      {/* Progress Bar */}
-      <GoalProgressBar goal={goal} progress={progress} />
+      {/* Progress Bar with Sparkline */}
+      <GoalProgressBar 
+        goal={goal} 
+        progress={progress} 
+        salesByDate={salesByDate}
+        dollarRate={dollarRate}
+      />
 
       {/* Projection Cards */}
       {progress.remaining > 0 && (
