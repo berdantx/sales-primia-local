@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-export type CardColorVariant = 'blue' | 'green' | 'orange' | 'purple' | 'gray' | 'yellow';
+export type CardColorVariant = 'blue' | 'green' | 'orange' | 'purple' | 'gray' | 'yellow' | 'cyan' | 'red';
 
 interface ColoredKPICardProps {
   title: string;
@@ -27,6 +27,8 @@ const variantStyles: Record<CardColorVariant, string> = {
   purple: 'bg-gradient-to-r from-[hsl(280,65%,60%)] to-[hsl(270,70%,50%)] text-white',
   gray: 'bg-muted text-muted-foreground',
   yellow: 'bg-gradient-to-r from-[hsl(45,93%,47%)] to-[hsl(36,100%,50%)] text-white',
+  cyan: 'bg-gradient-to-r from-[hsl(195,85%,45%)] to-[hsl(210,90%,55%)] text-white',
+  red: 'bg-gradient-to-r from-[hsl(0,70%,65%)] to-[hsl(350,75%,55%)] text-white',
 };
 
 export function ColoredKPICard({

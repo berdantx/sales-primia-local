@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
 import { Goal } from '@/hooks/useGoals';
-import { calculateGoalProgress, formatCurrency, formatPercent } from '@/lib/calculations/goalCalculations';
+import { calculateGoalProgress, formatCurrency, formatPercent, formatNumber } from '@/lib/calculations/goalCalculations';
 import { ColoredKPICard } from './ColoredKPICard';
 import { GoalProgressBar } from './GoalProgressBar';
 import { ProjectionCards } from './ProjectionCards';
-import { Target, TrendingUp, AlertCircle } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, Flame, Package, Gem } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -17,6 +17,13 @@ interface PlatformBreakdown {
   usdConvertedBRL: number;
 }
 
+interface TransactionCounts {
+  hotmart: number;
+  tmb: number;
+  eduzz: number;
+  total: number;
+}
+
 interface GoalSummarySectionProps {
   goal: Goal;
   totalSold: number;
@@ -24,6 +31,7 @@ interface GoalSummarySectionProps {
   platformBreakdown?: PlatformBreakdown;
   salesByDate?: Record<string, Record<string, number>>;
   dollarRate?: number;
+  transactionCounts?: TransactionCounts;
 }
 
 export function GoalSummarySection({ 
@@ -33,6 +41,7 @@ export function GoalSummarySection({
   platformBreakdown,
   salesByDate,
   dollarRate,
+  transactionCounts,
 }: GoalSummarySectionProps) {
   const progress = calculateGoalProgress(goal, totalSold);
   
@@ -127,14 +136,43 @@ export function GoalSummarySection({
           icon={TrendingUp}
           variant="green"
           delay={1}
-          tooltipContent={buildBreakdownTooltip()}
+          tooltipContent={
+            <div className="space-y-2">
+              {buildBreakdownTooltip()}
+              {transactionCounts && transactionCounts.total > 0 && (
+                <div className="border-t pt-2 mt-2">
+                  <p className="font-medium text-xs mb-1.5">Transações por Plataforma</p>
+                  <div className="flex flex-wrap gap-2">
+                    {transactionCounts.hotmart > 0 && (
+                      <div className="flex items-center gap-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded px-1.5 py-0.5">
+                        <Flame className="h-3 w-3" />
+                        <span>{formatNumber(transactionCounts.hotmart)}</span>
+                      </div>
+                    )}
+                    {transactionCounts.tmb > 0 && (
+                      <div className="flex items-center gap-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded px-1.5 py-0.5">
+                        <Package className="h-3 w-3" />
+                        <span>{formatNumber(transactionCounts.tmb)}</span>
+                      </div>
+                    )}
+                    {transactionCounts.eduzz > 0 && (
+                      <div className="flex items-center gap-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded px-1.5 py-0.5">
+                        <Gem className="h-3 w-3" />
+                        <span>{formatNumber(transactionCounts.eduzz)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          }
         />
         <ColoredKPICard
           title="Projeção Faturamento"
           value={formatCurrency(projectionValue ?? progress.totalSold, goal.currency)}
           subtitle="Inclui recorrências"
           icon={TrendingUp}
-          variant="yellow"
+          variant="cyan"
           delay={2}
           tooltipContent={buildBreakdownTooltip(true)}
         />
@@ -143,7 +181,7 @@ export function GoalSummarySection({
           value={formatCurrency(progress.remaining, goal.currency)}
           subtitle={progress.remaining === 0 ? 'Meta atingida!' : 'Valor a alcançar'}
           icon={AlertCircle}
-          variant="orange"
+          variant="red"
           delay={3}
         />
       </div>

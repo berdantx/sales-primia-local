@@ -192,6 +192,16 @@ export default function Dashboard() {
     };
   }, [primaryGoal, projectionStats, hotmartStats, tmbStats, eduzzStats, dollarRate]);
 
+  // Calculate transaction counts by platform
+  const transactionCounts = useMemo(() => ({
+    hotmart: hotmartStats?.totalTransactions || 0,
+    tmb: tmbStats?.totalTransactions || 0,
+    eduzz: eduzzStats?.totalTransactions || 0,
+    total: (hotmartStats?.totalTransactions || 0) + 
+           (tmbStats?.totalTransactions || 0) + 
+           (eduzzStats?.totalTransactions || 0),
+  }), [hotmartStats, tmbStats, eduzzStats]);
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -277,6 +287,7 @@ export default function Dashboard() {
             platformBreakdown={platformBreakdown}
             salesByDate={salesByDate}
             dollarRate={dollarRate?.rate}
+            transactionCounts={transactionCounts}
           />
         )}
 
