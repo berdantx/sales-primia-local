@@ -18,6 +18,8 @@ interface ColoredKPICardProps {
   delay?: number;
   className?: string;
   tooltipContent?: React.ReactNode;
+  customContent?: React.ReactNode;
+  onClick?: () => void;
 }
 
 const variantStyles: Record<CardColorVariant, string> = {
@@ -40,16 +42,20 @@ export function ColoredKPICard({
   delay = 0,
   className,
   tooltipContent,
+  customContent,
+  onClick,
 }: ColoredKPICardProps) {
   const cardContent = (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: delay * 0.1 }}
+      onClick={onClick}
       className={cn(
         'rounded-lg p-2.5 sm:p-5 shadow-medium transition-transform hover:scale-[1.02]',
         variantStyles[variant],
         tooltipContent && 'cursor-help',
+        onClick && 'cursor-pointer',
         className
       )}
     >
@@ -60,6 +66,7 @@ export function ColoredKPICard({
           {subtitle && (
             <p className="text-[10px] sm:text-sm opacity-80 leading-tight">{subtitle}</p>
           )}
+          {customContent}
         </div>
         {Icon && (
           <div className="p-1 sm:p-2 rounded-full bg-white/20 shrink-0">
