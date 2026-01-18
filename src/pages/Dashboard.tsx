@@ -11,7 +11,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { KPICard } from '@/components/dashboard/KPICard';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
-import { SalesBreakdownCards } from '@/components/dashboard/SalesBreakdownCards';
+import { SalesBreakdownDialog } from '@/components/dashboard/SalesBreakdownDialog';
 
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 
@@ -254,81 +254,127 @@ export default function Dashboard() {
 
         {/* Currency and Transaction KPI Cards - right below goal cards */}
         {hasData && (() => {
-          const brlTotal = stats?.totalByCurrency?.['BRL'] || 0;
-          const usdTotal = stats?.totalByCurrency?.['USD'] || 0;
-          const usdConvertedToBRL = dollarRate ? usdTotal * dollarRate.rate : 0;
-          const totalCombinedBRL = brlTotal + usdConvertedToBRL;
+          // Get platform-specific values
+          const hotmartRealBRL = hotmartStats?.totalByCurrency?.['BRL'] || 0;
+          const hotmartUSD = hotmartStats?.totalByCurrency?.['USD'] || 0;
+          const hotmartProjectedBRL = projectionStats?.totalProjectedBRL || hotmartRealBRL;
+          const tmbBRL = tmbStats?.totalBRL || 0;
+          const eduzzBRL = eduzzStats?.totalBRL || 0;
           
-        // Combined view: show Faturamento Real and Projeção side by side
-        if (currencyView === 'combined') {
-          const totalRealBRL = projectionStats?.totalRealBRL || brlTotal;
-          const totalProjectedBRL = projectionStats?.totalProjectedBRL || brlTotal;
-          const hasProjection = totalProjectedBRL > totalRealBRL;
+          // Combined values (all platforms)
+          const combinedRealBRL = hotmartRealBRL + tmbBRL + eduzzBRL;
+          const combinedProjectedBRL = hotmartProjectedBRL + tmbBRL + eduzzBRL;
+          const usdConvertedToBRL = dollarRate ? hotmartUSD * dollarRate.rate : 0;
           
-          return (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-              <KPICard
-                title="Faturamento Real"
-                value={formatCurrency(totalRealBRL + usdConvertedToBRL, 'BRL')}
-                subtitle={usdTotal > 0 && dollarRate ? 
-                  `Inclui ${formatCurrency(usdTotal, 'USD')}` : 
-                  "Vendas recebidas"
-                }
-                icon={DollarSign}
-                delay={0}
-                className="border-l-4 border-l-green-500"
-              />
-              {hasProjection && (
-                <KPICard
-                  title="Projeção de Faturamento"
-                  value={formatCurrency(totalProjectedBRL + usdConvertedToBRL, 'BRL')}
-                  subtitle="Inclui recorrências futuras"
-                  icon={TrendingUp}
-                  delay={1}
-                  className="border-l-4 border-l-amber-500"
-                />
-              )}
-              <KPICard
-                title="Total Transações"
-                value={formatNumber(stats.totalTransactions)}
-                icon={ShoppingCart}
-                delay={hasProjection ? 2 : 1}
-              />
-              <KPICard
-                title="Total de Leads"
-                value={formatNumber(leadCount || 0)}
-                subtitle="no período"
-                icon={UserPlus}
-                delay={hasProjection ? 3 : 2}
-                className="cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => navigate('/leads')}
-              />
-            </div>
-          );
-        }
-          
-          // BRL-only view: single card with just BRL
-          if (currencyView === 'brl-only') {
+          // For 'all' platform: show combined values
+          if (platform === 'all') {
+            const hasProjection = combinedProjectedBRL > combinedRealBRL;
+            
+            if (currencyView === 'combined') {
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                  <KPICard
+                    title="Faturamento Atual"
+                    value={formatCurrency(combinedRealBRL + usdConvertedToBRL, 'BRL')}
+                    subtitle="Hotmart + TMB + Eduzz"
+                    icon={DollarSign}
+                    delay={0}
+                    className="border-l-4 border-l-green-500"
+                  />
+                  {hasProjection && (
+                    <KPICard
+                      title="Projeção de Faturamento"
+                      value={formatCurrency(combinedProjectedBRL + usdConvertedToBRL, 'BRL')}
+                      subtitle="Inclui recorrências futuras"
+                      icon={TrendingUp}
+                      delay={1}
+                      className="border-l-4 border-l-amber-500"
+                    />
+                  )}
+                  <KPICard
+                    title="Total Transações"
+                    value={formatNumber(stats?.totalTransactions || 0)}
+                    icon={ShoppingCart}
+                    delay={hasProjection ? 2 : 1}
+                  />
+                  <KPICard
+                    title="Total de Leads"
+                    value={formatNumber(leadCount || 0)}
+                    subtitle="no período"
+                    icon={UserPlus}
+                    delay={hasProjection ? 3 : 2}
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => navigate('/leads')}
+                  />
+                </div>
+              );
+            }
+            
+            // BRL-only view for 'all' platform
+            if (currencyView === 'brl-only') {
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+                  <KPICard
+                    title="Faturamento Atual"
+                    value={formatCurrency(combinedRealBRL, 'BRL')}
+                    subtitle="Hotmart + TMB + Eduzz"
+                    icon={DollarSign}
+                    delay={0}
+                    className="border-l-4 border-l-green-500"
+                  />
+                  <KPICard
+                    title="Total Transações"
+                    value={formatNumber(stats?.totalTransactions || 0)}
+                    icon={ShoppingCart}
+                    delay={1}
+                  />
+                  <KPICard
+                    title="Total de Leads"
+                    value={formatNumber(leadCount || 0)}
+                    subtitle="no período"
+                    icon={UserPlus}
+                    delay={2}
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => navigate('/leads')}
+                  />
+                </div>
+              );
+            }
+            
+            // Separated view for 'all' platform
             return (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 <KPICard
                   title="Vendas em Reais"
-                  value={formatCurrency(brlTotal, 'BRL')}
+                  value={formatCurrency(combinedRealBRL, 'BRL')}
+                  subtitle="Hotmart + TMB + Eduzz"
                   icon={DollarSign}
                   delay={0}
                 />
+                {hotmartUSD > 0 && (
+                  <KPICard
+                    title="Vendas em Dólares"
+                    value={formatCurrency(hotmartUSD, 'USD')}
+                    subtitle={dollarRate ? 
+                      `≈ ${formatCurrency(usdConvertedToBRL, 'BRL')}` : 
+                      undefined
+                    }
+                    icon={DollarSign}
+                    delay={1}
+                  />
+                )}
                 <KPICard
                   title="Total Transações"
-                  value={formatNumber(stats.totalTransactions)}
+                  value={formatNumber(stats?.totalTransactions || 0)}
                   icon={ShoppingCart}
-                  delay={1}
+                  delay={2}
                 />
                 <KPICard
                   title="Total de Leads"
                   value={formatNumber(leadCount || 0)}
                   subtitle="no período"
                   icon={UserPlus}
-                  delay={2}
+                  delay={3}
                   className="cursor-pointer hover:border-primary/50 transition-colors"
                   onClick={() => navigate('/leads')}
                 />
@@ -336,39 +382,95 @@ export default function Dashboard() {
             );
           }
           
-          // Separated view: separate cards for each currency
+          // For Hotmart platform: show Hotmart-specific values with dialog button
+          if (platform === 'hotmart') {
+            const hasProjection = hotmartProjectedBRL > hotmartRealBRL;
+            
+            return (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                  <KPICard
+                    title="Faturamento Real"
+                    value={formatCurrency(hotmartRealBRL + usdConvertedToBRL, 'BRL')}
+                    subtitle={hotmartUSD > 0 && dollarRate ? 
+                      `Inclui ${formatCurrency(hotmartUSD, 'USD')}` : 
+                      "Vendas recebidas"
+                    }
+                    icon={DollarSign}
+                    delay={0}
+                    className="border-l-4 border-l-green-500"
+                  />
+                  {hasProjection && (
+                    <KPICard
+                      title="Projeção de Faturamento"
+                      value={formatCurrency(hotmartProjectedBRL + usdConvertedToBRL, 'BRL')}
+                      subtitle="Inclui recorrências futuras"
+                      icon={TrendingUp}
+                      delay={1}
+                      className="border-l-4 border-l-amber-500"
+                    />
+                  )}
+                  <KPICard
+                    title="Total Transações"
+                    value={formatNumber(hotmartStats?.totalTransactions || 0)}
+                    icon={ShoppingCart}
+                    delay={hasProjection ? 2 : 1}
+                  />
+                  <KPICard
+                    title="Total de Leads"
+                    value={formatNumber(leadCount || 0)}
+                    subtitle="no período"
+                    icon={UserPlus}
+                    delay={hasProjection ? 3 : 2}
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => navigate('/leads')}
+                  />
+                </div>
+                
+                {/* Vendas por Tipo button (Hotmart only) */}
+                {salesBreakdown && salesBreakdown.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <SalesBreakdownDialog 
+                      data={salesBreakdown}
+                      isLoading={isLoadingBreakdown}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      Ver detalhamento por tipo de cobrança
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          }
+          
+          // For TMB or Eduzz: show platform-specific values
+          const platformBRL = platform === 'tmb' ? tmbBRL : eduzzBRL;
+          const platformTransactions = platform === 'tmb' 
+            ? (tmbStats?.totalTransactions || 0) 
+            : (eduzzStats?.totalTransactions || 0);
+          
           return (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4">
               <KPICard
-                title="Vendas em Reais"
-                value={formatCurrency(brlTotal, 'BRL')}
+                title="Faturamento"
+                value={formatCurrency(platformBRL, 'BRL')}
+                subtitle={platform === 'tmb' ? 'TMB' : 'Eduzz'}
                 icon={DollarSign}
                 delay={0}
+                className="border-l-4 border-l-green-500"
               />
-              {usdTotal > 0 && (
-                <KPICard
-                  title="Vendas em Dólares"
-                  value={formatCurrency(usdTotal, 'USD')}
-                  subtitle={dollarRate ? 
-                    `≈ ${formatCurrency(usdConvertedToBRL, 'BRL')}` : 
-                    undefined
-                  }
-                  icon={DollarSign}
-                  delay={1}
-                />
-              )}
               <KPICard
                 title="Total Transações"
-                value={formatNumber(stats.totalTransactions)}
+                value={formatNumber(platformTransactions)}
                 icon={ShoppingCart}
-                delay={2}
+                delay={1}
               />
               <KPICard
                 title="Total de Leads"
                 value={formatNumber(leadCount || 0)}
                 subtitle="no período"
                 icon={UserPlus}
-                delay={3}
+                delay={2}
                 className="cursor-pointer hover:border-primary/50 transition-colors"
                 onClick={() => navigate('/leads')}
               />
@@ -376,20 +478,6 @@ export default function Dashboard() {
           );
         })()}
 
-        {/* Sales Breakdown by Type (only for Hotmart) */}
-        {hasData && platform !== 'tmb' && platform !== 'eduzz' && salesBreakdown && salesBreakdown.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 }}
-            className="p-3 sm:p-4 bg-muted/20 rounded-lg border"
-          >
-            <SalesBreakdownCards 
-              data={salesBreakdown}
-              isLoading={isLoadingBreakdown}
-            />
-          </motion.div>
-        )}
 
         {/* Saved Filter Views */}
         <motion.div
