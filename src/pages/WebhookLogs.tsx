@@ -14,6 +14,7 @@ import { WebhookStatusCards } from '@/components/webhook/WebhookStatusCards';
 import { WebhookLogsTable } from '@/components/webhook/WebhookLogsTable';
 import { WebhookFilters } from '@/components/webhook/WebhookFilters';
 import { LogDetailDialog } from '@/components/webhook/LogDetailDialog';
+import { WebhookDailyChart } from '@/components/webhook/WebhookDailyChart';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const BASE_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1';
@@ -232,6 +233,9 @@ export default function WebhookLogs() {
 
         {/* Status Cards */}
         <WebhookStatusCards stats={stats} isLoading={statsLoading} />
+
+        {/* Daily Evolution Chart */}
+        <WebhookDailyChart logs={logs} isLoading={logsLoading} />
 
         {/* Logs Section */}
         <Card>
