@@ -308,9 +308,8 @@ export function SalesByTimeChart({ data, currencies }: SalesByTimeChartProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
-      className="h-full"
     >
-      <Card className="h-full flex flex-col min-h-[400px] sm:min-h-[500px]">
+      <Card className="flex flex-col min-h-[400px] sm:min-h-[500px]">
         <CardHeader className="pb-2 space-y-2 sm:space-y-3 px-3 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>

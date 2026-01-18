@@ -414,10 +414,16 @@ function Transactions() {
 
         {/* Sales Evolution Chart */}
         {Object.keys(salesByDateData).length > 0 && chartCurrencies.length > 0 && (
-          <SalesByTimeChart 
-            data={salesByDateData} 
-            currencies={chartCurrencies}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <SalesByTimeChart 
+              data={salesByDateData} 
+              currencies={chartCurrencies}
+            />
+          </motion.div>
         )}
 
         {/* Filters */}
