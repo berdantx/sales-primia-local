@@ -255,7 +255,8 @@ export default function Dashboard() {
         {/* Currency and Transaction KPI Cards - right below goal cards */}
         {hasData && (() => {
           // Get platform-specific values
-          const hotmartRealBRL = hotmartStats?.totalByCurrency?.['BRL'] || 0;
+          // Use projectionStats for Hotmart real values (computed_value based)
+          const hotmartRealBRL = projectionStats?.totalRealBRL || (hotmartStats?.totalByCurrency?.['BRL'] || 0);
           const hotmartUSD = hotmartStats?.totalByCurrency?.['USD'] || 0;
           const hotmartProjectedBRL = projectionStats?.totalProjectedBRL || hotmartRealBRL;
           const tmbBRL = tmbStats?.totalBRL || 0;
