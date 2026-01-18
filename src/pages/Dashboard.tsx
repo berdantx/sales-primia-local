@@ -344,28 +344,9 @@ export default function Dashboard() {
               );
             }
             
-            // If there's an active goal, show only 2 cards: Projeção and Transações
-            // (Faturamento Atual is already shown in GoalSummarySection)
-            return (
-              <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                {hasProjection && (
-                  <KPICard
-                    title="Projeção Faturamento"
-                    value={formatCurrency(combinedProjectedBRL + usdConvertedToBRL, 'BRL')}
-                    subtitle="Inclui recorrências"
-                    icon={TrendingUp}
-                    delay={0}
-                    className="border-l-4 border-l-amber-500"
-                  />
-                )}
-                <KPICard
-                  title="Transações"
-                  value={formatNumber(stats?.totalTransactions || 0)}
-                  icon={ShoppingCart}
-                  delay={hasProjection ? 1 : 0}
-                />
-              </div>
-            );
+            // If there's an active goal, don't show duplicate cards
+            // (Faturamento and Projeção are already shown in GoalSummarySection)
+            return null;
           }
           
           // For Hotmart platform: show Hotmart-specific values with dialog button
