@@ -13,6 +13,7 @@ import { LLMIntegrationsCard } from '@/components/settings/LLMIntegrationsCard';
 import { ChangePasswordCard } from '@/components/settings/ChangePasswordCard';
 import { BrandingSettingsCard } from '@/components/settings/BrandingSettingsCard';
 import { SignupSettingsCard } from '@/components/settings/SignupSettingsCard';
+import { BackupCard } from '@/components/settings/BackupCard';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -39,6 +40,9 @@ export default function Settings() {
 
         {/* Signup Settings - Only for Admin/Master */}
         {isMasterOrAdmin && <SignupSettingsCard />}
+
+        {/* Backup - Only for Admin/Master */}
+        {isMasterOrAdmin && <BackupCard />}
 
         {/* Profile Card */}
         <motion.div
