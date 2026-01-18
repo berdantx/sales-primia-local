@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type CardColorVariant = 'blue' | 'green' | 'orange' | 'purple' | 'gray';
+export type CardColorVariant = 'blue' | 'green' | 'orange' | 'purple' | 'gray' | 'yellow';
 
 interface ColoredKPICardProps {
   title: string;
@@ -20,6 +20,7 @@ const variantStyles: Record<CardColorVariant, string> = {
   orange: 'bg-warning text-warning-foreground',
   purple: 'bg-gradient-to-r from-[hsl(280,65%,60%)] to-[hsl(270,70%,50%)] text-white',
   gray: 'bg-muted text-muted-foreground',
+  yellow: 'bg-gradient-to-r from-[hsl(45,93%,47%)] to-[hsl(36,100%,50%)] text-white',
 };
 
 export function ColoredKPICard({
