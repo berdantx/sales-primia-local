@@ -6,6 +6,7 @@ import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useTransactions, Transaction } from '@/hooks/useTransactions';
 import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
 import { useDollarRate } from '@/hooks/useDollarRate';
+import { useProjectionStats } from '@/hooks/useSalesBreakdown';
 import { useFilter } from '@/contexts/FilterContext';
 import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
@@ -41,7 +42,8 @@ import {
   X,
   DollarSign,
   Receipt,
-  Calendar
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
@@ -161,6 +163,13 @@ function Transactions() {
   
   // Dollar rate for USD → BRL conversion
   const { data: dollarRate } = useDollarRate();
+  
+  // Projection stats for revenue projection card
+  const { data: projectionStats } = useProjectionStats({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    clientId,
+  });
 
   // Debug logging
   console.log('Transactions state:', { isLoading, count: transactions?.length, error });
@@ -226,6 +235,12 @@ function Transactions() {
     const usdConvertedToBRL = dollarRate ? totalUSD * dollarRate.rate : 0;
     const totalCombinedBRL = totalBRL + usdConvertedToBRL;
     
+    // Projection stats (includes recurrences)
+    const projectedBRL = projectionStats?.totalProjectedBRL || 0;
+    const projectedUSD = projectionStats?.totalProjectedUSD || 0;
+    const projectedUSDConvertedToBRL = dollarRate ? projectedUSD * dollarRate.rate : 0;
+    const totalProjectedCombinedBRL = projectedBRL + projectedUSDConvertedToBRL;
+    
     // Keep counts from filtered transactions for display reference
     const brlTransactions = filteredTransactions.filter(t => t.currency === 'BRL');
     const usdTransactions = filteredTransactions.filter(t => t.currency === 'USD');
@@ -235,10 +250,11 @@ function Transactions() {
       totalUSD,
       totalCombinedBRL,
       usdConvertedToBRL,
+      totalProjectedCombinedBRL,
       countBRL: brlTransactions.length,
       countUSD: usdTransactions.length,
     };
-  }, [statsFromDB, filteredTransactions, dollarRate]);
+  }, [statsFromDB, filteredTransactions, dollarRate, projectionStats]);
 
   // Chart data - aggregate sales by date for the chart
   const salesByDateData = useMemo(() => {
@@ -373,7 +389,7 @@ function Transactions() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
         >
           <ColoredKPICard
             title="Faturamento Total (BRL)"
@@ -387,6 +403,15 @@ function Transactions() {
             delay={0}
             className="text-sm sm:text-base"
           />
+          <ColoredKPICard
+            title="Projeção Faturamento"
+            value={formatCurrency(summaryStats.totalProjectedCombinedBRL, 'BRL')}
+            subtitle="Inclui recorrências"
+            icon={TrendingUp}
+            variant="cyan"
+            delay={1}
+            className="text-sm sm:text-base"
+          />
           {summaryStats.totalUSD > 0 && (
             <ColoredKPICard
               title="Vendas em Dólares"
@@ -397,7 +422,7 @@ function Transactions() {
               }
               icon={DollarSign}
               variant="blue"
-              delay={1}
+              delay={2}
               className="text-sm sm:text-base"
             />
           )}
@@ -407,8 +432,8 @@ function Transactions() {
             subtitle="no período filtrado"
             icon={Receipt}
             variant="purple"
-            delay={2}
-            className={summaryStats.totalUSD > 0 ? "text-sm sm:text-base" : "col-span-2 sm:col-span-1 text-sm sm:text-base"}
+            delay={3}
+            className="text-sm sm:text-base"
           />
         </motion.div>
 
