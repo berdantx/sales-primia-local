@@ -7,6 +7,7 @@ import { useDollarRate } from '@/hooks/useDollarRate';
 import { useLeadCount } from '@/hooks/useLeads';
 import { useSalesBreakdown, useProjectionStats } from '@/hooks/useSalesBreakdown';
 import { useFilter } from '@/contexts/FilterContext';
+import { useClients } from '@/hooks/useClients';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { KPICard } from '@/components/dashboard/KPICard';
@@ -59,6 +60,7 @@ export default function Dashboard() {
   
   // Get filters from global context
   const { billingType, paymentMethod, sckCode, product, clientId, setClientId, setBillingType, setPaymentMethod, setSckCode, setProduct } = useFilter();
+  const { data: clients } = useClients();
   
   // Selected view
   const [selectedViewId, setSelectedViewId] = useState<string | null>(null);
@@ -227,7 +229,7 @@ export default function Dashboard() {
           className="flex flex-col gap-3 sm:gap-4 pb-2"
         >
           <ClientContextHeader 
-            title="Projeção de Faturamento"
+            title={`Faturamento ${clients?.find(c => c.id === clientId)?.name || ''}`}
             description="Acompanhe suas metas e desempenho financeiro"
           />
           
