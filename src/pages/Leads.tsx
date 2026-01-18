@@ -17,7 +17,7 @@ import {
 import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
-import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
+import { LeadsPeriodFilter } from '@/components/leads/LeadsPeriodFilter';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,6 +61,7 @@ function Leads() {
   const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('30days');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 30),
     to: new Date(),
@@ -210,15 +211,12 @@ function Leads() {
     setUtmContentFilter('all');
     setUtmTermFilter('all');
     setTestFilter('hide');
+    setSelectedPeriod('30days');
     setDateRange({ from: subDays(new Date(), 30), to: new Date() });
     setCurrentPage(1);
   };
 
-  const defaultDateRange = { from: subDays(new Date(), 30), to: new Date() };
-  const isDateRangeChanged = dateRange?.from?.getTime() !== defaultDateRange.from.getTime() || 
-                             dateRange?.to?.getTime() !== defaultDateRange.to.getTime();
-
-  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || testFilter !== 'hide' || isDateRangeChanged;
+  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || testFilter !== 'hide' || selectedPeriod !== '30days';
 
   const handleDeleteTestLeads = async () => {
     if (!leads) return;
@@ -375,13 +373,17 @@ function Leads() {
             <div className="flex flex-col gap-3">
               {/* Date Range + Search Row */}
               <div className="flex flex-col sm:flex-row gap-3">
-                <DateRangePicker
+                <LeadsPeriodFilter
+                  selectedPeriod={selectedPeriod}
                   dateRange={dateRange}
+                  onPeriodChange={(period) => {
+                    setSelectedPeriod(period);
+                    setCurrentPage(1);
+                  }}
                   onDateRangeChange={(range) => {
                     setDateRange(range);
                     setCurrentPage(1);
                   }}
-                  className="h-9 text-sm w-full sm:w-auto"
                 />
                 <div className="flex-1">
                   <div className="relative">
