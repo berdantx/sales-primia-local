@@ -168,6 +168,19 @@ export default function Dashboard() {
     return baseSales;
   }, [primaryGoal, stats, dollarRate]);
 
+  // Calculate projection value for GoalSummarySection
+  const projectionValueForGoal = useMemo(() => {
+    if (!primaryGoal) return 0;
+    const hotmartRealBRL = projectionStats?.totalRealBRL || (hotmartStats?.totalByCurrency?.['BRL'] || 0);
+    const hotmartUSD = hotmartStats?.totalByCurrency?.['USD'] || 0;
+    const hotmartProjectedBRL = projectionStats?.totalProjectedBRL || hotmartRealBRL;
+    const tmbBRL = tmbStats?.totalBRL || 0;
+    const eduzzBRL = eduzzStats?.totalBRL || 0;
+    const combinedProjectedBRL = hotmartProjectedBRL + tmbBRL + eduzzBRL;
+    const usdConvertedToBRL = dollarRate ? hotmartUSD * dollarRate.rate : 0;
+    return combinedProjectedBRL + usdConvertedToBRL;
+  }, [primaryGoal, projectionStats, hotmartStats, tmbStats, eduzzStats, dollarRate]);
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -249,6 +262,7 @@ export default function Dashboard() {
           <GoalSummarySection 
             goal={primaryGoal} 
             totalSold={primaryGoalSales}
+            projectionValue={projectionValueForGoal}
           />
         )}
 

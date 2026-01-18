@@ -4,7 +4,7 @@ import { calculateGoalProgress, formatCurrency, formatPercent } from '@/lib/calc
 import { ColoredKPICard } from './ColoredKPICard';
 import { GoalProgressBar } from './GoalProgressBar';
 import { ProjectionCards } from './ProjectionCards';
-import { Target, TrendingUp, AlertCircle, Percent } from 'lucide-react';
+import { Target, TrendingUp, AlertCircle, TrendingUp as ProjectionIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -12,9 +12,10 @@ import { ptBR } from 'date-fns/locale';
 interface GoalSummarySectionProps {
   goal: Goal;
   totalSold: number;
+  projectionValue?: number;
 }
 
-export function GoalSummarySection({ goal, totalSold }: GoalSummarySectionProps) {
+export function GoalSummarySection({ goal, totalSold, projectionValue }: GoalSummarySectionProps) {
   const progress = calculateGoalProgress(goal, totalSold);
   
   const statusText = progress.progressPercent >= 100 
@@ -62,19 +63,19 @@ export function GoalSummarySection({ goal, totalSold }: GoalSummarySectionProps)
           delay={1}
         />
         <ColoredKPICard
+          title="Projeção Faturamento"
+          value={formatCurrency(projectionValue ?? progress.totalSold, goal.currency)}
+          subtitle="Inclui recorrências"
+          icon={TrendingUp}
+          variant="yellow"
+          delay={2}
+        />
+        <ColoredKPICard
           title="Restante para Meta"
           value={formatCurrency(progress.remaining, goal.currency)}
           subtitle={progress.remaining === 0 ? 'Meta atingida!' : 'Valor a alcançar'}
           icon={AlertCircle}
           variant="orange"
-          delay={2}
-        />
-        <ColoredKPICard
-          title="% Atingido"
-          value={formatPercent(progress.progressPercent)}
-          subtitle={statusText}
-          icon={Percent}
-          variant="purple"
           delay={3}
         />
       </div>
