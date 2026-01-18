@@ -258,6 +258,7 @@ function Transactions() {
 
   // Get unique currencies for the chart
   const chartCurrencies = useMemo(() => {
+    if (!filteredTransactions || filteredTransactions.length === 0) return [];
     const currencySet = new Set<string>();
     filteredTransactions.forEach(t => currencySet.add(t.currency));
     return Array.from(currencySet).sort((a, b) => {
