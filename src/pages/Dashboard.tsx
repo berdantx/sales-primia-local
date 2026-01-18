@@ -176,6 +176,7 @@ export default function Dashboard() {
     const hotmartRealBRL = projectionStats?.totalRealBRL || (hotmartStats?.totalByCurrency?.['BRL'] || 0);
     const hotmartUSD = hotmartStats?.totalByCurrency?.['USD'] || 0;
     const hotmartProjectedBRL = projectionStats?.totalProjectedBRL || hotmartRealBRL;
+    const hotmartPendingBRL = hotmartProjectedBRL - hotmartRealBRL; // Valor a receber
     const tmbBRL = tmbStats?.totalBRL || 0;
     const eduzzBRL = eduzzStats?.totalBRL || 0;
     const combinedProjectedBRL = hotmartProjectedBRL + tmbBRL + eduzzBRL;
@@ -185,6 +186,7 @@ export default function Dashboard() {
       projectionValueForGoal: combinedProjectedBRL + usdConvertedToBRL,
       platformBreakdown: {
         hotmartBRL: hotmartRealBRL,
+        hotmartPendingBRL,
         hotmartUSD,
         tmbBRL,
         eduzzBRL,
