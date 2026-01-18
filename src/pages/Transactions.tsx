@@ -1,11 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { DateRange } from 'react-day-picker';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useTransactions, Transaction } from '@/hooks/useTransactions';
 import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useFilter } from '@/contexts/FilterContext';
+import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
+import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,7 +24,7 @@ import {
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
 import { format } from 'date-fns';
-import { getDateRangeBrasiliaUTC, formatDateTimeBR, formatDateTimeUTC } from '@/lib/dateUtils';
+import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC, formatDateTimeBR, formatDateTimeUTC } from '@/lib/dateUtils';
 import {
   Tooltip,
   TooltipContent,
@@ -37,7 +40,8 @@ import {
   FileSpreadsheet,
   X,
   DollarSign,
-  Receipt
+  Receipt,
+  Calendar
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
@@ -45,6 +49,8 @@ import { BillingTypeBadge } from '@/components/transactions/BillingTypeBadge';
 
 
 const ITEMS_PER_PAGE = 20;
+
+type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
 // Mobile transaction card component
 function TransactionCard({ transaction, onClick }: { transaction: Transaction; onClick: () => void }) {
@@ -101,8 +107,16 @@ function Transactions() {
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [period, setPeriod] = useState<PeriodFilter>('365d');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  
+  // Advanced filters
+  const [billingTypeFilter, setBillingTypeFilter] = useState<string | null>(null);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | null>(null);
+  const [sckCodeFilter, setSckCodeFilter] = useState<string | null>(null);
+  const [productFilter, setProductFilter] = useState<string | null>(null);
 
   // Debounce search to avoid excessive updates
   useEffect(() => {
@@ -116,14 +130,28 @@ function Transactions() {
   
   const { clientId, setClientId } = useFilter();
 
-  const filters = useMemo(() => {
-    const range = getDateRangeBrasiliaUTC(365);
-    return {
-      startDate: range.startDate,
-      endDate: range.endDate,
-      clientId,
-    };
-  }, [clientId]);
+  const dateRange = useMemo(() => {
+    if (period === 'all') {
+      return { startDate: undefined, endDate: undefined };
+    }
+    if (period === 'custom' && customDateRange?.from && customDateRange?.to) {
+      return { 
+        startDate: startOfDayBrasiliaUTC(customDateRange.from), 
+        endDate: endOfDayBrasiliaUTC(customDateRange.to) 
+      };
+    }
+    if (period === 'custom') {
+      return { startDate: undefined, endDate: undefined };
+    }
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
+    return getDateRangeBrasiliaUTC(days);
+  }, [period, customDateRange]);
+
+  const filters = useMemo(() => ({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    clientId,
+  }), [dateRange, clientId]);
 
   const { data: transactions, isLoading, error } = useTransactions(filters);
   
@@ -168,9 +196,16 @@ function Transactions() {
       const matchesCurrency = currencyFilter === 'all' || t.currency === currencyFilter;
       const matchesCountry = countryFilter === 'all' || t.country === countryFilter;
       
-      return matchesSearch && matchesCurrency && matchesCountry;
+      // Advanced filters
+      const matchesBillingType = !billingTypeFilter || t.billing_type === billingTypeFilter;
+      const matchesPaymentMethod = !paymentMethodFilter || t.payment_method === paymentMethodFilter;
+      const matchesSckCode = !sckCodeFilter || t.sck_code === sckCodeFilter;
+      const matchesProduct = !productFilter || t.product === productFilter;
+      
+      return matchesSearch && matchesCurrency && matchesCountry && 
+             matchesBillingType && matchesPaymentMethod && matchesSckCode && matchesProduct;
     });
-  }, [transactions, debouncedSearch, currencyFilter, countryFilter]);
+  }, [transactions, debouncedSearch, currencyFilter, countryFilter, billingTypeFilter, paymentMethodFilter, sckCodeFilter, productFilter]);
 
   // Paginate
   const paginatedTransactions = useMemo(() => {
@@ -230,10 +265,15 @@ function Transactions() {
     setSearch('');
     setCurrencyFilter('all');
     setCountryFilter('all');
+    setBillingTypeFilter(null);
+    setPaymentMethodFilter(null);
+    setSckCodeFilter(null);
+    setProductFilter(null);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = search || currencyFilter !== 'all' || countryFilter !== 'all';
+  const hasActiveFilters = search || currencyFilter !== 'all' || countryFilter !== 'all' || 
+                           billingTypeFilter || paymentMethodFilter || sckCodeFilter || productFilter;
 
   if (isLoading || isLoadingStats) {
     return (
@@ -264,11 +304,43 @@ function Transactions() {
           </Button>
         </motion.div>
 
-        {/* Summary KPIs */}
+        {/* Period Selector */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="flex flex-wrap items-center gap-2"
+        >
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground font-medium">Período:</span>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {(['7d', '30d', '90d', '365d', 'all'] as const).map((p) => (
+              <Button
+                key={p}
+                variant={period === p ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPeriod(p)}
+                className="h-7 sm:h-8 text-xs sm:text-sm px-2 sm:px-3"
+              >
+                {p === 'all' ? 'Tudo' : p}
+              </Button>
+            ))}
+            <DateRangePicker
+              dateRange={customDateRange}
+              onDateRangeChange={(range) => {
+                setCustomDateRange(range);
+                setPeriod('custom');
+              }}
+              className={period === 'custom' ? 'ring-2 ring-primary ring-offset-2' : ''}
+            />
+          </div>
+        </motion.div>
+
+        {/* Summary KPIs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
           className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4"
         >
           <ColoredKPICard
@@ -310,7 +382,7 @@ function Transactions() {
 
         {/* Filters */}
         <Card>
-          <CardContent className="p-3 sm:pt-6 sm:px-6">
+          <CardContent className="p-3 sm:pt-6 sm:px-6 space-y-4">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="flex-1">
                 <div className="relative">
@@ -356,6 +428,19 @@ function Transactions() {
                 )}
               </div>
             </div>
+            
+            {/* Advanced Filters */}
+            <AdvancedFilters
+              billingType={billingTypeFilter}
+              paymentMethod={paymentMethodFilter}
+              sckCode={sckCodeFilter}
+              product={productFilter}
+              onBillingTypeChange={setBillingTypeFilter}
+              onPaymentMethodChange={setPaymentMethodFilter}
+              onSckCodeChange={setSckCodeFilter}
+              onProductChange={setProductFilter}
+              totalFilteredTransactions={filteredTransactions.length}
+            />
           </CardContent>
         </Card>
 
