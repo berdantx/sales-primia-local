@@ -18,6 +18,7 @@ import { WebhookDailyChart } from '@/components/webhook/WebhookDailyChart';
 import { DuplicatesReportCard } from '@/components/webhook/DuplicatesReportCard';
 import { WebhookHealthDashboard } from '@/components/webhook/WebhookHealthDashboard';
 import { ValidationAlertsCard } from '@/components/webhook/ValidationAlertsCard';
+import { ValidationTrendChart } from '@/components/webhook/ValidationTrendChart';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const BASE_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1';
@@ -244,11 +245,14 @@ export default function WebhookLogs() {
         </div>
 
         {/* Validation Alerts Section */}
-        <ValidationAlertsCard 
-          logs={logs} 
-          isLoading={logsLoading} 
-          onViewDetails={handleViewDetails} 
-        />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <ValidationAlertsCard 
+            logs={logs} 
+            isLoading={logsLoading} 
+            onViewDetails={handleViewDetails} 
+          />
+          <ValidationTrendChart logs={logs} isLoading={logsLoading} />
+        </div>
 
         {/* Duplicates Report */}
         <DuplicatesReportCard logs={logs} isLoading={logsLoading} />
