@@ -15,6 +15,7 @@ import { WebhookLogsTable } from '@/components/webhook/WebhookLogsTable';
 import { WebhookFilters } from '@/components/webhook/WebhookFilters';
 import { LogDetailDialog } from '@/components/webhook/LogDetailDialog';
 import { WebhookDailyChart } from '@/components/webhook/WebhookDailyChart';
+import { DuplicatesReportCard } from '@/components/webhook/DuplicatesReportCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const BASE_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1';
@@ -234,8 +235,13 @@ export default function WebhookLogs() {
         {/* Status Cards */}
         <WebhookStatusCards stats={stats} isLoading={statsLoading} />
 
-        {/* Daily Evolution Chart */}
-        <WebhookDailyChart logs={logs} isLoading={logsLoading} />
+        {/* Charts Section */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="md:col-span-2">
+            <WebhookDailyChart logs={logs} isLoading={logsLoading} />
+          </div>
+          <DuplicatesReportCard logs={logs} isLoading={logsLoading} />
+        </div>
 
         {/* Logs Section */}
         <Card>

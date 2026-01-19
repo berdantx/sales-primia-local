@@ -145,7 +145,7 @@ async function logWebhookEvent(
   clientId: string | null,
   eventType: string,
   transactionCode: string | null,
-  status: 'processed' | 'skipped' | 'error',
+  status: 'processed' | 'skipped' | 'error' | 'duplicate',
   payload: unknown,
   errorMessage?: string
 ) {
@@ -401,7 +401,7 @@ serve(async (req) => {
 
         console.log('Inserting transaction:', JSON.stringify(transactionData, null, 2));
 
-        // Upsert transaction (insert or update if exists)
+        // Try to insert the transaction - if it's a duplicate, it will be handled by the unique index
         const { error } = await supabase
           .from('transactions')
           .upsert(transactionData, {
@@ -409,7 +409,31 @@ serve(async (req) => {
             ignoreDuplicates: false,
           });
 
+        // Check if error is due to duplicate based on our unique index
         if (error) {
+          const isDuplicateError = error.message.includes('idx_hotmart_unique_transaction') ||
+                                   error.message.includes('duplicate key') ||
+                                   error.code === '23505';
+          
+          if (isDuplicateError) {
+            console.log(`Duplicate transaction detected for ${purchase.transaction} - ignoring duplicate webhook`);
+            results.skipped++;
+            results.details.push(`Duplicate: ${purchase.transaction}`);
+            
+            // Log as duplicate
+            await logWebhookEvent(
+              supabase,
+              webhookUserId,
+              webhookClientId || null,
+              eventType,
+              purchase.transaction,
+              'duplicate',
+              event,
+              'Transação duplicada ignorada - mesmos dados já existem'
+            );
+            continue;
+          }
+
           console.error('Error inserting transaction:', error);
           results.errors++;
           results.details.push(`Error: ${purchase.transaction} - ${error.message}`);
