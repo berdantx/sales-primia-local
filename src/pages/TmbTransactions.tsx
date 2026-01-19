@@ -10,8 +10,14 @@ import { TmbAdvancedFilters } from '@/components/dashboard/TmbAdvancedFilters';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTopSales, SalesViewMode } from '@/hooks/useTopSales';
+import { SalesGroupBy } from '@/hooks/useSalesTrend';
+import { SalesByDayChart } from '@/components/sales/SalesByDayChart';
+import { SalesTrendChart } from '@/components/sales/SalesTrendChart';
+import { TopSalesCard } from '@/components/sales/TopSalesCard';
 import {
   Table,
   TableBody,
@@ -77,6 +83,14 @@ function TmbTransactions() {
   const [utmSourceFilter, setUtmSourceFilter] = useState<string | null>(null);
   const [utmMediumFilter, setUtmMediumFilter] = useState<string | null>(null);
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string | null>(null);
+  
+  // Analytics state
+  const [topMode, setTopMode] = useState<SalesViewMode>('products');
+  const [trendGroupBy, setTrendGroupBy] = useState<SalesGroupBy>('day');
+  const [chartTab, setChartTab] = useState('daily');
+  const [chartValueMode, setChartValueMode] = useState<'count' | 'value'>('value');
+  const [trendValueMode, setTrendValueMode] = useState<'count' | 'value'>('count');
+  const [selectedTopItem, setSelectedTopItem] = useState<string | null>(null);
 
   // Debounce search to avoid excessive updates
   useEffect(() => {
@@ -143,9 +157,43 @@ function TmbTransactions() {
       if (utmMediumFilter && t.utm_medium !== utmMediumFilter) return false;
       if (utmCampaignFilter && t.utm_campaign !== utmCampaignFilter) return false;
       
+      // Top item filter (from analytics)
+      if (selectedTopItem) {
+        if (topMode === 'products' && t.product !== selectedTopItem) return false;
+        if (topMode === 'campaigns' && t.utm_campaign !== selectedTopItem) return false;
+      }
+      
       return true;
     });
-  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter]);
+  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, selectedTopItem, topMode]);
+
+  // Analytics hooks
+  const { topItems, totalCount: totalTopCount } = useTopSales({
+    transactions: filteredTransactions,
+    limit: 5,
+    mode: topMode,
+    productField: 'product',
+    campaignField: 'utm_campaign',
+    originField: 'utm_source',
+    valueField: 'ticket_value',
+  });
+
+  // Aggregate sales by date for chart
+  const salesByDayData = useMemo(() => {
+    if (!filteredTransactions) return {};
+    
+    return filteredTransactions.reduce((acc, t) => {
+      if (t.effective_date) {
+        const date = t.effective_date.split('T')[0];
+        if (!acc[date]) {
+          acc[date] = { count: 0, value: 0 };
+        }
+        acc[date].count += 1;
+        acc[date].value += Number(t.ticket_value) || 0;
+      }
+      return acc;
+    }, {} as Record<string, { count: number; value: number }>);
+  }, [filteredTransactions]);
 
   // Sort and paginate
   const sortedTransactions = useMemo(() => {
@@ -355,6 +403,88 @@ function TmbTransactions() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Analytics Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+        >
+          {/* Charts - 2/3 width */}
+          <div className="lg:col-span-2">
+            <Card className="h-full">
+              <CardHeader className="pb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="text-base font-medium">Análise de Vendas</CardTitle>
+                  <Tabs value={chartTab} onValueChange={setChartTab} className="w-full sm:w-auto">
+                    <TabsList className="h-8">
+                      <TabsTrigger value="daily" className="text-xs px-3">Vendas por Dia</TabsTrigger>
+                      <TabsTrigger value="trend" className="text-xs px-3">Evolução {topMode === 'products' ? 'Produtos' : 'Campanhas'}</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Tabs value={chartTab} onValueChange={setChartTab}>
+                  <TabsContent value="daily" className="mt-0">
+                    <SalesByDayChart 
+                      data={salesByDayData} 
+                      valueMode={chartValueMode}
+                      onValueModeChange={setChartValueMode}
+                    />
+                  </TabsContent>
+                  <TabsContent value="trend" className="mt-0">
+                    <SalesTrendChart
+                      transactions={filteredTransactions}
+                      topItemNames={topItems.map(i => i.name)}
+                      mode={topMode}
+                      groupBy={trendGroupBy}
+                      onGroupByChange={setTrendGroupBy}
+                      embedded={true}
+                      dateField="effective_date"
+                      productField="product"
+                      campaignField="utm_campaign"
+                      originField="utm_source"
+                      valueField="ticket_value"
+                      valueMode={trendValueMode}
+                      onValueModeChange={setTrendValueMode}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Top 5 Card - 1/3 width */}
+          <div>
+            <TopSalesCard
+              topItems={topItems}
+              totalCount={totalTopCount}
+              mode={topMode}
+              onModeChange={(mode) => { setTopMode(mode); setSelectedTopItem(null); }}
+              selectedItem={selectedTopItem}
+              onItemClick={(name) => setSelectedTopItem(prev => prev === name ? null : name)}
+            />
+          </div>
+        </motion.div>
+
+        {/* Selected Filter Indicator */}
+        {selectedTopItem && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <Badge 
+              variant="secondary" 
+              className="cursor-pointer hover:bg-secondary/80"
+              onClick={() => setSelectedTopItem(null)}
+            >
+              Filtrado por: {selectedTopItem}
+              <X className="h-3 w-3 ml-1" />
+            </Badge>
+          </motion.div>
+        )}
 
         {/* Mobile: Card View */}
         <div className="md:hidden">
