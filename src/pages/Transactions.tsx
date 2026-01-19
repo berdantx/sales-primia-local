@@ -605,6 +605,7 @@ function Transactions() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="min-w-[100px]">Data (BRT)</TableHead>
                     <TableHead className="min-w-[100px]">Código</TableHead>
                     <TableHead className="min-w-[150px]">Produto</TableHead>
                     <TableHead className="min-w-[150px]">Comprador</TableHead>
@@ -613,7 +614,6 @@ function Transactions() {
                     <TableHead>Moeda</TableHead>
                     <TableHead className="hidden lg:table-cell">País</TableHead>
                     <TableHead className="text-right min-w-[100px]">Valor</TableHead>
-                    <TableHead className="min-w-[100px]">Data (BRT)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -626,6 +626,28 @@ function Transactions() {
                         setIsDetailOpen(true);
                       }}
                     >
+                      <TableCell className="text-xs">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">
+                                {transaction.purchase_date 
+                                  ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
+                                  : '-'
+                                }
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">
+                                {transaction.purchase_date 
+                                  ? formatDateTimeUTC(transaction.purchase_date, 'dd/MM/yyyy HH:mm:ss')
+                                  : 'Sem data UTC'
+                                }
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
                       <TableCell className="font-mono text-xs">
                         {transaction.transaction_code.slice(0, 12)}...
                       </TableCell>
@@ -659,28 +681,6 @@ function Transactions() {
                       <TableCell className="hidden lg:table-cell">{transaction.country || '-'}</TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(Number(transaction.computed_value), transaction.currency)}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-help">
-                                {transaction.purchase_date 
-                                  ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
-                                  : '-'
-                                }
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs">
-                                {transaction.purchase_date 
-                                  ? formatDateTimeUTC(transaction.purchase_date, 'dd/MM/yyyy HH:mm:ss')
-                                  : 'Sem data UTC'
-                                }
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}
