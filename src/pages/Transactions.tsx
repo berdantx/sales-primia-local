@@ -45,7 +45,8 @@ import {
   Calendar,
   TrendingUp,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  ArrowUpDown
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
@@ -124,6 +125,7 @@ function Transactions() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   
   // Sort state
+  const [sortColumn, setSortColumn] = useState<'date' | 'value' | 'product'>('date');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   
   // Advanced filters
@@ -236,11 +238,27 @@ function Transactions() {
   // Sort and paginate
   const sortedTransactions = useMemo(() => {
     return [...filteredTransactions].sort((a, b) => {
-      const dateA = a.purchase_date ? new Date(a.purchase_date).getTime() : 0;
-      const dateB = b.purchase_date ? new Date(b.purchase_date).getTime() : 0;
-      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      let comparison = 0;
+      
+      switch (sortColumn) {
+        case 'date':
+          const dateA = a.purchase_date ? new Date(a.purchase_date).getTime() : 0;
+          const dateB = b.purchase_date ? new Date(b.purchase_date).getTime() : 0;
+          comparison = dateA - dateB;
+          break;
+        case 'value':
+          comparison = Number(a.computed_value) - Number(b.computed_value);
+          break;
+        case 'product':
+          const productA = (a.product || '').toLowerCase();
+          const productB = (b.product || '').toLowerCase();
+          comparison = productA.localeCompare(productB);
+          break;
+      }
+      
+      return sortOrder === 'desc' ? -comparison : comparison;
     });
-  }, [filteredTransactions, sortOrder]);
+  }, [filteredTransactions, sortColumn, sortOrder]);
 
   const paginatedTransactions = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -249,9 +267,19 @@ function Transactions() {
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
   
-  const toggleSortOrder = () => {
-    setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+  const handleSort = (column: 'date' | 'value' | 'product') => {
+    if (sortColumn === column) {
+      setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortColumn(column);
+      setSortOrder('desc');
+    }
     setCurrentPage(1);
+  };
+  
+  const SortIcon = ({ column }: { column: 'date' | 'value' | 'product' }) => {
+    if (sortColumn !== column) return <ArrowUpDown className="h-3 w-3 opacity-50" />;
+    return sortOrder === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />;
   };
 
   // Summary stats for KPI cards - using deduplicated values from DB for consistency with Dashboard
@@ -625,25 +653,37 @@ function Transactions() {
                   <TableRow>
                     <TableHead 
                       className="min-w-[100px] cursor-pointer hover:bg-muted/50 select-none"
-                      onClick={toggleSortOrder}
+                      onClick={() => handleSort('date')}
                     >
                       <div className="flex items-center gap-1">
                         Data (BRT)
-                        {sortOrder === 'desc' ? (
-                          <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUp className="h-3 w-3" />
-                        )}
+                        <SortIcon column="date" />
                       </div>
                     </TableHead>
                     <TableHead className="min-w-[100px]">Código</TableHead>
-                    <TableHead className="min-w-[150px]">Produto</TableHead>
+                    <TableHead 
+                      className="min-w-[150px] cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('product')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Produto
+                        <SortIcon column="product" />
+                      </div>
+                    </TableHead>
                     <TableHead className="min-w-[150px]">Comprador</TableHead>
                     <TableHead className="min-w-[100px]">Tipo</TableHead>
                     <TableHead>Origem</TableHead>
                     <TableHead>Moeda</TableHead>
                     <TableHead className="hidden lg:table-cell">País</TableHead>
-                    <TableHead className="text-right min-w-[100px]">Valor</TableHead>
+                    <TableHead 
+                      className="text-right min-w-[100px] cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleSort('value')}
+                    >
+                      <div className="flex items-center gap-1 justify-end">
+                        Valor
+                        <SortIcon column="value" />
+                      </div>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
