@@ -14,6 +14,7 @@ import { ChangePasswordCard } from '@/components/settings/ChangePasswordCard';
 import { BrandingSettingsCard } from '@/components/settings/BrandingSettingsCard';
 import { SignupSettingsCard } from '@/components/settings/SignupSettingsCard';
 import { BackupCard } from '@/components/settings/BackupCard';
+import { TransactionAuditCard } from '@/components/audit/TransactionAuditCard';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -43,6 +44,9 @@ export default function Settings() {
 
         {/* Backup - Only for Admin/Master */}
         {isMasterOrAdmin && <BackupCard />}
+
+        {/* Transaction Audit - Only for Admin/Master */}
+        {isMasterOrAdmin && <TransactionAuditCard />}
 
         {/* Profile Card */}
         <motion.div
