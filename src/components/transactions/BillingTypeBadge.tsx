@@ -117,8 +117,10 @@ export function BillingTypeBadge({
   const PaymentIcon = paymentMethod ? PAYMENT_METHOD_ICONS[paymentMethod] : null;
   
   // Show installment badge for Recuperador Inteligente / Parcelamento Inteligente
-  const showInstallmentBadge = recurrenceNumber && totalInstallments && totalInstallments > 1 &&
-    (category === 'recuperador_inteligente' || category === 'parcelamento_inteligente');
+  const isInstallmentType = category === 'recuperador_inteligente' || category === 'parcelamento_inteligente';
+  const hasMultipleInstallments = totalInstallments && totalInstallments > 1;
+  const showInstallmentBadge = isInstallmentType && hasMultipleInstallments;
+  const hasRecurrenceNumber = recurrenceNumber !== null && recurrenceNumber !== undefined;
 
   return (
     <div className={cn("flex items-center gap-1", className)}>
@@ -132,8 +134,11 @@ export function BillingTypeBadge({
       
       {/* Installment indicator for Recuperador/Parcelamento Inteligente */}
       {showInstallmentBadge && (
-        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
-          {recurrenceNumber}/{totalInstallments}
+        <Badge 
+          variant="outline" 
+          className="text-xs bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+        >
+          {hasRecurrenceNumber ? `${recurrenceNumber}/${totalInstallments}` : `${totalInstallments}x`}
         </Badge>
       )}
       

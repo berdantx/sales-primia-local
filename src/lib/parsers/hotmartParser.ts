@@ -310,30 +310,19 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
         : '';
       
       // Cálculo de computed_value e projected_value baseado no billing_type
-      // IMPORTANTE: Para importação CSV, não temos o valor líquido separado
-      // Usamos o gross_value disponível no arquivo
+      // IMPORTANTE: Para importação CSV, não temos recurrence_number
+      // Por isso, usamos uma abordagem conservadora:
+      // - computed_value = valor da linha (sempre)
+      // - projected_value = valor da linha (conservador, será corrigido via migration)
       // 
-      // A lógica é:
-      // - Parcelamento Inteligente/Recuperador: cada linha é 1 parcela
-      //   * computed_value = valor da parcela (o que foi recebido)
-      //   * projected_value = valor × parcelas (projeção total) - sem recurrence_number no CSV
-      // - Parcelamento Padrão: todas parcelas cobradas de uma vez
-      // - À Vista: valor único
+      // A migration SQL identifica automaticamente o número da parcela baseado
+      // em buyer_email + product + ordem cronológica e corrige:
+      // - 1ª parcela: projected = computed × total_installments
+      // - Parcelas subsequentes: projected = computed
+      //
+      // Isso evita superestimação de projeção no CSV
       let computedValue = grossValue;
-      let projectedValue = grossValue;
-      const billingTypeLower = billingType.toLowerCase();
-      
-      if (billingTypeLower.includes('parcelamento inteligente') || billingTypeLower.includes('recuperador inteligente')) {
-        // Parcelamento/Recuperador Inteligente: valor é de UMA parcela
-        // computed = valor da parcela, projected = total projetado
-        // Nota: No CSV não temos recurrence_number, então projetamos sempre
-        computedValue = grossValue;
-        projectedValue = grossValue * totalInstallments;
-      } else {
-        // Parcelamento Padrão / À Vista: valor já é o total recebido
-        computedValue = grossValue;
-        projectedValue = grossValue;
-      }
+      let projectedValue = grossValue; // Conservador: migration corrige depois
       
       // Determine currency based on country (not from column)
       // For Brazil: BRL
