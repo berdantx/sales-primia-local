@@ -362,38 +362,50 @@ serve(async (req) => {
           : null;
 
         // Valores base
+        // full_price = valor bruto da parcela (com taxas)
+        // price = valor líquido (o que realmente é recebido após comissões)
         const grossValue = purchase.full_price?.value || purchase.price?.value || 0;
-        const priceValue = purchase.price?.value || 0;
+        const netValue = purchase.price?.value || grossValue; // Valor líquido (recebido)
         
         // Cálculo de computed_value e projected_value baseado no billing_type
         // IMPORTANTE: A diferença entre os tipos:
-        // - Parcelamento Inteligente: gross_value_with_taxes JÁ É o valor TOTAL da compra
-        // - Recuperador Inteligente: gross_value_with_taxes é o valor de UMA parcela
-        // - Parcelamento Padrão: gross_value_with_taxes é o valor TOTAL (cartão parcelado)
+        // - Parcelamento Inteligente: Hotmart envia 1 webhook por parcela paga
+        //   * full_price = valor bruto da parcela
+        //   * price = valor LÍQUIDO recebido (após taxas)
+        //   * computed_value = price.value (valor efetivamente recebido)
+        //   * projected_value = price.value × parcelas (na 1ª parcela) ou price.value (nas demais)
+        // - Recuperador Inteligente: similar ao Parcelamento Inteligente
+        // - Parcelamento Padrão: todas parcelas cobradas de uma vez no cartão
         // - À Vista: valor único
         
         let computedValue: number;
         let projectedValue: number;
         
         if (billingType === 'Parcelamento Inteligente') {
-          // No Parcelamento Inteligente, o valor enviado JÁ É O TOTAL
-          // NÃO multiplicar por número de parcelas
-          computedValue = grossValue;
-          projectedValue = grossValue;
-        } else if (billingType === 'Recuperador Inteligente') {
-          // No Recuperador Inteligente, o valor é de UMA parcela/recorrência
-          // computed = valor recebido agora, projected = total se for 1ª parcela
-          computedValue = grossValue;
+          // Parcelamento Inteligente: usar valor LÍQUIDO (price.value)
+          // Cada webhook representa 1 parcela paga
+          computedValue = netValue; // Valor efetivamente recebido
+          
+          // Projeção: total líquido apenas na 1ª parcela
           if (recurrenceNumber === 1 && installmentsNumber > 1) {
-            projectedValue = grossValue * installmentsNumber;
+            projectedValue = netValue * installmentsNumber;
           } else {
-            projectedValue = grossValue;
+            // Parcelas subsequentes: já projetado na 1ª parcela
+            projectedValue = netValue;
+          }
+        } else if (billingType === 'Recuperador Inteligente') {
+          // Recuperador Inteligente: similar - usar valor líquido
+          computedValue = netValue;
+          if (recurrenceNumber === 1 && installmentsNumber > 1) {
+            projectedValue = netValue * installmentsNumber;
+          } else {
+            projectedValue = netValue;
           }
         } else if (installmentsNumber > 1) {
           // Parcelamento Padrão (cartão de crédito)
-          // O valor é o total, mas parcelas são cobradas de uma vez no cartão
+          // Todas as parcelas são cobradas de uma vez, usar valor bruto
           computedValue = grossValue;
-          projectedValue = grossValue * installmentsNumber;
+          projectedValue = grossValue;
         } else {
           // À Vista
           computedValue = grossValue;

@@ -167,6 +167,7 @@ export default function UploadPage() {
             total_installments: t.total_installments,
             billing_type: t.billing_type,
             computed_value: t.computed_value,
+            projected_value: t.projected_value,
             buyer_name: t.buyer_name,
             buyer_email: t.buyer_email,
             purchase_date: t.purchase_date?.toISOString() || null,

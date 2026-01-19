@@ -12,6 +12,7 @@ export interface HotmartTransaction {
   total_installments: number;
   billing_type: string;
   computed_value: number;
+  projected_value: number;
   buyer_name: string;
   buyer_email: string;
   purchase_date: Date | null;
@@ -308,20 +309,30 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
         ? String(row[columnMap.billingType] || '').trim()
         : '';
       
-      // Cálculo de computed_value baseado no billing_type
-      // IMPORTANTE: A diferença entre os tipos:
-      // - Parcelamento Inteligente: gross_value JÁ É o valor TOTAL (NÃO multiplicar)
-      // - Recuperador Inteligente: gross_value é o valor de UMA parcela (multiplicar)
-      // - Parcelamento Padrão/À Vista: valor único
+      // Cálculo de computed_value e projected_value baseado no billing_type
+      // IMPORTANTE: Para importação CSV, não temos o valor líquido separado
+      // Usamos o gross_value disponível no arquivo
+      // 
+      // A lógica é:
+      // - Parcelamento Inteligente/Recuperador: cada linha é 1 parcela
+      //   * computed_value = valor da parcela (o que foi recebido)
+      //   * projected_value = valor × parcelas (projeção total) - sem recurrence_number no CSV
+      // - Parcelamento Padrão: todas parcelas cobradas de uma vez
+      // - À Vista: valor único
       let computedValue = grossValue;
+      let projectedValue = grossValue;
       const billingTypeLower = billingType.toLowerCase();
       
-      if (billingTypeLower.includes('parcelamento inteligente')) {
-        // Parcelamento Inteligente: valor já é o total, NÃO multiplicar
+      if (billingTypeLower.includes('parcelamento inteligente') || billingTypeLower.includes('recuperador inteligente')) {
+        // Parcelamento/Recuperador Inteligente: valor é de UMA parcela
+        // computed = valor da parcela, projected = total projetado
+        // Nota: No CSV não temos recurrence_number, então projetamos sempre
         computedValue = grossValue;
-      } else if (billingTypeLower.includes('recuperador inteligente')) {
-        // Recuperador Inteligente: valor é de uma parcela, multiplicar para obter total
-        computedValue = grossValue * totalInstallments;
+        projectedValue = grossValue * totalInstallments;
+      } else {
+        // Parcelamento Padrão / À Vista: valor já é o total recebido
+        computedValue = grossValue;
+        projectedValue = grossValue;
       }
       
       // Determine currency based on country (not from column)
@@ -345,6 +356,7 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
         total_installments: totalInstallments,
         billing_type: billingType,
         computed_value: computedValue,
+        projected_value: projectedValue,
         buyer_name: columnMap.buyerName ? String(row[columnMap.buyerName] || '').trim() : '',
         buyer_email: columnMap.buyerEmail ? String(row[columnMap.buyerEmail] || '').trim() : '',
         purchase_date: parseDate(
