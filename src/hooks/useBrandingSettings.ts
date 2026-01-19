@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -33,6 +33,10 @@ const SETTINGS_KEYS = [
   'signup_enabled',
 ] as const;
 
+const CACHE_KEY = 'branding-settings-cache';
+const CACHE_TIMESTAMP_KEY = 'branding-settings-cache-timestamp';
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour in milliseconds
+
 type SettingKey = typeof SETTINGS_KEYS[number];
 
 function mapKeyToProperty(key: SettingKey): keyof BrandingSettings {
@@ -61,10 +65,68 @@ function mapPropertyToKey(property: keyof BrandingSettings): SettingKey {
   return map[property];
 }
 
+// Get cached settings from localStorage
+function getCachedSettings(): BrandingSettings | null {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY);
+    const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    
+    if (!cached || !timestamp) return null;
+    
+    // Check if cache is still valid
+    const cacheAge = Date.now() - parseInt(timestamp, 10);
+    if (cacheAge > CACHE_TTL) {
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+      return null;
+    }
+    
+    return JSON.parse(cached) as BrandingSettings;
+  } catch {
+    return null;
+  }
+}
+
+// Save settings to localStorage cache
+function setCachedSettings(settings: BrandingSettings): void {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(settings));
+    localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+// Clear cached settings
+export function clearBrandingCache(): void {
+  try {
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+// Apply theme colors immediately on page load from cache
+function applyInitialTheme(): void {
+  const cached = getCachedSettings();
+  if (cached?.primaryColor && cached.primaryColor !== DEFAULT_SETTINGS.primaryColor) {
+    applyThemeColors(cached.primaryColor, cached.primaryColorDark);
+  }
+}
+
+// Apply initial theme immediately
+if (typeof window !== 'undefined') {
+  applyInitialTheme();
+}
+
 export function useBrandingSettings() {
   const queryClient = useQueryClient();
+  
+  // Get initial data from cache for instant display
+  const cachedSettings = getCachedSettings();
 
-  const { data: settings = DEFAULT_SETTINGS, isLoading } = useQuery({
+  const { data: settings = cachedSettings || DEFAULT_SETTINGS, isLoading } = useQuery({
     queryKey: ['branding-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -87,9 +149,13 @@ export function useBrandingSettings() {
         }
       });
 
+      // Update cache with fresh data
+      setCachedSettings(result);
+
       return result;
     },
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes in React Query
+    initialData: cachedSettings || undefined,
   });
 
   // Apply theme colors when settings change
@@ -121,7 +187,12 @@ export function useBrandingSettings() {
 
       return newSettings;
     },
-    onSuccess: () => {
+    onSuccess: (newSettings) => {
+      // Update cache immediately with new settings
+      const currentSettings = settings;
+      const updatedSettings = { ...currentSettings, ...newSettings };
+      setCachedSettings(updatedSettings);
+      
       queryClient.invalidateQueries({ queryKey: ['branding-settings'] });
       toast.success('Configurações de branding salvas!');
     },
