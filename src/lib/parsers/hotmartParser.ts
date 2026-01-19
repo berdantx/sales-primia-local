@@ -308,9 +308,12 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
         ? String(row[columnMap.billingType] || '').trim()
         : '';
       
-      // Apply "Recuperador inteligente" rule
+      // Apply "Recuperador Inteligente" / "Parcelamento Inteligente" rule
+      // Both billing types use monthly payments, so total value = grossValue * totalInstallments
       let computedValue = grossValue;
-      if (billingType.toLowerCase().includes('recuperador inteligente')) {
+      const billingTypeLower = billingType.toLowerCase();
+      if (billingTypeLower.includes('recuperador inteligente') || 
+          billingTypeLower.includes('parcelamento inteligente')) {
         computedValue = grossValue * totalInstallments;
       }
       

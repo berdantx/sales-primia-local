@@ -172,7 +172,9 @@ export function HotmartTransactionDetailDialog({
                 <InfoRow icon={Hash} label="Total de Parcelas" value={transaction.total_installments} />
                 
                 {/* Parcela Atual - show for Recuperador Inteligente / Parcelamento Inteligente */}
-                {transaction.recurrence_number && transaction.total_installments && transaction.total_installments > 1 && (
+                {((transaction.billing_type?.toLowerCase().includes('inteligente') || 
+                   transaction.billing_type?.toLowerCase().includes('recuperador')) && 
+                  transaction.total_installments && transaction.total_installments > 1) && (
                   <>
                     <Separator className="my-1" />
                     <div className="flex items-start gap-3 py-2">
@@ -180,12 +182,20 @@ export function HotmartTransactionDetailDialog({
                       <div className="flex-1">
                         <p className="text-xs text-muted-foreground">Parcela Atual</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300">
-                            {transaction.recurrence_number} de {transaction.total_installments}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            ({transaction.total_installments - transaction.recurrence_number} restantes)
-                          </span>
+                          {transaction.recurrence_number ? (
+                            <>
+                              <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300">
+                                {transaction.recurrence_number} de {transaction.total_installments}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                ({transaction.total_installments - transaction.recurrence_number} restantes)
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              Total de {transaction.total_installments} parcelas mensais
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -11,7 +11,7 @@ interface BillingTypeBadgeProps {
   totalInstallments?: number | null;
 }
 
-type CategoryKey = 'pix' | 'a_vista' | 'parcelado' | 'recuperador' | 'parc_inteligente' | 'recorrencia' | 'outro';
+type CategoryKey = 'pix' | 'a_vista' | 'parcelado' | 'recuperador_inteligente' | 'parcelamento_inteligente' | 'recorrencia' | 'outro';
 
 const BILLING_TYPE_CONFIG: Record<CategoryKey, {
   label: string;
@@ -33,12 +33,12 @@ const BILLING_TYPE_CONFIG: Record<CategoryKey, {
     icon: CreditCard,
     className: 'bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950 dark:text-indigo-300 dark:border-indigo-800',
   },
-  recuperador: {
-    label: 'Recuperação',
+  recuperador_inteligente: {
+    label: 'Recuperador',
     icon: RefreshCcw,
     className: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800',
   },
-  parc_inteligente: {
+  parcelamento_inteligente: {
     label: 'Parc. Intel.',
     icon: Sparkles,
     className: 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800',
@@ -84,14 +84,14 @@ function getCategoryFromBillingType(billingType?: string | null, paymentMethod?:
     return 'parcelado';
   }
   
-  // Recuperador Inteligente
+  // Recuperador Inteligente (must check before generic "inteligente")
   if (type.includes('recuperador inteligente')) {
-    return 'recuperador';
+    return 'recuperador_inteligente';
   }
   
   // Parcelamento Inteligente
   if (type.includes('parcelamento inteligente')) {
-    return 'parc_inteligente';
+    return 'parcelamento_inteligente';
   }
   
   // Recorrência
@@ -118,7 +118,7 @@ export function BillingTypeBadge({
   
   // Show installment badge for Recuperador Inteligente / Parcelamento Inteligente
   const showInstallmentBadge = recurrenceNumber && totalInstallments && totalInstallments > 1 &&
-    (category === 'recuperador' || category === 'parc_inteligente');
+    (category === 'recuperador_inteligente' || category === 'parcelamento_inteligente');
 
   return (
     <div className={cn("flex items-center gap-1", className)}>
