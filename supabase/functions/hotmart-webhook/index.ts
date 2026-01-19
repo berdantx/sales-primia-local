@@ -365,23 +365,39 @@ serve(async (req) => {
         const grossValue = purchase.full_price?.value || purchase.price?.value || 0;
         const priceValue = purchase.price?.value || 0;
         
-        // Identificar se é pagamento mensal (Recuperador ou Parcelamento Inteligente)
-        const isMonthlyPayment = billingType === 'Recuperador Inteligente' || 
-                                 billingType === 'Parcelamento Inteligente';
+        // Cálculo de computed_value e projected_value baseado no billing_type
+        // IMPORTANTE: A diferença entre os tipos:
+        // - Parcelamento Inteligente: gross_value_with_taxes JÁ É o valor TOTAL da compra
+        // - Recuperador Inteligente: gross_value_with_taxes é o valor de UMA parcela
+        // - Parcelamento Padrão: gross_value_with_taxes é o valor TOTAL (cartão parcelado)
+        // - À Vista: valor único
         
-        // computed_value = valor REALMENTE recebido agora
-        // Para pagamentos mensais: usa o valor da parcela (grossValue)
-        // Para pagamentos à vista/parcelamento padrão: usa o valor líquido limitado
-        const computedValue = isMonthlyPayment 
-          ? grossValue  // valor da parcela recebida
-          : Math.min(priceValue, 1997.03);  // valor à vista/parcelamento padrão
+        let computedValue: number;
+        let projectedValue: number;
         
-        // projected_value = valor TOTAL projetado
-        // Para pagamentos mensais na primeira parcela: grossValue * totalInstallments
-        // Para outras parcelas ou vendas à vista: igual ao computedValue
-        let projectedValue = computedValue;
-        if (isMonthlyPayment && recurrenceNumber === 1 && installmentsNumber > 1) {
+        if (billingType === 'Parcelamento Inteligente') {
+          // No Parcelamento Inteligente, o valor enviado JÁ É O TOTAL
+          // NÃO multiplicar por número de parcelas
+          computedValue = grossValue;
+          projectedValue = grossValue;
+        } else if (billingType === 'Recuperador Inteligente') {
+          // No Recuperador Inteligente, o valor é de UMA parcela/recorrência
+          // computed = valor recebido agora, projected = total se for 1ª parcela
+          computedValue = grossValue;
+          if (recurrenceNumber === 1 && installmentsNumber > 1) {
+            projectedValue = grossValue * installmentsNumber;
+          } else {
+            projectedValue = grossValue;
+          }
+        } else if (installmentsNumber > 1) {
+          // Parcelamento Padrão (cartão de crédito)
+          // O valor é o total, mas parcelas são cobradas de uma vez no cartão
+          computedValue = grossValue;
           projectedValue = grossValue * installmentsNumber;
+        } else {
+          // À Vista
+          computedValue = grossValue;
+          projectedValue = grossValue;
         }
 
         // Prepare transaction record with CORRECTED field mapping

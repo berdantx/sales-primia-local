@@ -308,12 +308,19 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
         ? String(row[columnMap.billingType] || '').trim()
         : '';
       
-      // Apply "Recuperador Inteligente" / "Parcelamento Inteligente" rule
-      // Both billing types use monthly payments, so total value = grossValue * totalInstallments
+      // Cálculo de computed_value baseado no billing_type
+      // IMPORTANTE: A diferença entre os tipos:
+      // - Parcelamento Inteligente: gross_value JÁ É o valor TOTAL (NÃO multiplicar)
+      // - Recuperador Inteligente: gross_value é o valor de UMA parcela (multiplicar)
+      // - Parcelamento Padrão/À Vista: valor único
       let computedValue = grossValue;
       const billingTypeLower = billingType.toLowerCase();
-      if (billingTypeLower.includes('recuperador inteligente') || 
-          billingTypeLower.includes('parcelamento inteligente')) {
+      
+      if (billingTypeLower.includes('parcelamento inteligente')) {
+        // Parcelamento Inteligente: valor já é o total, NÃO multiplicar
+        computedValue = grossValue;
+      } else if (billingTypeLower.includes('recuperador inteligente')) {
+        // Recuperador Inteligente: valor é de uma parcela, multiplicar para obter total
         computedValue = grossValue * totalInstallments;
       }
       
