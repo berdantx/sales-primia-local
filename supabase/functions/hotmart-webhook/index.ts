@@ -362,31 +362,24 @@ serve(async (req) => {
           : null;
 
         // Valores base
-        // full_price = valor bruto da parcela (com taxas)
-        // price = valor líquido (o que realmente é recebido após comissões)
+        // full_price = valor bruto da parcela (com taxas/impostos)
+        // price = valor líquido SEM impostos (o que realmente deve ser computado)
         const grossValue = purchase.full_price?.value || purchase.price?.value || 0;
-        const netValue = purchase.price?.value || grossValue; // Valor líquido (recebido)
+        const netValue = purchase.price?.value || grossValue; // Valor SEM impostos
         
         // Cálculo de computed_value e projected_value baseado no billing_type
-        // IMPORTANTE: A diferença entre os tipos:
-        // - Parcelamento Inteligente: Hotmart envia 1 webhook por parcela paga
-        //   * full_price = valor bruto da parcela
-        //   * price = valor LÍQUIDO recebido (após taxas)
-        //   * computed_value = price.value (valor efetivamente recebido)
-        //   * projected_value = price.value × parcelas (na 1ª parcela) ou price.value (nas demais)
-        // - Recuperador Inteligente: similar ao Parcelamento Inteligente
-        // - Parcelamento Padrão: todas parcelas cobradas de uma vez no cartão
-        // - À Vista: valor único
+        // IMPORTANTE: Sempre usar netValue (price.value - SEM impostos) como computed_value
+        // O grossValue (full_price) é apenas informativo
         
         let computedValue: number;
         let projectedValue: number;
         
         if (billingType === 'Parcelamento Inteligente') {
-          // Parcelamento Inteligente: usar valor LÍQUIDO (price.value)
+          // Parcelamento Inteligente: usar valor SEM impostos (price.value)
           // Cada webhook representa 1 parcela paga
-          computedValue = netValue; // Valor efetivamente recebido
+          computedValue = netValue;
           
-          // Projeção: total líquido apenas na 1ª parcela
+          // Projeção: total apenas na 1ª parcela
           if (recurrenceNumber === 1 && installmentsNumber > 1) {
             projectedValue = netValue * installmentsNumber;
           } else {
@@ -394,7 +387,7 @@ serve(async (req) => {
             projectedValue = netValue;
           }
         } else if (billingType === 'Recuperador Inteligente') {
-          // Recuperador Inteligente: similar - usar valor líquido
+          // Recuperador Inteligente: similar - usar valor sem impostos
           computedValue = netValue;
           if (recurrenceNumber === 1 && installmentsNumber > 1) {
             projectedValue = netValue * installmentsNumber;
@@ -403,13 +396,13 @@ serve(async (req) => {
           }
         } else if (installmentsNumber > 1) {
           // Parcelamento Padrão (cartão de crédito)
-          // Todas as parcelas são cobradas de uma vez, usar valor bruto
-          computedValue = grossValue;
-          projectedValue = grossValue;
+          // Usar valor SEM impostos (netValue)
+          computedValue = netValue;
+          projectedValue = netValue;
         } else {
-          // À Vista
-          computedValue = grossValue;
-          projectedValue = grossValue;
+          // À Vista - usar valor SEM impostos
+          computedValue = netValue;
+          projectedValue = netValue;
         }
 
         // Prepare transaction record with CORRECTED field mapping
