@@ -527,9 +527,9 @@ function Leads() {
           transition={{ delay: 0.2 }}
           className="grid grid-cols-1 lg:grid-cols-3 gap-4"
         >
-          <div className="lg:col-span-2">
-            <Card>
-              <Tabs value={chartTab} onValueChange={(v) => setChartTab(v as 'daily' | 'evolution')}>
+          <div className="lg:col-span-2 h-[420px]">
+            <Card className="h-full flex flex-col">
+              <Tabs value={chartTab} onValueChange={(v) => setChartTab(v as 'daily' | 'evolution')} className="flex flex-col h-full">
                 <div className="px-4 pt-4 pb-2">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="daily" className="flex items-center gap-2">
@@ -544,15 +544,15 @@ function Leads() {
                     </TabsTrigger>
                   </TabsList>
                 </div>
-                <CardContent className="pt-2">
-                  <TabsContent value="daily" className="mt-0">
+                <CardContent className="pt-2 flex-1 overflow-hidden">
+                  <TabsContent value="daily" className="mt-0 h-full">
                     <LeadsByDayChart 
                       data={stats?.byDay || {}} 
                       isLoading={isLoadingStats} 
                       embedded 
                     />
                   </TabsContent>
-                  <TabsContent value="evolution" className="mt-0">
+                  <TabsContent value="evolution" className="mt-0 h-full">
                     <AdTrendChart
                       leads={leads}
                       topItemNames={topItemNames}
@@ -567,8 +567,8 @@ function Leads() {
               </Tabs>
             </Card>
           </div>
-          <div className="lg:col-span-1">
-            <TopAdsCard 
+          <div className="lg:col-span-1 h-[420px]">
+            <TopAdsCard
               topItems={topItems} 
               totalCount={totalCount} 
               isLoading={isLoading}
