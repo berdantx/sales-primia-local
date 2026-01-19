@@ -19,6 +19,7 @@ import { DuplicatesReportCard } from '@/components/webhook/DuplicatesReportCard'
 import { WebhookHealthDashboard } from '@/components/webhook/WebhookHealthDashboard';
 import { ValidationAlertsCard } from '@/components/webhook/ValidationAlertsCard';
 import { ValidationTrendChart } from '@/components/webhook/ValidationTrendChart';
+import { WeeklySummaryCard } from '@/components/webhook/WeeklySummaryCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const BASE_URL = 'https://vvuhqqvjtozhwideqdnn.supabase.co/functions/v1';
@@ -253,6 +254,9 @@ export default function WebhookLogs() {
           />
           <ValidationTrendChart logs={logs} isLoading={logsLoading} />
         </div>
+
+        {/* Weekly Summary */}
+        <WeeklySummaryCard logs={logs} isLoading={logsLoading} />
 
         {/* Duplicates Report */}
         <DuplicatesReportCard logs={logs} isLoading={logsLoading} />
