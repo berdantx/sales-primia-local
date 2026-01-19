@@ -247,8 +247,7 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
             {/* Timestamps */}
             <Section icon={Calendar} title="Histórico">
               <HistoryItem label="Criado em" value={lead.created_at} />
-              <HistoryItem label="Atualizado em" value={lead.updated_at} />
-              {!lead.created_at && !lead.updated_at && (
+              {!lead.created_at && (
                 <p className="text-sm text-muted-foreground py-2">Sem informações de data</p>
               )}
             </Section>
