@@ -7,6 +7,7 @@ import { useTopItems, ViewMode } from '@/hooks/useTopAds';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
 import { AdTrendChart } from '@/components/leads/AdTrendChart';
 import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
+import { LeadsWorldMap } from '@/components/leads/LeadsWorldMap';
 import { GroupBy } from '@/hooks/useAdTrend';
 import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
@@ -679,11 +680,28 @@ function Leads() {
           </div>
         </motion.div>
 
-        {/* Geographic Distribution */}
+        {/* Interactive World Map */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
+        >
+          <LeadsWorldMap
+            byCountry={stats?.byCountry || {}}
+            isLoading={isLoadingStats}
+            totalLeads={stats?.total || 0}
+            onCountryClick={(country) => {
+              setCountryFilter(country);
+              setCurrentPage(1);
+            }}
+          />
+        </motion.div>
+
+        {/* Geographic Distribution Charts */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
         >
           <LeadsByCountryChart
             byCountry={stats?.byCountry || {}}
