@@ -138,12 +138,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-card p-4 overflow-hidden">
       <div className="flex items-center gap-2 mb-3">
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
-      <div className="space-y-1">
+      <div className="space-y-1 overflow-hidden">
         {children}
       </div>
     </div>
@@ -155,9 +155,9 @@ function HistoryItem({ label, value }: { label: string; value: string | null | u
   const formattedValue = value ? formatDateTimeBR(value, 'dd/MM/yyyy HH:mm') : '-';
   
   return (
-    <div className="flex justify-between items-center py-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">{formattedValue}</span>
+    <div className="flex justify-between items-center py-2 gap-4 overflow-hidden">
+      <span className="text-sm text-muted-foreground shrink-0">{label}</span>
+      <span className="text-sm font-medium truncate">{formattedValue}</span>
     </div>
   );
 }
