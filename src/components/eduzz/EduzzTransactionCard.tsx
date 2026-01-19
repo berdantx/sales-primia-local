@@ -38,19 +38,17 @@ export function EduzzTransactionCard({ transaction, onClick }: EduzzTransactionC
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="text-xs text-muted-foreground cursor-help">
-                  {transaction.sale_date 
-                    ? formatDateTimeBR(transaction.sale_date, 'dd/MM/yy HH:mm')
+                  {transaction.created_at 
+                    ? formatDateTimeBR(transaction.created_at, 'dd/MM/yy HH:mm')
                     : 'Sem data'
                   }
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="text-xs">
-                  {transaction.sale_date 
-                    ? formatDateTimeUTC(transaction.sale_date, 'dd/MM/yyyy HH:mm:ss')
-                    : 'Sem data UTC'
-                  }
-                </p>
+                <div className="text-xs space-y-1">
+                  <p>Registro: {transaction.created_at ? formatDateTimeUTC(transaction.created_at, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                  <p className="text-muted-foreground">Venda: {transaction.sale_date ? formatDateTimeUTC(transaction.sale_date, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                </div>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

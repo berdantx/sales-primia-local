@@ -214,8 +214,8 @@ function EduzzTransactions() {
       
       switch (sortColumn) {
         case 'date':
-          const dateA = a.sale_date ? new Date(a.sale_date).getTime() : 0;
-          const dateB = b.sale_date ? new Date(b.sale_date).getTime() : 0;
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
           comparison = dateA - dateB;
           break;
         case 'value':
@@ -544,7 +544,7 @@ function EduzzTransactions() {
                     onClick={() => handleSort('date')}
                   >
                     <div className="flex items-center gap-1">
-                      Data (BRT)
+                      Registro (BRT)
                       <SortIcon column="date" />
                     </div>
                   </TableHead>
@@ -586,19 +586,17 @@ function EduzzTransactions() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className="cursor-help">
-                              {transaction.sale_date 
-                                ? formatDateTimeBR(transaction.sale_date, 'dd/MM/yy HH:mm')
+                              {transaction.created_at 
+                                ? formatDateTimeBR(transaction.created_at, 'dd/MM/yy HH:mm')
                                 : '-'
                               }
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p className="text-xs">
-                              {transaction.sale_date 
-                                ? formatDateTimeUTC(transaction.sale_date, 'dd/MM/yyyy HH:mm:ss')
-                                : 'Sem data UTC'
-                              }
-                            </p>
+                            <div className="text-xs space-y-1">
+                              <p>Registro: {transaction.created_at ? formatDateTimeUTC(transaction.created_at, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                              <p className="text-muted-foreground">Venda: {transaction.sale_date ? formatDateTimeUTC(transaction.sale_date, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                            </div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
