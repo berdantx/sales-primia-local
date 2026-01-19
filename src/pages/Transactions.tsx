@@ -12,9 +12,15 @@ import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTopSales, SalesViewMode } from '@/hooks/useTopSales';
+import { SalesGroupBy } from '@/hooks/useSalesTrend';
+import { SalesByDayChart } from '@/components/sales/SalesByDayChart';
+import { SalesTrendChart } from '@/components/sales/SalesTrendChart';
+import { TopSalesCard } from '@/components/sales/TopSalesCard';
 import {
   Table,
   TableBody,
@@ -134,6 +140,14 @@ function Transactions() {
   const [sckCodeFilter, setSckCodeFilter] = useState<string | null>(null);
   const [productFilter, setProductFilter] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
+  
+  // Analytics state
+  const [topMode, setTopMode] = useState<SalesViewMode>('products');
+  const [trendGroupBy, setTrendGroupBy] = useState<SalesGroupBy>('day');
+  const [chartTab, setChartTab] = useState('daily');
+  const [chartValueMode, setChartValueMode] = useState<'count' | 'value'>('value');
+  const [trendValueMode, setTrendValueMode] = useState<'count' | 'value'>('count');
+  const [selectedTopItem, setSelectedTopItem] = useState<string | null>(null);
 
   // Debounce search to avoid excessive updates
   useEffect(() => {
@@ -230,10 +244,45 @@ function Transactions() {
       const matchesSource = !sourceFilter || 
         (sourceFilter === 'webhook' ? t.source === 'webhook' : t.source !== 'webhook');
       
+      // Top item filter (from analytics)
+      const matchesTopItem = !selectedTopItem || (
+        topMode === 'products' ? t.product === selectedTopItem :
+        topMode === 'origins' ? t.sck_code === selectedTopItem :
+        t.product === selectedTopItem
+      );
+      
       return matchesSearch && matchesCurrency && matchesCountry && 
-             matchesBillingType && matchesPaymentMethod && matchesSckCode && matchesProduct && matchesSource;
+             matchesBillingType && matchesPaymentMethod && matchesSckCode && matchesProduct && matchesSource && matchesTopItem;
     });
-  }, [transactions, debouncedSearch, currencyFilter, countryFilter, billingTypeFilter, paymentMethodFilter, sckCodeFilter, productFilter, sourceFilter]);
+  }, [transactions, debouncedSearch, currencyFilter, countryFilter, billingTypeFilter, paymentMethodFilter, sckCodeFilter, productFilter, sourceFilter, selectedTopItem, topMode]);
+
+  // Analytics hooks
+  const { topItems, totalCount: totalTopCount } = useTopSales({
+    transactions: filteredTransactions,
+    limit: 5,
+    mode: topMode,
+    productField: 'product',
+    campaignField: 'sck_code',
+    originField: 'sck_code',
+    valueField: 'computed_value',
+  });
+
+  // Aggregate sales by date for chart
+  const salesByDayData = useMemo(() => {
+    if (!filteredTransactions) return {};
+    
+    return filteredTransactions.reduce((acc, t) => {
+      if (t.purchase_date) {
+        const date = t.purchase_date.split('T')[0];
+        if (!acc[date]) {
+          acc[date] = { count: 0, value: 0 };
+        }
+        acc[date].count += 1;
+        acc[date].value += Number(t.computed_value) || 0;
+      }
+      return acc;
+    }, {} as Record<string, { count: number; value: number }>);
+  }, [filteredTransactions]);
 
   // Sort and paginate
   const sortedTransactions = useMemo(() => {
@@ -536,12 +585,95 @@ function Transactions() {
           />
         </motion.div>
 
+        {/* Analytics Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+        >
+          {/* Charts - 2/3 width */}
+          <div className="lg:col-span-2">
+            <Card className="h-full">
+              <CardHeader className="pb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="text-base font-medium">Análise de Vendas</CardTitle>
+                  <Tabs value={chartTab} onValueChange={setChartTab} className="w-full sm:w-auto">
+                    <TabsList className="h-8">
+                      <TabsTrigger value="daily" className="text-xs px-3">Vendas por Dia</TabsTrigger>
+                      <TabsTrigger value="trend" className="text-xs px-3">Evolução {topMode === 'products' ? 'Produtos' : 'Origens'}</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Tabs value={chartTab} onValueChange={setChartTab}>
+                  <TabsContent value="daily" className="mt-0">
+                    <SalesByDayChart 
+                      data={salesByDayData} 
+                      valueMode={chartValueMode}
+                      onValueModeChange={setChartValueMode}
+                    />
+                  </TabsContent>
+                  <TabsContent value="trend" className="mt-0">
+                    <SalesTrendChart
+                      transactions={filteredTransactions}
+                      topItemNames={topItems.map(i => i.name)}
+                      mode={topMode}
+                      groupBy={trendGroupBy}
+                      onGroupByChange={setTrendGroupBy}
+                      embedded={true}
+                      dateField="purchase_date"
+                      productField="product"
+                      campaignField="sck_code"
+                      originField="sck_code"
+                      valueField="computed_value"
+                      valueMode={trendValueMode}
+                      onValueModeChange={setTrendValueMode}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Top 5 Card - 1/3 width */}
+          <div>
+            <TopSalesCard
+              topItems={topItems}
+              totalCount={totalTopCount}
+              mode={topMode}
+              onModeChange={(mode) => { setTopMode(mode); setSelectedTopItem(null); }}
+              selectedItem={selectedTopItem}
+              onItemClick={(name) => setSelectedTopItem(prev => prev === name ? null : name)}
+              showOrigins={true}
+            />
+          </div>
+        </motion.div>
+
+        {/* Selected Filter Indicator */}
+        {selectedTopItem && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <Badge 
+              variant="secondary" 
+              className="cursor-pointer hover:bg-secondary/80"
+              onClick={() => setSelectedTopItem(null)}
+            >
+              Filtrado por: {selectedTopItem}
+              <X className="h-3 w-3 ml-1" />
+            </Badge>
+          </motion.div>
+        )}
+
         {/* Sales Evolution Chart */}
         {Object.keys(salesByDateData).length > 0 && chartCurrencies.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.25 }}
           >
             <SalesByTimeChart 
               data={salesByDateData} 
