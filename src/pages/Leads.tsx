@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useLeads, useLeadStats } from '@/hooks/useLeads';
-import { useTopAds } from '@/hooks/useTopAds';
+import { useTopItems, ViewMode } from '@/hooks/useTopAds';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
+import { AdTrendChart } from '@/components/leads/AdTrendChart';
+import { GroupBy } from '@/hooks/useAdTrend';
 import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +70,8 @@ function Leads() {
     from: subDays(new Date(), 30),
     to: new Date(),
   });
+  const [topMode, setTopMode] = useState<ViewMode>('ads');
+  const [trendGroupBy, setTrendGroupBy] = useState<GroupBy>('day');
   
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
@@ -82,7 +86,8 @@ function Leads() {
 
   const { data: leads, isLoading } = useLeads(isReady ? filters : undefined);
   const { stats, isLoading: isLoadingStats } = useLeadStats(isReady ? filters : undefined);
-  const { topAds, totalAdsCount } = useTopAds({ leads });
+  const { topItems, totalCount } = useTopItems({ leads, mode: topMode });
+  const topItemNames = useMemo(() => topItems.map(item => item.name), [topItems]);
 
   // Get unique sources and utm values for filters with counts
   const filterOptions = useMemo(() => {
@@ -523,11 +528,31 @@ function Leads() {
             <LeadsByDayChart data={stats?.byDay || {}} isLoading={isLoadingStats} />
           </div>
           <div className="lg:col-span-1">
-            <TopAdsCard topAds={topAds} totalAdsCount={totalAdsCount} isLoading={isLoading} />
+            <TopAdsCard 
+              topItems={topItems} 
+              totalCount={totalCount} 
+              isLoading={isLoading}
+              mode={topMode}
+              onModeChange={setTopMode}
+            />
           </div>
         </motion.div>
 
-
+        {/* Trend Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <AdTrendChart
+            leads={leads}
+            topItemNames={topItemNames}
+            mode={topMode}
+            groupBy={trendGroupBy}
+            onGroupByChange={setTrendGroupBy}
+            isLoading={isLoading}
+          />
+        </motion.div>
         {/* Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
