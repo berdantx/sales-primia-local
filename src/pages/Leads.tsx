@@ -52,7 +52,8 @@ import {
   Globe,
   FlaskConical,
   Trash2,
-  BarChart3
+  BarChart3,
+  MapPin
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 20;
@@ -60,12 +61,14 @@ const ITEMS_PER_PAGE = 20;
 function Leads() {
   const [search, setSearch] = useState('');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [countryFilter, setCountryFilter] = useState<string>('all');
   const [utmSourceFilter, setUtmSourceFilter] = useState<string>('all');
   const [utmMediumFilter, setUtmMediumFilter] = useState<string>('all');
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string>('all');
   const [utmContentFilter, setUtmContentFilter] = useState<string>('all');
   const [utmTermFilter, setUtmTermFilter] = useState<string>('all');
   const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
+  const [isBackfilling, setIsBackfilling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('30days');
@@ -94,14 +97,15 @@ function Leads() {
   const { topItems, totalCount } = useTopItems({ leads, mode: topMode });
   const topItemNames = useMemo(() => topItems.map(item => item.name), [topItems]);
 
-  // Get unique sources and utm values for filters with counts
+  // Get unique sources, countries and utm values for filters with counts
   const filterOptions = useMemo(() => {
     if (!leads) return { 
-      sources: [], utmSources: [], utmMediums: [], utmCampaigns: [], utmContents: [], utmTerms: [],
-      sourceCounts: {}, utmSourceCounts: {}, utmMediumCounts: {}, utmCampaignCounts: {}, utmContentCounts: {}, utmTermCounts: {}
+      sources: [], countries: [], utmSources: [], utmMediums: [], utmCampaigns: [], utmContents: [], utmTerms: [],
+      sourceCounts: {}, countryCounts: {}, utmSourceCounts: {}, utmMediumCounts: {}, utmCampaignCounts: {}, utmContentCounts: {}, utmTermCounts: {}
     };
     
     const sourceCounts: Record<string, number> = {};
+    const countryCounts: Record<string, number> = {};
     const utmSourceCounts: Record<string, number> = {};
     const utmMediumCounts: Record<string, number> = {};
     const utmCampaignCounts: Record<string, number> = {};
@@ -110,6 +114,8 @@ function Leads() {
     
     leads.forEach(l => {
       if (l.source) sourceCounts[l.source] = (sourceCounts[l.source] || 0) + 1;
+      const country = l.country || 'Desconhecido';
+      countryCounts[country] = (countryCounts[country] || 0) + 1;
       if (l.utm_source) utmSourceCounts[l.utm_source] = (utmSourceCounts[l.utm_source] || 0) + 1;
       if (l.utm_medium) utmMediumCounts[l.utm_medium] = (utmMediumCounts[l.utm_medium] || 0) + 1;
       if (l.utm_campaign) utmCampaignCounts[l.utm_campaign] = (utmCampaignCounts[l.utm_campaign] || 0) + 1;
@@ -119,12 +125,14 @@ function Leads() {
     
     return {
       sources: Object.keys(sourceCounts).sort(),
+      countries: Object.keys(countryCounts).sort((a, b) => countryCounts[b] - countryCounts[a]),
       utmSources: Object.keys(utmSourceCounts).sort(),
       utmMediums: Object.keys(utmMediumCounts).sort(),
       utmCampaigns: Object.keys(utmCampaignCounts).sort(),
       utmContents: Object.keys(utmContentCounts).sort(),
       utmTerms: Object.keys(utmTermCounts).sort(),
       sourceCounts,
+      countryCounts,
       utmSourceCounts,
       utmMediumCounts,
       utmCampaignCounts,
@@ -151,6 +159,9 @@ function Leads() {
         l.phone?.toLowerCase().includes(search.toLowerCase());
       
       const matchesSource = sourceFilter === 'all' || l.source === sourceFilter;
+      const matchesCountry = countryFilter === 'all' || 
+        (countryFilter === 'unknown' && !l.country) ||
+        l.country === countryFilter;
       const matchesUtmSource = utmSourceFilter === 'all' || l.utm_source === utmSourceFilter;
       const matchesUtmMedium = utmMediumFilter === 'all' || l.utm_medium === utmMediumFilter;
       const matchesUtmCampaign = utmCampaignFilter === 'all' || l.utm_campaign === utmCampaignFilter;
@@ -171,9 +182,9 @@ function Leads() {
         (testFilter === 'hide' && !isTest) || 
         (testFilter === 'only' && isTest);
       
-      return matchesSearch && matchesSource && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter && matchesSelectedTopItem;
+      return matchesSearch && matchesSource && matchesCountry && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter && matchesSelectedTopItem;
     });
-  }, [leads, search, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter, selectedTopItem, topMode]);
+  }, [leads, search, sourceFilter, countryFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter, selectedTopItem, topMode]);
 
   // Count test leads
   const testLeadsCount = useMemo(() => {
@@ -225,6 +236,7 @@ function Leads() {
   const clearFilters = () => {
     setSearch('');
     setSourceFilter('all');
+    setCountryFilter('all');
     setUtmSourceFilter('all');
     setUtmMediumFilter('all');
     setUtmCampaignFilter('all');
@@ -237,7 +249,37 @@ function Leads() {
     setSelectedTopItem(null);
   };
 
-  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || testFilter !== 'hide' || selectedPeriod !== '30days' || selectedTopItem;
+  const hasActiveFilters = search || sourceFilter !== 'all' || countryFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || testFilter !== 'hide' || selectedPeriod !== '30days' || selectedTopItem;
+
+  // Backfill geolocation handler
+  const handleBackfillGeolocation = async () => {
+    setIsBackfilling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('backfill-geolocation', {
+        body: { batchSize: 100, maxBatches: 10 }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`Geolocalização atualizada: ${data.stats.totalUpdated} leads processados`);
+        queryClient.invalidateQueries({ queryKey: ['leads'] });
+      } else {
+        toast.error(data?.error || 'Erro ao processar geolocalização');
+      }
+    } catch (error) {
+      console.error('Backfill error:', error);
+      toast.error('Erro ao processar geolocalização retroativa');
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
+
+  // Count leads without geolocation
+  const leadsWithoutGeolocation = useMemo(() => {
+    if (!leads) return 0;
+    return leads.filter(l => !l.country && l.ip_address).length;
+  }, [leads]);
 
   // Handle mode change - reset selected item when mode changes
   const handleTopModeChange = (mode: ViewMode) => {
@@ -339,6 +381,29 @@ function Leads() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
+            {leadsWithoutGeolocation > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleBackfillGeolocation}
+                disabled={isBackfilling}
+                className="flex-1 sm:flex-none"
+              >
+                {isBackfilling ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <MapPin className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Atualizar Geo</span>
+                    <span className="sm:hidden">Geo</span>
+                    <span className="ml-1">({leadsWithoutGeolocation})</span>
+                  </>
+                )}
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
@@ -439,6 +504,21 @@ function Leads() {
                     {filterOptions.sources.map(s => (
                       <SelectItem key={s} value={s}>
                         {s} ({filterOptions.sourceCounts[s]})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={countryFilter} onValueChange={(v) => { setCountryFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
+                    <Globe className="h-3 w-3 mr-1 shrink-0" />
+                    <SelectValue placeholder="País" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos países</SelectItem>
+                    {filterOptions.countries.map(c => (
+                      <SelectItem key={c} value={c}>
+                        {c} ({filterOptions.countryCounts[c]})
                       </SelectItem>
                     ))}
                   </SelectContent>
