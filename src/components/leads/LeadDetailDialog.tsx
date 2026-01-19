@@ -145,10 +145,8 @@ function Section({
 }
 
 function HistoryItem({ label, value }: { label: string; value: string | null | undefined }) {
-  // Formatar a data - se não tiver valor, mostrar mensagem
-  const formattedValue = value ? formatDateTimeBR(value, 'dd/MM/yyyy HH:mm') : null;
-  
-  if (!formattedValue || formattedValue === '-') return null;
+  // Sempre mostrar o item, mesmo se não tiver valor
+  const formattedValue = value ? formatDateTimeBR(value, 'dd/MM/yyyy HH:mm') : '-';
   
   return (
     <div className="flex justify-between items-center py-2">
