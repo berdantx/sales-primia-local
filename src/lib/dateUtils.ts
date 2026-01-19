@@ -102,16 +102,23 @@ export function formatDateTimeBR(date: Date | string | null | undefined, formatS
   
   let d: Date;
   if (typeof date === 'string') {
-    // Normalizar formato: Supabase retorna "2026-01-19 02:28:53.002118+00"
-    // parseISO espera formato ISO com "T": "2026-01-19T02:28:53.002118+00:00"
-    let normalizedDate = date.replace(' ', 'T');
+    // Tentar múltiplos formatos de parsing
+    // Formato Supabase: "2026-01-19 02:28:53.002118+00"
+    let normalizedDate = date;
     
-    // Corrigir timezone offset: +00 → +00:00
-    if (/[+-]\d{2}$/.test(normalizedDate)) {
-      normalizedDate = normalizedDate + ':00';
-    }
+    // 1. Substituir espaço por T
+    normalizedDate = normalizedDate.replace(' ', 'T');
+    
+    // 2. Corrigir timezone offset abreviado: +00 → +00:00
+    // Regex para detectar offset sem os minutos (e.g., +00, -03)
+    normalizedDate = normalizedDate.replace(/([+-])(\d{2})$/, '$1$2:00');
     
     d = parseISO(normalizedDate);
+    
+    // Se ainda inválido, tentar criar Date diretamente
+    if (isNaN(d.getTime())) {
+      d = new Date(date);
+    }
   } else {
     d = date;
   }
