@@ -1,16 +1,32 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CheckCircle, AlertTriangle, RefreshCw, Search } from "lucide-react";
+import { CheckCircle, AlertTriangle, RefreshCw, Search, Wrench, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTransactionAudit, TransactionAuditResult } from "@/hooks/useTransactionAudit";
 import { formatCurrency } from "@/lib/calculations/goalCalculations";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function TransactionAuditCard() {
   const { data, isLoading, refetch, isFetching } = useTransactionAudit();
   const [search, setSearch] = useState("");
+  const [isFixing, setIsFixing] = useState(false);
+  const [fixProgress, setFixProgress] = useState({ current: 0, total: 0 });
 
   const filteredResults = data?.results.filter(r => 
     r.transaction_code.toLowerCase().includes(search.toLowerCase())
@@ -18,6 +34,56 @@ export function TransactionAuditCard() {
 
   const incorretos = filteredResults.filter(r => r.status === 'INCORRETO');
   const corretos = filteredResults.filter(r => r.status === 'OK');
+
+  const allIncorretos = data?.results.filter(r => r.status === 'INCORRETO') || [];
+
+  const handleBulkFix = async () => {
+    if (allIncorretos.length === 0) return;
+
+    setIsFixing(true);
+    setFixProgress({ current: 0, total: allIncorretos.length });
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < allIncorretos.length; i++) {
+      const tx = allIncorretos[i];
+      
+      try {
+        const { error } = await supabase
+          .from('transactions')
+          .update({
+            computed_value: tx.valor_correto_sem_impostos,
+            projected_value: tx.valor_correto_sem_impostos,
+            gross_value_with_taxes: tx.valor_com_impostos,
+          })
+          .eq('transaction_code', tx.transaction_code);
+
+        if (error) {
+          console.error(`Erro ao corrigir ${tx.transaction_code}:`, error);
+          errorCount++;
+        } else {
+          successCount++;
+        }
+      } catch (err) {
+        console.error(`Erro ao corrigir ${tx.transaction_code}:`, err);
+        errorCount++;
+      }
+
+      setFixProgress({ current: i + 1, total: allIncorretos.length });
+    }
+
+    setIsFixing(false);
+
+    if (errorCount === 0) {
+      toast.success(`✅ ${successCount} transações corrigidas com sucesso!`);
+    } else {
+      toast.warning(`⚠️ ${successCount} corrigidas, ${errorCount} com erro`);
+    }
+
+    // Refresh the audit data
+    refetch();
+  };
 
   if (isLoading) {
     return (
@@ -32,26 +98,83 @@ export function TransactionAuditCard() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <Search className="h-5 w-5" />
             Auditoria de Valores - Webhook
           </CardTitle>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => refetch()}
-            disabled={isFetching}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            {allIncorretos.length > 0 && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    disabled={isFixing}
+                  >
+                    {isFixing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Wrench className="h-4 w-4 mr-2" />
+                    )}
+                    Corrigir Todos ({allIncorretos.length})
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Correção em Massa</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-3">
+                      <p>
+                        Esta ação irá corrigir <strong>{allIncorretos.length} transações</strong> incorretas,
+                        atualizando o <code className="bg-muted px-1 rounded">computed_value</code> para o valor 
+                        sem impostos (<code className="bg-muted px-1 rounded">price.value</code>) do payload original.
+                      </p>
+                      <p className="text-amber-600 dark:text-amber-500">
+                        Diferença total a ser corrigida: {formatCurrency(data?.summary.diferencaTotal || 0, 'BRL')}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Esta operação não pode ser desfeita automaticamente.
+                      </p>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkFix}>
+                      Confirmar Correção
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => refetch()}
+              disabled={isFetching || isFixing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground">
           Compara computed_value salvo vs price.value do payload (sem impostos)
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Progress bar during fix */}
+        {isFixing && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Corrigindo transações...</span>
+              <span className="font-medium">
+                {fixProgress.current} / {fixProgress.total}
+              </span>
+            </div>
+            <Progress value={(fixProgress.current / fixProgress.total) * 100} />
+          </div>
+        )}
+
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-3">
           <div className="p-3 rounded-lg bg-muted/50 text-center">
@@ -72,11 +195,13 @@ export function TransactionAuditCard() {
 
         {data?.summary.incorretos ? (
           <div className="p-3 rounded-lg bg-red-500/10 border border-red-200 dark:border-red-900">
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="font-medium">
-                Diferença total: {formatCurrency(data.summary.diferencaTotal, 'BRL')}
-              </span>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="font-medium">
+                  Diferença total: {formatCurrency(data.summary.diferencaTotal, 'BRL')}
+                </span>
+              </div>
             </div>
           </div>
         ) : (
