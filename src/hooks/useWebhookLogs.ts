@@ -7,7 +7,7 @@ export interface WebhookLog {
   user_id: string;
   event_type: string;
   transaction_code: string | null;
-  status: 'processed' | 'skipped' | 'error' | 'duplicate';
+  status: 'processed' | 'skipped' | 'error' | 'duplicate' | 'warning';
   payload: unknown;
   error_message: string | null;
   created_at: string;
@@ -28,6 +28,7 @@ export interface WebhookStats {
   skipped: number;
   errors: number;
   duplicates: number;
+  warnings: number;
 }
 
 export function useWebhookLogs(filters: WebhookLogsFilters = {}) {
@@ -93,7 +94,7 @@ export function useWebhookStats(filters: WebhookLogsFilters = {}) {
     queryKey: ['webhook-stats', user?.id, filters],
     queryFn: async (): Promise<WebhookStats> => {
       if (!user?.id) {
-        return { total: 0, processed: 0, skipped: 0, errors: 0, duplicates: 0 };
+        return { total: 0, processed: 0, skipped: 0, errors: 0, duplicates: 0, warnings: 0 };
       }
 
       let query = supabase
@@ -125,6 +126,7 @@ export function useWebhookStats(filters: WebhookLogsFilters = {}) {
         skipped: 0,
         errors: 0,
         duplicates: 0,
+        warnings: 0,
       };
 
       data?.forEach((item: { status: string }) => {
@@ -132,6 +134,7 @@ export function useWebhookStats(filters: WebhookLogsFilters = {}) {
         else if (item.status === 'skipped') stats.skipped++;
         else if (item.status === 'error') stats.errors++;
         else if (item.status === 'duplicate') stats.duplicates++;
+        else if (item.status === 'warning') stats.warnings++;
       });
 
       return stats;

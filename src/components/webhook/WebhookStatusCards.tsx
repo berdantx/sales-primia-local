@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Inbox, CheckCircle, AlertCircle, XCircle, Copy, Loader2 } from 'lucide-react';
+import { Inbox, CheckCircle, AlertCircle, XCircle, Copy, Loader2, AlertTriangle } from 'lucide-react';
 import type { WebhookStats } from '@/hooks/useWebhookLogs';
 
 interface WebhookStatusCardsProps {
@@ -24,10 +24,10 @@ export function WebhookStatusCards({ stats, isLoading }: WebhookStatusCardsProps
       bgColor: 'bg-green-500/10',
     },
     {
-      title: 'Ignorados',
-      value: stats?.skipped || 0,
-      icon: AlertCircle,
-      color: 'text-amber-500',
+      title: 'Alertas',
+      value: stats?.warnings || 0,
+      icon: AlertTriangle,
+      color: 'text-amber-600',
       bgColor: 'bg-amber-500/10',
     },
     {
