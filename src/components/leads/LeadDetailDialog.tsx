@@ -138,12 +138,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4 overflow-hidden">
+    <div className="rounded-xl border bg-card p-4 overflow-hidden w-full max-w-full">
       <div className="flex items-center gap-2 mb-3">
         <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
-      <div className="space-y-1 overflow-hidden">
+      <div className="space-y-1 overflow-hidden w-full max-w-full">
         {children}
       </div>
     </div>
@@ -174,7 +174,7 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-3xl w-full max-h-[90vh] p-0 gap-0 overflow-hidden">
         {/* Header */}
         <DialogHeader className="p-6 pb-4 bg-gradient-to-b from-muted/50 to-background">
           <div className="flex items-start justify-between gap-4">
@@ -197,8 +197,8 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
 
         <Separator />
 
-        <ScrollArea className="max-h-[calc(90vh-140px)]">
-          <div className="p-6 space-y-4">
+        <ScrollArea className="max-h-[calc(90vh-140px)] w-full">
+          <div className="p-6 space-y-4 w-full max-w-full overflow-hidden">
             {/* Contact Info */}
             <Section icon={Mail} title="Informações de Contato">
               <InfoItem icon={Mail} label="Email" value={lead.email} copyable />
