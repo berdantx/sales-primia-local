@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, Package, Globe, Megaphone, Target, Filter, Loader2 } from 'lucide-react';
+import { X, Package, Globe, Megaphone, Target, Filter, Loader2, Speaker } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface EduzzAdvancedFiltersProps {
@@ -17,10 +17,12 @@ interface EduzzAdvancedFiltersProps {
   utmSource: string | null;
   utmMedium: string | null;
   utmCampaign: string | null;
+  utmContent: string | null;
   onProductChange: (value: string | null) => void;
   onUtmSourceChange: (value: string | null) => void;
   onUtmMediumChange: (value: string | null) => void;
   onUtmCampaignChange: (value: string | null) => void;
+  onUtmContentChange: (value: string | null) => void;
   totalFilteredTransactions?: number;
 }
 
@@ -29,21 +31,24 @@ export function EduzzAdvancedFilters({
   utmSource,
   utmMedium,
   utmCampaign,
+  utmContent,
   onProductChange,
   onUtmSourceChange,
   onUtmMediumChange,
   onUtmCampaignChange,
+  onUtmContentChange,
   totalFilteredTransactions,
 }: EduzzAdvancedFiltersProps) {
   const { data: filterOptions, isLoading } = useEduzzFilterOptions();
 
-  const hasActiveFilters = product || utmSource || utmMedium || utmCampaign;
+  const hasActiveFilters = product || utmSource || utmMedium || utmCampaign || utmContent;
 
   const clearAllFilters = () => {
     onProductChange(null);
     onUtmSourceChange(null);
     onUtmMediumChange(null);
     onUtmCampaignChange(null);
+    onUtmContentChange(null);
   };
 
   if (isLoading) {
@@ -86,7 +91,7 @@ export function EduzzAdvancedFilters({
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {/* Product Filter */}
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
@@ -194,6 +199,33 @@ export function EduzzAdvancedFilters({
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* UTM Content (Anúncio) Filter */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Speaker className="h-3 w-3" />
+                  Anúncio
+                </label>
+                <Select
+                  value={utmContent || 'all'}
+                  onValueChange={(v) => onUtmContentChange(v === 'all' ? null : v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todos os anúncios" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os anúncios</SelectItem>
+                    {filterOptions?.utm_contents?.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        <span className="truncate max-w-[180px]">{c.value}</span>
+                        <Badge variant="outline" className="ml-2 text-xs">
+                          {c.count}
+                        </Badge>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Active Filters Display */}
@@ -231,6 +263,15 @@ export function EduzzAdvancedFilters({
                     <Megaphone className="h-3 w-3" />
                     {utmCampaign.length > 15 ? utmCampaign.slice(0, 15) + '...' : utmCampaign}
                     <button onClick={() => onUtmCampaignChange(null)} className="ml-1 hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {utmContent && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Speaker className="h-3 w-3" />
+                    {utmContent.length > 15 ? utmContent.slice(0, 15) + '...' : utmContent}
+                    <button onClick={() => onUtmContentChange(null)} className="ml-1 hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>

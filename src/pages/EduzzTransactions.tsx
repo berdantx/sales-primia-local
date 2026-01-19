@@ -85,7 +85,7 @@ function EduzzTransactions() {
   const [utmSourceFilter, setUtmSourceFilter] = useState<string | null>(null);
   const [utmMediumFilter, setUtmMediumFilter] = useState<string | null>(null);
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string | null>(null);
-  
+  const [utmContentFilter, setUtmContentFilter] = useState<string | null>(null);
   // Analytics state
   const [topMode, setTopMode] = useState<SalesViewMode>('products');
   const [trendGroupBy, setTrendGroupBy] = useState<SalesGroupBy>('day');
@@ -158,16 +158,17 @@ function EduzzTransactions() {
       if (utmSourceFilter && t.utm_source !== utmSourceFilter) return false;
       if (utmMediumFilter && t.utm_medium !== utmMediumFilter) return false;
       if (utmCampaignFilter && t.utm_campaign !== utmCampaignFilter) return false;
-      
+      if (utmContentFilter && t.utm_content !== utmContentFilter) return false;
       // Filter by selected top item
       if (selectedTopItem) {
         if (topMode === 'products' && t.product !== selectedTopItem) return false;
         if (topMode === 'campaigns' && t.utm_campaign !== selectedTopItem) return false;
+        if (topMode === 'ads' && t.utm_content !== selectedTopItem) return false;
       }
       
       return true;
     });
-  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, selectedTopItem, topMode]);
+  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, selectedTopItem, topMode]);
 
   // Top sales hook
   const { topItems, totalCount } = useTopSales({
@@ -175,6 +176,7 @@ function EduzzTransactions() {
     mode: topMode,
     productField: 'product',
     campaignField: 'utm_campaign',
+    adsField: 'utm_content',
     valueField: 'sale_value',
   });
   const topItemNames = useMemo(() => topItems.map(item => item.name), [topItems]);
@@ -284,10 +286,11 @@ function EduzzTransactions() {
     setUtmSourceFilter(null);
     setUtmMediumFilter(null);
     setUtmCampaignFilter(null);
+    setUtmContentFilter(null);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter;
+  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter || !!utmContentFilter;
 
   if (isLoading || isLoadingStats) {
     return (
@@ -364,7 +367,7 @@ function EduzzTransactions() {
                     </TabsTrigger>
                     <TabsTrigger value="evolution" className="flex items-center gap-2">
                       <TrendingUp className="h-4 w-4" />
-                      <span className="hidden sm:inline">Evolução {topMode === 'products' ? 'Produtos' : 'Campanhas'}</span>
+                      <span className="hidden sm:inline">Evolução {topMode === 'products' ? 'Produtos' : topMode === 'campaigns' ? 'Campanhas' : 'Anúncios'}</span>
                       <span className="sm:hidden">Evolução</span>
                     </TabsTrigger>
                   </TabsList>
@@ -392,6 +395,7 @@ function EduzzTransactions() {
                       dateField="sale_date"
                       productField="product"
                       campaignField="utm_campaign"
+                      adsField="utm_content"
                       valueField="sale_value"
                       valueMode={trendValueMode}
                       onValueModeChange={setTrendValueMode}
@@ -413,6 +417,7 @@ function EduzzTransactions() {
                 setSelectedTopItem(item);
                 setCurrentPage(1);
               }}
+              showAds={true}
               showOrigins={false}
               currency="BRL"
             />
@@ -426,7 +431,7 @@ function EduzzTransactions() {
             animate={{ opacity: 1, scale: 1 }}
           >
             <Badge variant="secondary" className="gap-2 px-3 py-1.5">
-              Filtrado por {topMode === 'products' ? 'produto' : 'campanha'}: {selectedTopItem}
+              Filtrado por {topMode === 'products' ? 'produto' : topMode === 'campaigns' ? 'campanha' : 'anúncio'}: {selectedTopItem}
               <X 
                 className="h-3 w-3 cursor-pointer hover:text-destructive" 
                 onClick={() => setSelectedTopItem(null)}
@@ -474,10 +479,12 @@ function EduzzTransactions() {
               utmSource={utmSourceFilter}
               utmMedium={utmMediumFilter}
               utmCampaign={utmCampaignFilter}
+              utmContent={utmContentFilter}
               onProductChange={(v) => { setProductFilter(v); setCurrentPage(1); }}
               onUtmSourceChange={(v) => { setUtmSourceFilter(v); setCurrentPage(1); }}
               onUtmMediumChange={(v) => { setUtmMediumFilter(v); setCurrentPage(1); }}
               onUtmCampaignChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(1); }}
+              onUtmContentChange={(v) => { setUtmContentFilter(v); setCurrentPage(1); }}
               totalFilteredTransactions={filteredTransactions.length}
             />
             

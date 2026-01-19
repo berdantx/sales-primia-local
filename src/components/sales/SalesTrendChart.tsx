@@ -36,6 +36,7 @@ interface SalesTrendChartProps<T> {
   productField?: keyof T;
   campaignField?: keyof T;
   originField?: keyof T;
+  adsField?: keyof T;
   valueField?: keyof T;
   valueMode?: 'count' | 'value';
   onValueModeChange?: (mode: 'count' | 'value') => void;
@@ -104,6 +105,7 @@ export function SalesTrendChart<T>({
   productField = 'product' as keyof T,
   campaignField = 'utm_campaign' as keyof T,
   originField = 'sck_code' as keyof T,
+  adsField = 'utm_content' as keyof T,
   valueField = 'computed_value' as keyof T,
   valueMode = 'count',
   onValueModeChange,
@@ -117,6 +119,7 @@ export function SalesTrendChart<T>({
     productField,
     campaignField,
     originField,
+    adsField,
     valueField,
     valueMode,
   });
@@ -125,7 +128,9 @@ export function SalesTrendChart<T>({
     ? 'Evolução dos Produtos' 
     : mode === 'campaigns'
       ? 'Evolução das Campanhas'
-      : 'Evolução das Origens';
+      : mode === 'ads'
+        ? 'Evolução dos Anúncios'
+        : 'Evolução das Origens';
 
   const chartContent = (
     <div className="h-[280px]">
