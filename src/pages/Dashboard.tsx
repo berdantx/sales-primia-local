@@ -14,6 +14,7 @@ import { KPICard } from '@/components/dashboard/KPICard';
 import { ColoredDashboardCards } from '@/components/dashboard/ColoredDashboardCards';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 import { SalesBreakdownDialog } from '@/components/dashboard/SalesBreakdownDialog';
+import { DashboardSalesAnalytics } from '@/components/dashboard/DashboardSalesAnalytics';
 
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 
@@ -551,6 +552,14 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+
+            {/* Sales Analytics Section - Consolidated */}
+            <DashboardSalesAnalytics
+              startDate={dateRange.startDate}
+              endDate={dateRange.endDate}
+              clientId={clientId}
+              platform={platform}
+            />
 
             {/* Top Customers */}
             <TopCustomers customers={topCustomers || []} />
