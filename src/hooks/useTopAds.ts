@@ -1,6 +1,82 @@
 import { useMemo } from 'react';
 import { Lead } from './useLeads';
 
+export type ViewMode = 'ads' | 'campaigns';
+
+export interface TopItem {
+  name: string;
+  lead_count: number;
+  percentage: number;
+  related: string[];
+}
+
+export interface TopItemsFilters {
+  leads: Lead[] | undefined;
+  limit?: number;
+  mode?: ViewMode;
+}
+
+export function useTopItems({ leads, limit = 5, mode = 'ads' }: TopItemsFilters) {
+  const topItems = useMemo(() => {
+    if (!leads || leads.length === 0) return [];
+
+    const field = mode === 'ads' ? 'utm_content' : 'utm_campaign';
+    const relatedField = mode === 'ads' ? 'utm_campaign' : 'utm_content';
+
+    // Aggregate by selected field
+    const itemMap = new Map<string, { count: number; related: Set<string> }>();
+
+    leads.forEach((lead) => {
+      const value = lead[field];
+      if (!value) return;
+
+      const existing = itemMap.get(value);
+      if (existing) {
+        existing.count++;
+        const relatedValue = lead[relatedField];
+        if (relatedValue) {
+          existing.related.add(relatedValue);
+        }
+      } else {
+        itemMap.set(value, {
+          count: 1,
+          related: new Set(lead[relatedField] ? [lead[relatedField]] : []),
+        });
+      }
+    });
+
+    // Calculate total leads with the selected field
+    const totalWithField = Array.from(itemMap.values()).reduce(
+      (sum, item) => sum + item.count,
+      0
+    );
+
+    // Convert to array and sort by count
+    const sorted: TopItem[] = Array.from(itemMap.entries())
+      .map(([name, data]) => ({
+        name,
+        lead_count: data.count,
+        percentage: totalWithField > 0 
+          ? (data.count / totalWithField) * 100 
+          : 0,
+        related: Array.from(data.related).sort(),
+      }))
+      .sort((a, b) => b.lead_count - a.lead_count)
+      .slice(0, limit);
+
+    return sorted;
+  }, [leads, limit, mode]);
+
+  const totalCount = useMemo(() => {
+    if (!leads) return 0;
+    const field = mode === 'ads' ? 'utm_content' : 'utm_campaign';
+    return new Set(leads.filter(l => l[field]).map(l => l[field])).size;
+  }, [leads, mode]);
+
+  return { topItems, totalCount };
+}
+
+// Keep backward compatibility
 export interface TopAd {
   utm_content: string;
   lead_count: number;
@@ -14,56 +90,14 @@ export interface TopAdsFilters {
 }
 
 export function useTopAds({ leads, limit = 5 }: TopAdsFilters) {
-  const topAds = useMemo(() => {
-    if (!leads || leads.length === 0) return [];
+  const { topItems, totalCount } = useTopItems({ leads, limit, mode: 'ads' });
+  
+  const topAds: TopAd[] = topItems.map(item => ({
+    utm_content: item.name,
+    lead_count: item.lead_count,
+    percentage: item.percentage,
+    campaigns: item.related,
+  }));
 
-    // Aggregate by utm_content
-    const adMap = new Map<string, { count: number; campaigns: Set<string> }>();
-
-    leads.forEach((lead) => {
-      const utmContent = lead.utm_content;
-      if (!utmContent) return;
-
-      const existing = adMap.get(utmContent);
-      if (existing) {
-        existing.count++;
-        if (lead.utm_campaign) {
-          existing.campaigns.add(lead.utm_campaign);
-        }
-      } else {
-        adMap.set(utmContent, {
-          count: 1,
-          campaigns: new Set(lead.utm_campaign ? [lead.utm_campaign] : []),
-        });
-      }
-    });
-
-    // Calculate total leads with utm_content
-    const totalWithUtmContent = Array.from(adMap.values()).reduce(
-      (sum, item) => sum + item.count,
-      0
-    );
-
-    // Convert to array and sort by count
-    const sorted: TopAd[] = Array.from(adMap.entries())
-      .map(([utm_content, data]) => ({
-        utm_content,
-        lead_count: data.count,
-        percentage: totalWithUtmContent > 0 
-          ? (data.count / totalWithUtmContent) * 100 
-          : 0,
-        campaigns: Array.from(data.campaigns).sort(),
-      }))
-      .sort((a, b) => b.lead_count - a.lead_count)
-      .slice(0, limit);
-
-    return sorted;
-  }, [leads, limit]);
-
-  const totalAdsCount = useMemo(() => {
-    if (!leads) return 0;
-    return new Set(leads.filter(l => l.utm_content).map(l => l.utm_content)).size;
-  }, [leads]);
-
-  return { topAds, totalAdsCount };
+  return { topAds, totalAdsCount: totalCount };
 }
