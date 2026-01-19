@@ -126,7 +126,7 @@ export function useBrandingSettings() {
   // Get initial data from cache for instant display
   const cachedSettings = getCachedSettings();
 
-  const { data: settings = cachedSettings || DEFAULT_SETTINGS, isLoading } = useQuery({
+  const { data: settings = cachedSettings || DEFAULT_SETTINGS, isLoading, isFetching } = useQuery({
     queryKey: ['branding-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -205,6 +205,7 @@ export function useBrandingSettings() {
   return {
     settings,
     isLoading,
+    isFetching,
     updateSettings: updateMutation.mutate,
     isUpdating: updateMutation.isPending,
   };

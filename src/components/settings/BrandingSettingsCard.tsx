@@ -4,17 +4,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Palette, Upload, X, Loader2, Sun, Moon, Info } from 'lucide-react';
-import { useBrandingSettings, COLOR_PRESETS, applyThemeColors } from '@/hooks/useBrandingSettings';
+import { Palette, Upload, X, Loader2, Sun, Moon, Info, RefreshCw, Trash2 } from 'lucide-react';
+import { useBrandingSettings, COLOR_PRESETS, applyThemeColors, clearBrandingCache } from '@/hooks/useBrandingSettings';
 import { ColorPicker } from './ColorPicker';
 import { SidebarPreview } from './SidebarPreview';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useDropzone } from 'react-dropzone';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useQueryClient } from '@tanstack/react-query';
+import { Badge } from '@/components/ui/badge';
 
 export function BrandingSettingsCard() {
-  const { settings, isLoading, updateSettings, isUpdating } = useBrandingSettings();
+  const queryClient = useQueryClient();
+  const { settings, isLoading, updateSettings, isUpdating, isFetching } = useBrandingSettings();
   
   // Local state for preview
   const [localAppName, setLocalAppName] = useState('');
@@ -310,7 +313,7 @@ export function BrandingSettingsCard() {
               />
 
               {/* Save Button */}
-              <div className="flex items-center gap-4 pt-4">
+              <div className="flex flex-wrap items-center gap-3 pt-4">
                 <Button 
                   onClick={handleSave} 
                   disabled={isUpdating || !hasChanges}
@@ -325,10 +328,40 @@ export function BrandingSettingsCard() {
                     'Salvar Alterações'
                   )}
                 </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    clearBrandingCache();
+                    queryClient.invalidateQueries({ queryKey: ['branding-settings'] });
+                    toast.success('Cache limpo! Recarregando configurações...');
+                  }}
+                  className="gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Limpar Cache
+                </Button>
+                
                 {hasChanges && (
                   <span className="text-sm text-muted-foreground">
                     Você tem alterações não salvas
                   </span>
+                )}
+              </div>
+              
+              {/* Sync Status Indicator */}
+              <div className="flex items-center gap-2 pt-2">
+                {isFetching ? (
+                  <Badge variant="secondary" className="gap-1.5 text-xs">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    Sincronizando...
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="gap-1.5 text-xs text-muted-foreground">
+                    <RefreshCw className="w-3 h-3" />
+                    Sincronizado
+                  </Badge>
                 )}
               </div>
             </div>
