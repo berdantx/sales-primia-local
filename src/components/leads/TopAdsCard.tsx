@@ -72,8 +72,8 @@ export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange
   const maxCount = topItems[0]?.lead_count || 1;
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-2 flex-shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -110,7 +110,7 @@ export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange
           </ToggleGroup>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 overflow-auto">
         {topItems.length === 0 ? (
           <div className="text-sm text-muted-foreground py-8 text-center">
             {emptyMessage}
