@@ -43,7 +43,9 @@ import {
   DollarSign,
   Receipt,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
@@ -120,6 +122,9 @@ function Transactions() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  
+  // Sort state
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   
   // Advanced filters
   const [billingTypeFilter, setBillingTypeFilter] = useState<string | null>(null);
@@ -228,13 +233,26 @@ function Transactions() {
     });
   }, [transactions, debouncedSearch, currencyFilter, countryFilter, billingTypeFilter, paymentMethodFilter, sckCodeFilter, productFilter, sourceFilter]);
 
-  // Paginate
+  // Sort and paginate
+  const sortedTransactions = useMemo(() => {
+    return [...filteredTransactions].sort((a, b) => {
+      const dateA = a.purchase_date ? new Date(a.purchase_date).getTime() : 0;
+      const dateB = b.purchase_date ? new Date(b.purchase_date).getTime() : 0;
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+  }, [filteredTransactions, sortOrder]);
+
   const paginatedTransactions = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredTransactions.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredTransactions, currentPage]);
+    return sortedTransactions.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedTransactions, currentPage]);
 
   const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
+  
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+    setCurrentPage(1);
+  };
 
   // Summary stats for KPI cards - using deduplicated values from DB for consistency with Dashboard
   const summaryStats = useMemo(() => {
@@ -605,7 +623,19 @@ function Transactions() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[100px]">Data (BRT)</TableHead>
+                    <TableHead 
+                      className="min-w-[100px] cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={toggleSortOrder}
+                    >
+                      <div className="flex items-center gap-1">
+                        Data (BRT)
+                        {sortOrder === 'desc' ? (
+                          <ArrowDown className="h-3 w-3" />
+                        ) : (
+                          <ArrowUp className="h-3 w-3" />
+                        )}
+                      </div>
+                    </TableHead>
                     <TableHead className="min-w-[100px]">Código</TableHead>
                     <TableHead className="min-w-[150px]">Produto</TableHead>
                     <TableHead className="min-w-[150px]">Comprador</TableHead>
