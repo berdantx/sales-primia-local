@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Eye, CheckCircle, AlertCircle, XCircle, Copy, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, CheckCircle, AlertCircle, XCircle, Copy, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -36,6 +36,11 @@ function StatusBadge({ status, isMobile }: { status: string; isMobile?: boolean 
     skipped: {
       label: isMobile ? 'Skip' : 'Ignorado',
       icon: AlertCircle,
+      className: 'bg-slate-500/10 text-slate-600 border-slate-500/20 hover:bg-slate-500/20',
+    },
+    warning: {
+      label: isMobile ? 'Alert' : 'Alerta',
+      icon: AlertTriangle,
       className: 'bg-amber-500/10 text-amber-600 border-amber-500/20 hover:bg-amber-500/20',
     },
     error: {
