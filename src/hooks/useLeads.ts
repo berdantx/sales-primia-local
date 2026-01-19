@@ -4,8 +4,8 @@ import { useAuth } from './useAuth';
 
 export interface Lead {
   id: string;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   client_id: string | null;
   external_id: string | null;
   email: string;
@@ -127,7 +127,8 @@ export function useLeadStats(filters?: LeadFilters) {
     }, {} as Record<string, number>),
     
     byDay: leads.reduce((acc, lead) => {
-      const date = lead.created_at.split('T')[0];
+      // Supabase pode retornar "2026-01-19 02:28:53" (com espaço) ou "2026-01-19T02:28:53"
+      const date = lead.created_at ? lead.created_at.split(/[T ]/)[0] : 'unknown';
       acc[date] = (acc[date] || 0) + 1;
       return acc;
     }, {} as Record<string, number>),
