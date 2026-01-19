@@ -202,8 +202,8 @@ function TmbTransactions() {
       
       switch (sortColumn) {
         case 'date':
-          const dateA = a.effective_date ? new Date(a.effective_date).getTime() : 0;
-          const dateB = b.effective_date ? new Date(b.effective_date).getTime() : 0;
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
           comparison = dateA - dateB;
           break;
         case 'value':
@@ -525,7 +525,7 @@ function TmbTransactions() {
                     onClick={() => handleSort('date')}
                   >
                     <div className="flex items-center gap-1">
-                      Data (BRT)
+                      Registro (BRT)
                       <SortIcon column="date" />
                     </div>
                   </TableHead>
@@ -567,19 +567,17 @@ function TmbTransactions() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className="cursor-help">
-                              {transaction.effective_date 
-                                ? formatDateTimeBR(transaction.effective_date, 'dd/MM/yy HH:mm')
+                              {transaction.created_at 
+                                ? formatDateTimeBR(transaction.created_at, 'dd/MM/yy HH:mm')
                                 : '-'
                               }
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p className="text-xs">
-                              {transaction.effective_date 
-                                ? formatDateTimeUTC(transaction.effective_date, 'dd/MM/yyyy HH:mm:ss')
-                                : 'Sem data UTC'
-                              }
-                            </p>
+                            <div className="text-xs space-y-1">
+                              <p>Registro: {transaction.created_at ? formatDateTimeUTC(transaction.created_at, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                              <p className="text-muted-foreground">Venda: {transaction.effective_date ? formatDateTimeUTC(transaction.effective_date, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                            </div>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

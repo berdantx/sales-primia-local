@@ -94,19 +94,17 @@ function TransactionCard({ transaction, onClick }: { transaction: Transaction; o
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="text-xs text-muted-foreground cursor-help">
-                  {transaction.purchase_date 
-                    ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
+                  {transaction.created_at 
+                    ? formatDateTimeBR(transaction.created_at, 'dd/MM/yy HH:mm')
                     : 'Sem data'
                   }
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="text-xs">
-                  {transaction.purchase_date 
-                    ? formatDateTimeUTC(transaction.purchase_date, 'dd/MM/yyyy HH:mm:ss')
-                    : 'Sem data UTC'
-                  }
-                </p>
+                <div className="text-xs space-y-1">
+                  <p>Registro: {transaction.created_at ? formatDateTimeUTC(transaction.created_at, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                  <p className="text-muted-foreground">Venda: {transaction.purchase_date ? formatDateTimeUTC(transaction.purchase_date, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                </div>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -291,8 +289,8 @@ function Transactions() {
       
       switch (sortColumn) {
         case 'date':
-          const dateA = a.purchase_date ? new Date(a.purchase_date).getTime() : 0;
-          const dateB = b.purchase_date ? new Date(b.purchase_date).getTime() : 0;
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
           comparison = dateA - dateB;
           break;
         case 'value':
@@ -788,7 +786,7 @@ function Transactions() {
                       onClick={() => handleSort('date')}
                     >
                       <div className="flex items-center gap-1">
-                        Data (BRT)
+                        Registro (BRT)
                         <SortIcon column="date" />
                       </div>
                     </TableHead>
@@ -833,19 +831,17 @@ function Transactions() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="cursor-help">
-                                {transaction.purchase_date 
-                                  ? formatDateTimeBR(transaction.purchase_date, 'dd/MM/yy HH:mm')
+                                {transaction.created_at 
+                                  ? formatDateTimeBR(transaction.created_at, 'dd/MM/yy HH:mm')
                                   : '-'
                                 }
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="text-xs">
-                                {transaction.purchase_date 
-                                  ? formatDateTimeUTC(transaction.purchase_date, 'dd/MM/yyyy HH:mm:ss')
-                                  : 'Sem data UTC'
-                                }
-                              </p>
+                              <div className="text-xs space-y-1">
+                                <p>Registro: {transaction.created_at ? formatDateTimeUTC(transaction.created_at, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                                <p className="text-muted-foreground">Venda: {transaction.purchase_date ? formatDateTimeUTC(transaction.purchase_date, 'dd/MM/yyyy HH:mm:ss') : '-'}</p>
+                              </div>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
