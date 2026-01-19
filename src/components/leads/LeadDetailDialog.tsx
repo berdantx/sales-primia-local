@@ -145,11 +145,15 @@ function Section({
 }
 
 function HistoryItem({ label, value }: { label: string; value: string | null | undefined }) {
-  if (!value) return null;
+  // Formatar a data - se não tiver valor, mostrar mensagem
+  const formattedValue = value ? formatDateTimeBR(value, 'dd/MM/yyyy HH:mm') : null;
+  
+  if (!formattedValue || formattedValue === '-') return null;
+  
   return (
     <div className="flex justify-between items-center py-2">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">{formatDateTimeBR(value, 'dd/MM/yyyy HH:mm')}</span>
+      <span className="text-sm font-medium">{formattedValue}</span>
     </div>
   );
 }
@@ -240,6 +244,9 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
             <Section icon={Calendar} title="Histórico">
               <HistoryItem label="Criado em" value={lead.created_at} />
               <HistoryItem label="Atualizado em" value={lead.updated_at} />
+              {!lead.created_at && !lead.updated_at && (
+                <p className="text-sm text-muted-foreground py-2">Sem informações de data</p>
+              )}
             </Section>
 
             {/* Raw Payload */}
