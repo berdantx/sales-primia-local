@@ -31,6 +31,7 @@ interface AdTrendChartProps {
   groupBy: GroupBy;
   onGroupByChange: (value: GroupBy) => void;
   isLoading?: boolean;
+  embedded?: boolean;
 }
 
 const truncateName = (name: string, maxLength: number = 20) => {
@@ -79,10 +80,96 @@ export function AdTrendChart({
   groupBy,
   onGroupByChange,
   isLoading,
+  embedded = false,
 }: AdTrendChartProps) {
   const { trendData } = useAdTrend({ leads, topItemNames, mode, groupBy });
 
   const title = mode === 'ads' ? 'Evolução dos Anúncios' : 'Evolução das Campanhas';
+
+  const chartContent = (
+    <div className="h-[280px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={trendData}
+          margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <XAxis 
+            dataKey="displayDate" 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            className="text-muted-foreground"
+          />
+          <YAxis 
+            tick={{ fontSize: 12 }}
+            tickLine={false}
+            axisLine={false}
+            className="text-muted-foreground"
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend 
+            formatter={(value) => truncateName(value, 25)}
+            wrapperStyle={{ fontSize: '12px' }}
+          />
+          {topItemNames.map((name, index) => (
+            <Line
+              key={name}
+              type="monotone"
+              dataKey={name}
+              name={name}
+              stroke={CHART_COLORS[index % CHART_COLORS.length]}
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  const groupByToggle = (
+    <ToggleGroup 
+      type="single" 
+      value={groupBy} 
+      onValueChange={(value) => value && onGroupByChange(value as GroupBy)}
+      size="sm"
+    >
+      <ToggleGroupItem value="day" aria-label="Agrupar por dia">
+        <Calendar className="h-4 w-4 mr-1" />
+        Dia
+      </ToggleGroupItem>
+      <ToggleGroupItem value="week" aria-label="Agrupar por semana">
+        <CalendarDays className="h-4 w-4 mr-1" />
+        Semana
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+
+  if (embedded) {
+    if (isLoading) {
+      return (
+        <div className="h-[280px] flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Carregando gráfico...</div>
+        </div>
+      );
+    }
+    if (trendData.length === 0) {
+      return (
+        <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+          Sem dados para exibir no período selecionado
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-3">
+        <div className="flex justify-end">
+          {groupByToggle}
+        </div>
+        {chartContent}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -130,63 +217,11 @@ export function AdTrendChart({
             <TrendingUp className="h-5 w-5" />
             {title}
           </CardTitle>
-          <ToggleGroup 
-            type="single" 
-            value={groupBy} 
-            onValueChange={(value) => value && onGroupByChange(value as GroupBy)}
-            size="sm"
-          >
-            <ToggleGroupItem value="day" aria-label="Agrupar por dia">
-              <Calendar className="h-4 w-4 mr-1" />
-              Dia
-            </ToggleGroupItem>
-            <ToggleGroupItem value="week" aria-label="Agrupar por semana">
-              <CalendarDays className="h-4 w-4 mr-1" />
-              Semana
-            </ToggleGroupItem>
-          </ToggleGroup>
+          {groupByToggle}
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={trendData}
-              margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="displayDate" 
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                className="text-muted-foreground"
-              />
-              <YAxis 
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-                className="text-muted-foreground"
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend 
-                formatter={(value) => truncateName(value, 25)}
-                wrapperStyle={{ fontSize: '12px' }}
-              />
-              {topItemNames.map((name, index) => (
-                <Line
-                  key={name}
-                  type="monotone"
-                  dataKey={name}
-                  name={name}
-                  stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        {chartContent}
       </CardContent>
     </Card>
   );

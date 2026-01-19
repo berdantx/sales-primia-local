@@ -15,9 +15,10 @@ import { ptBR } from 'date-fns/locale';
 interface LeadsByDayChartProps {
   data: Record<string, number>;
   isLoading?: boolean;
+  embedded?: boolean;
 }
 
-export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
+export function LeadsByDayChart({ data, isLoading, embedded = false }: LeadsByDayChartProps) {
   const chartData = useMemo(() => {
     if (!data) return [];
     
@@ -29,6 +30,67 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [data]);
+
+  const chartContent = (
+    <div className={embedded ? "h-[280px]" : "h-[200px]"}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <XAxis 
+            dataKey="displayDate" 
+            tick={{ fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis 
+            tick={{ fontSize: 11 }}
+            tickLine={false}
+            axisLine={false}
+            allowDecimals={false}
+          />
+          <Tooltip
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null;
+              const data = payload[0].payload;
+              return (
+                <div className="bg-popover border rounded-lg shadow-lg p-3">
+                  <p className="text-sm font-medium">
+                    {format(parseISO(data.date), "dd 'de' MMMM", { locale: ptBR })}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {data.leads} lead{data.leads !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              );
+            }}
+          />
+          <Bar 
+            dataKey="leads" 
+            fill="hsl(var(--primary))" 
+            radius={[4, 4, 0, 0]}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  if (embedded) {
+    if (isLoading) {
+      return (
+        <div className="h-[280px] flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Carregando...</div>
+        </div>
+      );
+    }
+    if (chartData.length === 0) {
+      return (
+        <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+          Nenhum dado disponível
+        </div>
+      );
+    }
+    return chartContent;
+  }
 
   if (isLoading) {
     return (
@@ -66,46 +128,7 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
         <CardTitle className="text-base font-medium">Leads por Dia</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="displayDate" 
-                tick={{ fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                tick={{ fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null;
-                  const data = payload[0].payload;
-                  return (
-                    <div className="bg-popover border rounded-lg shadow-lg p-3">
-                      <p className="text-sm font-medium">
-                        {format(parseISO(data.date), "dd 'de' MMMM", { locale: ptBR })}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {data.leads} lead{data.leads !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  );
-                }}
-              />
-              <Bar 
-                dataKey="leads" 
-                fill="hsl(var(--primary))" 
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {chartContent}
       </CardContent>
     </Card>
   );

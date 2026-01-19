@@ -11,6 +11,7 @@ import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu,
@@ -49,7 +50,8 @@ import {
   TrendingUp,
   Globe,
   FlaskConical,
-  Trash2
+  Trash2,
+  BarChart3
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 20;
@@ -72,6 +74,7 @@ function Leads() {
   });
   const [topMode, setTopMode] = useState<ViewMode>('ads');
   const [trendGroupBy, setTrendGroupBy] = useState<GroupBy>('day');
+  const [chartTab, setChartTab] = useState<'daily' | 'evolution'>('daily');
   
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
@@ -525,7 +528,44 @@ function Leads() {
           className="grid grid-cols-1 lg:grid-cols-3 gap-4"
         >
           <div className="lg:col-span-2">
-            <LeadsByDayChart data={stats?.byDay || {}} isLoading={isLoadingStats} />
+            <Card>
+              <Tabs value={chartTab} onValueChange={(v) => setChartTab(v as 'daily' | 'evolution')}>
+                <div className="px-4 pt-4 pb-2">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="daily" className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      <span className="hidden sm:inline">Leads por Dia</span>
+                      <span className="sm:hidden">Por Dia</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="evolution" className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      <span className="hidden sm:inline">Evolução {topMode === 'ads' ? 'Anúncios' : 'Campanhas'}</span>
+                      <span className="sm:hidden">Evolução</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                <CardContent className="pt-2">
+                  <TabsContent value="daily" className="mt-0">
+                    <LeadsByDayChart 
+                      data={stats?.byDay || {}} 
+                      isLoading={isLoadingStats} 
+                      embedded 
+                    />
+                  </TabsContent>
+                  <TabsContent value="evolution" className="mt-0">
+                    <AdTrendChart
+                      leads={leads}
+                      topItemNames={topItemNames}
+                      mode={topMode}
+                      groupBy={trendGroupBy}
+                      onGroupByChange={setTrendGroupBy}
+                      isLoading={isLoading}
+                      embedded
+                    />
+                  </TabsContent>
+                </CardContent>
+              </Tabs>
+            </Card>
           </div>
           <div className="lg:col-span-1">
             <TopAdsCard 
@@ -536,22 +576,6 @@ function Leads() {
               onModeChange={setTopMode}
             />
           </div>
-        </motion.div>
-
-        {/* Trend Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-        >
-          <AdTrendChart
-            leads={leads}
-            topItemNames={topItemNames}
-            mode={topMode}
-            groupBy={trendGroupBy}
-            onGroupByChange={setTrendGroupBy}
-            isLoading={isLoading}
-          />
         </motion.div>
         {/* Table */}
         <motion.div
