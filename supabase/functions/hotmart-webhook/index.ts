@@ -155,6 +155,77 @@ function extractCommissions(commissions: CommissionData[] | undefined): {
   return { marketplaceCommission, producerCommission };
 }
 
+// Validation result interface
+interface ValidationResult {
+  isValid: boolean;
+  warnings: string[];
+  errors: string[];
+}
+
+// Helper function to validate transaction values
+function validateTransactionValues(
+  purchase: PurchaseData,
+  transactionCode: string
+): ValidationResult {
+  const result: ValidationResult = {
+    isValid: true,
+    warnings: [],
+    errors: [],
+  };
+
+  const priceValue = purchase.price?.value || 0;
+  const fullPriceValue = purchase.full_price?.value || 0;
+
+  // Check if price.value is missing
+  if (!purchase.price?.value && purchase.full_price?.value) {
+    result.warnings.push(`[${transactionCode}] price.value ausente, usando full_price.value como fallback`);
+  }
+
+  // Check for zero values
+  if (priceValue === 0 && fullPriceValue === 0) {
+    result.errors.push(`[${transactionCode}] Ambos price.value e full_price.value são zero ou ausentes`);
+    result.isValid = false;
+    return result;
+  }
+
+  // Check for significant discrepancy between price and full_price
+  // Discrepancy is expected (taxes), but should be within reasonable bounds (e.g., 20-30%)
+  if (priceValue > 0 && fullPriceValue > 0) {
+    const discrepancyPercent = ((fullPriceValue - priceValue) / priceValue) * 100;
+    
+    // Warning if taxes are higher than 30% (unusual but may be valid)
+    if (discrepancyPercent > 30) {
+      result.warnings.push(
+        `[${transactionCode}] Discrepância alta entre valores: price=${priceValue}, full_price=${fullPriceValue} (${discrepancyPercent.toFixed(1)}% diferença)`
+      );
+    }
+    
+    // Error if price is higher than full_price (should never happen)
+    if (priceValue > fullPriceValue) {
+      result.errors.push(
+        `[${transactionCode}] ANOMALIA: price.value (${priceValue}) > full_price.value (${fullPriceValue})`
+      );
+      // This is a data anomaly but we'll still process - just log it
+    }
+    
+    // Error if discrepancy is extreme (over 50% - likely data corruption)
+    if (discrepancyPercent > 50) {
+      result.errors.push(
+        `[${transactionCode}] ALERTA CRÍTICO: Discrepância extrema de ${discrepancyPercent.toFixed(1)}% entre price e full_price`
+      );
+      // Still process but flag heavily
+    }
+  }
+
+  // Validate currency consistency
+  const currency = purchase.price?.currency_value;
+  if (currency && !['BRL', 'USD', 'EUR'].includes(currency)) {
+    result.warnings.push(`[${transactionCode}] Moeda não padrão detectada: ${currency}`);
+  }
+
+  return result;
+}
+
 // Helper function to log webhook events
 async function logWebhookEvent(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -163,7 +234,7 @@ async function logWebhookEvent(
   clientId: string | null,
   eventType: string,
   transactionCode: string | null,
-  status: 'processed' | 'skipped' | 'error' | 'duplicate',
+  status: 'processed' | 'skipped' | 'error' | 'duplicate' | 'warning',
   payload: unknown,
   errorMessage?: string
 ) {
@@ -360,6 +431,39 @@ serve(async (req) => {
         const dateNextCharge = subscription?.date_next_charge 
           ? new Date(subscription.date_next_charge).toISOString() 
           : null;
+
+        // VALIDAÇÃO DE VALORES - Detectar anomalias antes de processar
+        const validation = validateTransactionValues(purchase, purchase.transaction || 'UNKNOWN');
+        
+        // Log warnings
+        if (validation.warnings.length > 0) {
+          console.warn('Validation warnings:', validation.warnings.join('; '));
+        }
+        
+        // Log errors (but still process - we don't want to lose data)
+        if (validation.errors.length > 0) {
+          console.error('Validation errors:', validation.errors.join('; '));
+          
+          // Log validation warning to webhook_logs for visibility
+          await logWebhookEvent(
+            supabase,
+            webhookUserId,
+            webhookClientId || null,
+            `${eventType}_VALIDATION_WARNING`,
+            purchase.transaction || null,
+            'warning',
+            {
+              ...event,
+              _validation: {
+                warnings: validation.warnings,
+                errors: validation.errors,
+                price_value: purchase.price?.value,
+                full_price_value: purchase.full_price?.value,
+              },
+            },
+            validation.errors.join('; ')
+          );
+        }
 
         // Valores base
         // full_price = valor bruto da parcela (com taxas/impostos)
