@@ -93,10 +93,15 @@ export function formatDateBR(date: Date | string, formatStr: string = 'dd/MM/yyy
 /**
  * Formata uma data ISO (UTC do banco) para exibição no horário de Brasília
  * Use esta função para exibir datas armazenadas em UTC convertidas para BRT
+ * 
+ * NOTA: parseISO já converte corretamente para o timezone local do navegador.
+ * Subtrair 3h para Brasília (BRT = UTC-3)
  */
-export function formatDateTimeBR(date: Date | string, formatStr: string = 'dd/MM/yyyy HH:mm'): string {
+export function formatDateTimeBR(date: Date | string | null | undefined, formatStr: string = 'dd/MM/yyyy HH:mm'): string {
+  if (!date) return '-';
   const d = typeof date === 'string' ? parseISO(date) : date;
-  const brasilia = toBrasilia(d);
+  // Subtrair 3 horas para converter UTC -> BRT (UTC-3)
+  const brasilia = new Date(d.getTime() + (BRASILIA_OFFSET_HOURS * 3600000));
   return format(brasilia, formatStr, { locale: ptBR });
 }
 
