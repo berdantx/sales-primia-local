@@ -203,9 +203,18 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
             <Section icon={Mail} title="Informações de Contato">
               <InfoItem icon={Mail} label="Email" value={lead.email} copyable />
               <InfoItem icon={Phone} label="Telefone" value={lead.phone} copyable />
-              <InfoItem icon={MapPin} label="Endereço IP" value={lead.ip_address} copyable />
               <InfoItem icon={Building2} label="Organização" value={lead.organization} />
             </Section>
+
+            {/* Location Info */}
+            {(lead.country || lead.city || lead.ip_address) && (
+              <Section icon={MapPin} title="Localização">
+                <InfoItem icon={Globe} label="País" value={lead.country} />
+                <InfoItem icon={MapPin} label="Cidade" value={lead.city} />
+                <InfoItem icon={MapPin} label="Região" value={lead.region} />
+                <InfoItem icon={MapPin} label="Endereço IP" value={lead.ip_address} copyable />
+              </Section>
+            )}
 
             {/* Tags */}
             {tags.length > 0 && (

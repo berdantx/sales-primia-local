@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.delete-invitation]
 verify_jwt = false
+
+[functions.geolocate-ip]
+verify_jwt = false

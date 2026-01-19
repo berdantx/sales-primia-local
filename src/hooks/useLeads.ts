@@ -26,6 +26,11 @@ export interface Lead {
   page_url: string | null;
   series_id: string | null;
   raw_payload: unknown;
+  // Geolocation fields
+  country: string | null;
+  country_code: string | null;
+  city: string | null;
+  region: string | null;
 }
 
 export interface LeadFilters {
@@ -106,6 +111,8 @@ export interface LeadStats {
   bySource: Record<string, number>;
   byUtmSource: Record<string, number>;
   byDay: Record<string, number>;
+  byCountry: Record<string, number>;
+  byCity: Record<string, number>;
 }
 
 export function useLeadStats(filters?: LeadFilters) {
@@ -130,6 +137,20 @@ export function useLeadStats(filters?: LeadFilters) {
       // Supabase pode retornar "2026-01-19 02:28:53" (com espaço) ou "2026-01-19T02:28:53"
       const date = lead.created_at ? lead.created_at.split(/[T ]/)[0] : 'unknown';
       acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+    
+    byCountry: leads.reduce((acc, lead) => {
+      const country = lead.country || 'Desconhecido';
+      acc[country] = (acc[country] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+    
+    byCity: leads.reduce((acc, lead) => {
+      if (lead.city) {
+        const cityLabel = lead.region ? `${lead.city}, ${lead.region}` : lead.city;
+        acc[cityLabel] = (acc[cityLabel] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>),
   } : null;
