@@ -108,16 +108,22 @@ interface HotmartWebhookEvent {
 // Helper function to determine billing type
 function determineBillingType(
   subscription: SubscriptionData | undefined,
-  installmentsNumber: number
+  installmentsNumber: number,
+  recurrenceNumber: number | null
 ): string {
+  // Check if it's a subscription-based payment (Recuperador Inteligente / Parcelamento Inteligente)
   if (subscription && (subscription.subscriber?.code || subscription.status)) {
-    // É uma recorrência/assinatura
+    // If recurrence_number exists and installments > 1, it's monthly installment payment
+    if (recurrenceNumber && recurrenceNumber > 0 && installmentsNumber > 1) {
+      return 'Recuperador Inteligente';
+    }
+    // Traditional subscription/recurring payment
     return 'Recorrência';
   } else if (installmentsNumber > 1) {
-    // Parcelamento padrão (mais de 1 parcela)
+    // Standard installment (credit card split)
     return 'Parcelamento Padrão';
   } else {
-    // Pagamento à vista
+    // One-time payment
     return 'À Vista';
   }
 }
@@ -326,18 +332,19 @@ serve(async (req) => {
         // Get installments number
         const installmentsNumber = purchase.payment?.installments_number || 1;
 
-        // Determine billing type (Recorrência, Parcelamento Padrão, or À Vista)
-        const billingType = determineBillingType(subscription, installmentsNumber);
-        console.log(`Billing type determined: ${billingType} (subscription: ${!!subscription}, installments: ${installmentsNumber})`);
+        // Extract subscription data FIRST (needed for billing type determination)
+        const subscriberCode = subscription?.subscriber?.code || null;
+        const subscriptionStatus = subscription?.status || null;
+        // recurrence_number comes from purchase (not subscription.plan) - indicates which installment is being paid
+        const recurrenceNumber = (purchase as any)?.recurrence_number || null;
+
+        // Determine billing type (Recorrência, Parcelamento Padrão, Recuperador Inteligente, or À Vista)
+        const billingType = determineBillingType(subscription, installmentsNumber, recurrenceNumber);
+        console.log(`Billing type determined: ${billingType} (subscription: ${!!subscription}, installments: ${installmentsNumber}, recurrence: ${recurrenceNumber})`);
 
         // Extract commissions
         const { marketplaceCommission, producerCommission } = extractCommissions(commissions);
         console.log(`Commissions - Marketplace: ${marketplaceCommission}, Producer: ${producerCommission}`);
-
-        // Extract subscription data
-        const subscriberCode = subscription?.subscriber?.code || null;
-        const subscriptionStatus = subscription?.status || null;
-        const recurrenceNumber = subscription?.plan?.recurrence_number || null;
         const dateNextCharge = subscription?.date_next_charge 
           ? new Date(subscription.date_next_charge).toISOString() 
           : null;

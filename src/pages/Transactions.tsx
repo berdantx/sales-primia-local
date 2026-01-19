@@ -72,6 +72,8 @@ function TransactionCard({ transaction, onClick }: { transaction: Transaction; o
             billingType={transaction.billing_type} 
             paymentMethod={transaction.payment_method}
             showPaymentMethod={false}
+            recurrenceNumber={transaction.recurrence_number}
+            totalInstallments={transaction.total_installments}
           />
         </div>
         <div className="flex justify-between items-end">
@@ -631,6 +633,8 @@ function Transactions() {
                         <BillingTypeBadge 
                           billingType={transaction.billing_type} 
                           paymentMethod={transaction.payment_method}
+                          recurrenceNumber={transaction.recurrence_number}
+                          totalInstallments={transaction.total_installments}
                         />
                       </TableCell>
                       <TableCell>
