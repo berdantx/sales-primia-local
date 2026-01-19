@@ -126,9 +126,10 @@ export function WebhookFilters({ filters, onFiltersChange }: WebhookFiltersProps
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="processed">Processados</SelectItem>
-            <SelectItem value="skipped">Ignorados</SelectItem>
+            <SelectItem value="warning">⚠️ Alertas</SelectItem>
             <SelectItem value="error">Erros</SelectItem>
             <SelectItem value="duplicate">Duplicatas</SelectItem>
+            <SelectItem value="skipped">Ignorados</SelectItem>
           </SelectContent>
         </Select>
 
