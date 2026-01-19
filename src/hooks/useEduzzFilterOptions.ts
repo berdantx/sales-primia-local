@@ -13,6 +13,7 @@ export interface EduzzFilterOptions {
   utm_sources: EduzzFilterOption[];
   utm_mediums: EduzzFilterOption[];
   utm_campaigns: EduzzFilterOption[];
+  utm_contents: EduzzFilterOption[];
 }
 
 export function useEduzzFilterOptions() {
@@ -36,6 +37,7 @@ export function useEduzzFilterOptions() {
         utm_sources: [],
         utm_mediums: [],
         utm_campaigns: [],
+        utm_contents: [],
       };
     },
     enabled: !!user,

@@ -21,6 +21,7 @@ export interface UseSalesTrendFilters<T> {
   productField?: keyof T;
   campaignField?: keyof T;
   originField?: keyof T;
+  adsField?: keyof T;
   valueField?: keyof T;
   valueMode?: 'count' | 'value';
 }
@@ -34,6 +35,7 @@ export function useSalesTrend<T>({
   productField = 'product' as keyof T,
   campaignField = 'utm_campaign' as keyof T,
   originField = 'sck_code' as keyof T,
+  adsField = 'utm_content' as keyof T,
   valueField = 'computed_value' as keyof T,
   valueMode = 'count',
 }: UseSalesTrendFilters<T>) {
@@ -47,7 +49,9 @@ export function useSalesTrend<T>({
       ? productField 
       : mode === 'campaigns' 
         ? campaignField 
-        : originField;
+        : mode === 'ads'
+          ? adsField
+          : originField;
 
     // Group by date (day or week)
     const dateGroups = new Map<string, Map<string, number>>();
@@ -111,7 +115,7 @@ export function useSalesTrend<T>({
       .sort((a, b) => a.date.localeCompare(b.date));
 
     return result;
-  }, [transactions, topItemNames, mode, groupBy, dateField, productField, campaignField, originField, valueField, valueMode]);
+  }, [transactions, topItemNames, mode, groupBy, dateField, productField, campaignField, originField, adsField, valueField, valueMode]);
 
   return { trendData };
 }

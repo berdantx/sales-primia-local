@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-export type SalesViewMode = 'products' | 'campaigns' | 'origins';
+export type SalesViewMode = 'products' | 'campaigns' | 'origins' | 'ads';
 
 export interface TopSalesItem {
   name: string;
@@ -17,6 +17,7 @@ export interface TopSalesFilters<T> {
   productField?: keyof T;
   campaignField?: keyof T;
   originField?: keyof T;
+  adsField?: keyof T;
   valueField?: keyof T;
 }
 
@@ -27,6 +28,7 @@ export function useTopSales<T>({
   productField = 'product' as keyof T,
   campaignField = 'utm_campaign' as keyof T,
   originField = 'sck_code' as keyof T,
+  adsField = 'utm_content' as keyof T,
   valueField = 'computed_value' as keyof T,
 }: TopSalesFilters<T>) {
   const topItems = useMemo(() => {
@@ -37,7 +39,9 @@ export function useTopSales<T>({
       ? productField 
       : mode === 'campaigns' 
         ? campaignField 
-        : originField;
+        : mode === 'ads'
+          ? adsField
+          : originField;
     
     // Determine related field (secondary grouping)
     const relatedField = mode === 'products' 
@@ -100,13 +104,15 @@ export function useTopSales<T>({
       ? productField 
       : mode === 'campaigns' 
         ? campaignField 
-        : originField;
+        : mode === 'ads'
+          ? adsField
+          : originField;
     return new Set(
       transactions
         .filter(t => t[primaryField])
         .map(t => t[primaryField] as string)
     ).size;
-  }, [transactions, mode, productField, campaignField, originField]);
+  }, [transactions, mode, productField, campaignField, originField, adsField]);
 
   return { topItems, totalCount };
 }

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Package, Target, MapPin, Trophy, Medal, Award, Info } from 'lucide-react';
+import { Package, Target, MapPin, Trophy, Medal, Award, Info, Megaphone } from 'lucide-react';
 import { TopSalesItem, SalesViewMode } from '@/hooks/useTopSales';
 import { Progress } from '@/components/ui/progress';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -16,6 +16,7 @@ interface TopSalesCardProps {
   selectedItem?: string | null;
   onItemClick?: (itemName: string | null) => void;
   showOrigins?: boolean;
+  showAds?: boolean;
   currency?: string;
 }
 
@@ -63,6 +64,7 @@ export function TopSalesCard({
   selectedItem, 
   onItemClick,
   showOrigins = false,
+  showAds = false,
   currency = 'BRL',
 }: TopSalesCardProps) {
   const getModeConfig = () => {
@@ -89,6 +91,14 @@ export function TopSalesCard({
           icon: MapPin,
           emptyMessage: 'Nenhuma origem (SCK) encontrada no período selecionado.',
           totalLabel: 'origens',
+          relatedLabel: 'Produtos',
+        };
+      case 'ads':
+        return {
+          title: 'Anúncios',
+          icon: Megaphone,
+          emptyMessage: 'Nenhum anúncio encontrado no período selecionado.',
+          totalLabel: 'anúncios',
           relatedLabel: 'Produtos',
         };
     }
@@ -154,6 +164,12 @@ export function TopSalesCard({
               <Target className="h-3 w-3" />
               <span className="hidden sm:inline ml-1 text-xs">Campanhas</span>
             </ToggleGroupItem>
+            {showAds && (
+              <ToggleGroupItem value="ads" aria-label="Ver anúncios" className="h-7 px-2">
+                <Megaphone className="h-3 w-3" />
+                <span className="hidden sm:inline ml-1 text-xs">Anúncios</span>
+              </ToggleGroupItem>
+            )}
             {showOrigins && (
               <ToggleGroupItem value="origins" aria-label="Ver origens" className="h-7 px-2">
                 <MapPin className="h-3 w-3" />
