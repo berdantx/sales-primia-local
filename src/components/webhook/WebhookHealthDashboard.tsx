@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle, AlertTriangle, XCircle, Activity } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PeriodSelector } from './PeriodSelector';
 import type { WebhookLog } from '@/hooks/useWebhookLogs';
 
 interface WebhookHealthDashboardProps {
@@ -55,8 +56,28 @@ function StatusBadge({ status }: { status: 'healthy' | 'warning' | 'critical' })
 }
 
 export function WebhookHealthDashboard({ logs, isLoading }: WebhookHealthDashboardProps) {
+  const [periodStart, setPeriodStart] = useState<Date | undefined>();
+  const [periodEnd, setPeriodEnd] = useState<Date | undefined>();
+
+  const handlePeriodChange = (startDate: Date | undefined, endDate: Date | undefined) => {
+    setPeriodStart(startDate);
+    setPeriodEnd(endDate);
+  };
+
+  const filteredLogs = useMemo(() => {
+    if (!logs) return [];
+    if (!periodStart && !periodEnd) return logs;
+    
+    return logs.filter((log) => {
+      const logDate = new Date(log.created_at);
+      if (periodStart && logDate < periodStart) return false;
+      if (periodEnd && logDate > periodEnd) return false;
+      return true;
+    });
+  }, [logs, periodStart, periodEnd]);
+
   const platformsHealth = useMemo(() => {
-    if (!logs || logs.length === 0) return [];
+    if (filteredLogs.length === 0) return [];
 
     const platforms = [
       { 
@@ -77,7 +98,7 @@ export function WebhookHealthDashboard({ logs, isLoading }: WebhookHealthDashboa
     ];
 
     return platforms.map((platform) => {
-      const platformLogs = logs.filter(platform.filter);
+      const platformLogs = filteredLogs.filter(platform.filter);
       const total = platformLogs.length;
       
       if (total === 0) {
@@ -114,7 +135,7 @@ export function WebhookHealthDashboard({ logs, isLoading }: WebhookHealthDashboa
         color: platform.color,
       };
     }).filter(p => p.total > 0);
-  }, [logs]);
+  }, [filteredLogs]);
 
   const overallHealth = useMemo(() => {
     if (platformsHealth.length === 0) return { status: 'healthy' as const, successRate: 100, totalLogs: 0 };
@@ -152,12 +173,13 @@ export function WebhookHealthDashboard({ logs, isLoading }: WebhookHealthDashboa
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Activity className="h-4 w-4" />
             Saúde dos Webhooks
           </CardTitle>
           <div className="flex items-center gap-2">
+            <PeriodSelector onPeriodChange={handlePeriodChange} />
             <StatusIcon status={overallHealth.status} />
             <StatusBadge status={overallHealth.status} />
           </div>

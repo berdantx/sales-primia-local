@@ -1,8 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Copy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Copy, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PeriodSelector } from './PeriodSelector';
+import { generateDuplicatesCsv, generateDuplicatesExcel } from '@/lib/export/generateDuplicatesReport';
 import type { WebhookLog } from '@/hooks/useWebhookLogs';
 
 interface DuplicatesReportCardProps {
@@ -18,10 +22,30 @@ interface PlatformDuplicates {
 }
 
 export function DuplicatesReportCard({ logs, isLoading }: DuplicatesReportCardProps) {
-  const duplicatesData = useMemo(() => {
-    if (!logs) return { platforms: [], total: 0 };
+  const [periodStart, setPeriodStart] = useState<Date | undefined>();
+  const [periodEnd, setPeriodEnd] = useState<Date | undefined>();
 
-    const duplicateLogs = logs.filter((log) => log.status === 'duplicate');
+  const handlePeriodChange = (startDate: Date | undefined, endDate: Date | undefined) => {
+    setPeriodStart(startDate);
+    setPeriodEnd(endDate);
+  };
+
+  const filteredLogs = useMemo(() => {
+    if (!logs) return [];
+    if (!periodStart && !periodEnd) return logs;
+    
+    return logs.filter((log) => {
+      const logDate = new Date(log.created_at);
+      if (periodStart && logDate < periodStart) return false;
+      if (periodEnd && logDate > periodEnd) return false;
+      return true;
+    });
+  }, [logs, periodStart, periodEnd]);
+
+  const duplicatesData = useMemo(() => {
+    if (filteredLogs.length === 0) return { platforms: [], total: 0 };
+
+    const duplicateLogs = filteredLogs.filter((log) => log.status === 'duplicate');
     
     // Group by platform
     const hotmartCount = duplicateLogs.filter((log) => 
@@ -46,7 +70,21 @@ export function DuplicatesReportCard({ logs, isLoading }: DuplicatesReportCardPr
       platforms,
       total: duplicateLogs.length,
     };
-  }, [logs]);
+  }, [filteredLogs]);
+
+  const handleExportCsv = () => {
+    generateDuplicatesCsv({
+      logs: filteredLogs,
+      dateRange: periodStart && periodEnd ? { start: periodStart, end: periodEnd } : undefined,
+    });
+  };
+
+  const handleExportExcel = () => {
+    generateDuplicatesExcel({
+      logs: filteredLogs,
+      dateRange: periodStart && periodEnd ? { start: periodStart, end: periodEnd } : undefined,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -68,10 +106,13 @@ export function DuplicatesReportCard({ logs, isLoading }: DuplicatesReportCardPr
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Copy className="h-4 w-4 text-purple-500" />
-            Duplicatas por Plataforma
-          </CardTitle>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Copy className="h-4 w-4 text-purple-500" />
+              Duplicatas por Plataforma
+            </CardTitle>
+            <PeriodSelector onPeriodChange={handlePeriodChange} />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground text-center py-4">
@@ -85,13 +126,36 @@ export function DuplicatesReportCard({ logs, isLoading }: DuplicatesReportCardPr
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Copy className="h-4 w-4 text-purple-500" />
-          Duplicatas por Plataforma
-          <Badge variant="secondary" className="ml-auto">
-            {duplicatesData.total} total
-          </Badge>
-        </CardTitle>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Copy className="h-4 w-4 text-purple-500" />
+            Duplicatas por Plataforma
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <PeriodSelector onPeriodChange={handlePeriodChange} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8">
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCsv}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exportar Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Badge variant="secondary">
+              {duplicatesData.total} total
+            </Badge>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
