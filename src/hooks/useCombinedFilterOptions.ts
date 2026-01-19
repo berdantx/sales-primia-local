@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { useFilterOptions, FilterOption } from './useFilterOptions';
 import { useTmbFilterOptions, TmbFilterOption } from './useTmbFilterOptions';
+import { useEduzzFilterOptions, EduzzFilterOption } from './useEduzzFilterOptions';
 
 export interface CombinedFilterTotals {
   hotmart: number;
   tmb: number;
+  eduzz: number;
   combined: number;
 }
 
@@ -21,6 +23,12 @@ export interface CombinedFilterOptions {
     utmMediums: TmbFilterOption[];
     utmCampaigns: TmbFilterOption[];
   } | null;
+  eduzz: {
+    products: EduzzFilterOption[];
+    utmSources: EduzzFilterOption[];
+    utmMediums: EduzzFilterOption[];
+    utmCampaigns: EduzzFilterOption[];
+  } | null;
   totals: CombinedFilterTotals;
   isLoading: boolean;
 }
@@ -32,6 +40,7 @@ function sumCounts(options: { count: number }[]): number {
 export function useCombinedFilterOptions(): CombinedFilterOptions {
   const { data: hotmartData, isLoading: hotmartLoading } = useFilterOptions();
   const { data: tmbData, isLoading: tmbLoading } = useTmbFilterOptions();
+  const { data: eduzzData, isLoading: eduzzLoading } = useEduzzFilterOptions();
 
   const totals = useMemo(() => {
     // Para Hotmart, usamos sckCodes como referência (cada transação tem um sck_code)
@@ -44,12 +53,18 @@ export function useCombinedFilterOptions(): CombinedFilterOptions {
       ? sumCounts(tmbData.products) 
       : 0;
 
+    // Para Eduzz, usamos products como referência
+    const eduzzTotal = eduzzData?.products 
+      ? sumCounts(eduzzData.products) 
+      : 0;
+
     return {
       hotmart: hotmartTotal,
       tmb: tmbTotal,
-      combined: hotmartTotal + tmbTotal,
+      eduzz: eduzzTotal,
+      combined: hotmartTotal + tmbTotal + eduzzTotal,
     };
-  }, [hotmartData, tmbData]);
+  }, [hotmartData, tmbData, eduzzData]);
 
   const tmb = useMemo(() => {
     if (!tmbData) return null;
@@ -61,10 +76,21 @@ export function useCombinedFilterOptions(): CombinedFilterOptions {
     };
   }, [tmbData]);
 
+  const eduzz = useMemo(() => {
+    if (!eduzzData) return null;
+    return {
+      products: eduzzData.products || [],
+      utmSources: eduzzData.utm_sources || [],
+      utmMediums: eduzzData.utm_mediums || [],
+      utmCampaigns: eduzzData.utm_campaigns || [],
+    };
+  }, [eduzzData]);
+
   return {
     hotmart: hotmartData || null,
     tmb,
+    eduzz,
     totals,
-    isLoading: hotmartLoading || tmbLoading,
+    isLoading: hotmartLoading || tmbLoading || eduzzLoading,
   };
 }

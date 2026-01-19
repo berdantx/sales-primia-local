@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, MapPin, CreditCard, Package, RefreshCw, X, Check, Link2, BarChart3, Target } from 'lucide-react';
+import { Search, MapPin, CreditCard, Package, RefreshCw, X, Check, Link2, BarChart3, Target, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -144,7 +144,7 @@ interface FilterSheetProps {
 export function FilterSheet({ trigger }: FilterSheetProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const { hotmart, tmb, totals, isLoading } = useCombinedFilterOptions();
+  const { hotmart, tmb, eduzz, totals, isLoading } = useCombinedFilterOptions();
   const {
     // Hotmart filters
     billingType,
@@ -164,15 +164,26 @@ export function FilterSheet({ trigger }: FilterSheetProps) {
     setUtmSource,
     setUtmMedium,
     setUtmCampaign,
+    // Eduzz filters
+    eduzzProduct,
+    eduzzUtmSource,
+    eduzzUtmMedium,
+    eduzzUtmCampaign,
+    setEduzzProduct,
+    setEduzzUtmSource,
+    setEduzzUtmMedium,
+    setEduzzUtmCampaign,
     // Common
     platform,
     setPlatform,
     clearAllFilters,
     clearHotmartFilters,
     clearTmbFilters,
+    clearEduzzFilters,
     activeFiltersCount,
     hotmartFiltersCount,
     tmbFiltersCount,
+    eduzzFiltersCount,
   } = useFilter();
 
   const handleClearAll = () => {
@@ -185,6 +196,8 @@ export function FilterSheet({ trigger }: FilterSheetProps) {
       clearHotmartFilters();
     } else if (platform === 'tmb') {
       clearTmbFilters();
+    } else if (platform === 'eduzz') {
+      clearEduzzFilters();
     } else {
       clearAllFilters();
     }
@@ -197,6 +210,8 @@ export function FilterSheet({ trigger }: FilterSheetProps) {
         return hotmartFiltersCount;
       case 'tmb':
         return tmbFiltersCount;
+      case 'eduzz':
+        return eduzzFiltersCount;
       default:
         return activeFiltersCount;
     }
@@ -204,6 +219,7 @@ export function FilterSheet({ trigger }: FilterSheetProps) {
 
   const showHotmartFilters = platform === 'all' || platform === 'hotmart';
   const showTmbFilters = platform === 'all' || platform === 'tmb';
+  const showEduzzFilters = platform === 'all' || platform === 'eduzz';
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -228,23 +244,29 @@ export function FilterSheet({ trigger }: FilterSheetProps) {
         {/* Platform Tabs */}
         <div className="mt-4">
           <Tabs value={platform} onValueChange={(v) => setPlatform(v as PlatformType)}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="all" className="text-xs sm:text-sm">
                 Todas
-                <Badge variant="secondary" className="ml-1.5 h-5 text-[10px] px-1.5">
+                <Badge variant="secondary" className="ml-1 h-5 text-[10px] px-1">
                   {totals.combined}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="hotmart" className="text-xs sm:text-sm">
                 Hotmart
-                <Badge variant="secondary" className="ml-1.5 h-5 text-[10px] px-1.5">
+                <Badge variant="secondary" className="ml-1 h-5 text-[10px] px-1">
                   {totals.hotmart}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="tmb" className="text-xs sm:text-sm">
                 TMB
-                <Badge variant="secondary" className="ml-1.5 h-5 text-[10px] px-1.5">
+                <Badge variant="secondary" className="ml-1 h-5 text-[10px] px-1">
                   {totals.tmb}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="eduzz" className="text-xs sm:text-sm">
+                Eduzz
+                <Badge variant="secondary" className="ml-1 h-5 text-[10px] px-1">
+                  {totals.eduzz}
                 </Badge>
               </TabsTrigger>
             </TabsList>
@@ -388,6 +410,65 @@ export function FilterSheet({ trigger }: FilterSheetProps) {
               {showTmbFilters && !tmb && (
                 <div className="py-8 text-center text-sm text-muted-foreground">
                   Nenhum dado TMB disponível
+                </div>
+              )}
+
+              {/* Eduzz Filters */}
+              {showEduzzFilters && eduzz && (
+                <>
+                  {platform === 'all' && (
+                    <div className="flex items-center gap-2 py-2 px-1 mt-4">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Eduzz
+                      </span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+                  )}
+
+                  <FilterSection
+                    title="Produtos Eduzz"
+                    icon={<Package className="h-4 w-4 text-emerald-500" />}
+                    options={eduzz.products || []}
+                    selectedValue={eduzzProduct}
+                    onSelect={setEduzzProduct}
+                    searchTerm={searchTerm}
+                    defaultOpen={platform === 'eduzz'}
+                  />
+
+                  <FilterSection
+                    title="UTM Source"
+                    icon={<Link2 className="h-4 w-4 text-indigo-500" />}
+                    options={eduzz.utmSources || []}
+                    selectedValue={eduzzUtmSource}
+                    onSelect={setEduzzUtmSource}
+                    searchTerm={searchTerm}
+                  />
+
+                  <FilterSection
+                    title="UTM Medium"
+                    icon={<BarChart3 className="h-4 w-4 text-violet-500" />}
+                    options={eduzz.utmMediums || []}
+                    selectedValue={eduzzUtmMedium}
+                    onSelect={setEduzzUtmMedium}
+                    searchTerm={searchTerm}
+                  />
+
+                  <FilterSection
+                    title="UTM Campaign"
+                    icon={<Target className="h-4 w-4 text-rose-500" />}
+                    options={eduzz.utmCampaigns || []}
+                    selectedValue={eduzzUtmCampaign}
+                    onSelect={setEduzzUtmCampaign}
+                    searchTerm={searchTerm}
+                  />
+                </>
+              )}
+
+              {/* Empty state for Eduzz when no data */}
+              {showEduzzFilters && !eduzz && (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  Nenhum dado Eduzz disponível
                 </div>
               )}
             </div>
