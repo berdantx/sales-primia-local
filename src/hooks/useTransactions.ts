@@ -19,6 +19,7 @@ export interface Transaction {
   purchase_date: string | null;
   created_at: string;
   recurrence_number: number | null;
+  source: string | null;
 }
 
 export interface TransactionFilters {

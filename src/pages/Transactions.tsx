@@ -48,6 +48,7 @@ import {
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
 import { BillingTypeBadge } from '@/components/transactions/BillingTypeBadge';
+import { SourceBadge } from '@/components/transactions/SourceBadge';
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 
 
@@ -65,7 +66,10 @@ function TransactionCard({ transaction, onClick }: { transaction: Transaction; o
             <p className="font-medium text-sm truncate">{transaction.product || 'Sem produto'}</p>
             <p className="text-xs text-muted-foreground truncate">{transaction.buyer_name || '-'}</p>
           </div>
-          <Badge variant="outline" className="ml-2 text-xs shrink-0">{transaction.currency}</Badge>
+          <div className="flex items-center gap-1 ml-2 shrink-0">
+            <SourceBadge source={transaction.source} />
+            <Badge variant="outline" className="text-xs">{transaction.currency}</Badge>
+          </div>
         </div>
         <div className="flex justify-between items-center mb-2">
           <BillingTypeBadge 
@@ -122,6 +126,7 @@ function Transactions() {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | null>(null);
   const [sckCodeFilter, setSckCodeFilter] = useState<string | null>(null);
   const [productFilter, setProductFilter] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
 
   // Debounce search to avoid excessive updates
   useEffect(() => {
@@ -214,10 +219,14 @@ function Transactions() {
       const matchesSckCode = !sckCodeFilter || t.sck_code === sckCodeFilter;
       const matchesProduct = !productFilter || t.product === productFilter;
       
+      // Source filter (csv = anything that's not 'webhook')
+      const matchesSource = !sourceFilter || 
+        (sourceFilter === 'webhook' ? t.source === 'webhook' : t.source !== 'webhook');
+      
       return matchesSearch && matchesCurrency && matchesCountry && 
-             matchesBillingType && matchesPaymentMethod && matchesSckCode && matchesProduct;
+             matchesBillingType && matchesPaymentMethod && matchesSckCode && matchesProduct && matchesSource;
     });
-  }, [transactions, debouncedSearch, currencyFilter, countryFilter, billingTypeFilter, paymentMethodFilter, sckCodeFilter, productFilter]);
+  }, [transactions, debouncedSearch, currencyFilter, countryFilter, billingTypeFilter, paymentMethodFilter, sckCodeFilter, productFilter, sourceFilter]);
 
   // Paginate
   const paginatedTransactions = useMemo(() => {
@@ -325,11 +334,12 @@ function Transactions() {
     setPaymentMethodFilter(null);
     setSckCodeFilter(null);
     setProductFilter(null);
+    setSourceFilter(null);
     setCurrentPage(1);
   };
 
   const hasActiveFilters = search || currencyFilter !== 'all' || countryFilter !== 'all' || 
-                           billingTypeFilter || paymentMethodFilter || sckCodeFilter || productFilter;
+                           billingTypeFilter || paymentMethodFilter || sckCodeFilter || productFilter || sourceFilter;
 
   if (isLoading || isLoadingStats) {
     return (
@@ -549,10 +559,12 @@ function Transactions() {
               paymentMethod={paymentMethodFilter}
               sckCode={sckCodeFilter}
               product={productFilter}
+              source={sourceFilter}
               onBillingTypeChange={setBillingTypeFilter}
               onPaymentMethodChange={setPaymentMethodFilter}
               onSckCodeChange={setSckCodeFilter}
               onProductChange={setProductFilter}
+              onSourceChange={setSourceFilter}
               totalFilteredTransactions={filteredTransactions.length}
             />
           </CardContent>
@@ -597,6 +609,7 @@ function Transactions() {
                     <TableHead className="min-w-[150px]">Produto</TableHead>
                     <TableHead className="min-w-[150px]">Comprador</TableHead>
                     <TableHead className="min-w-[100px]">Tipo</TableHead>
+                    <TableHead>Origem</TableHead>
                     <TableHead>Moeda</TableHead>
                     <TableHead className="hidden lg:table-cell">País</TableHead>
                     <TableHead className="text-right min-w-[100px]">Valor</TableHead>
@@ -638,6 +651,9 @@ function Transactions() {
                         />
                       </TableCell>
                       <TableCell>
+                        <SourceBadge source={transaction.source} />
+                      </TableCell>
+                      <TableCell>
                         <Badge variant="outline">{transaction.currency}</Badge>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">{transaction.country || '-'}</TableCell>
@@ -670,7 +686,7 @@ function Transactions() {
                   ))}
                   {paginatedTransactions.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12">
+                      <TableCell colSpan={9} className="text-center py-12">
                         <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <p className="text-muted-foreground">
                           {hasActiveFilters 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Filter, X, ShoppingCart, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { Filter, X, ShoppingCart, Package, ChevronDown, ChevronUp, FileSpreadsheet, Webhook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -17,10 +17,12 @@ interface AdvancedFiltersProps {
   paymentMethod: string | null;
   sckCode: string | null;
   product: string | null;
+  source?: string | null;
   onBillingTypeChange: (value: string | null) => void;
   onPaymentMethodChange: (value: string | null) => void;
   onSckCodeChange: (value: string | null) => void;
   onProductChange: (value: string | null) => void;
+  onSourceChange?: (value: string | null) => void;
   totalFilteredTransactions?: number;
 }
 
@@ -29,25 +31,28 @@ export function AdvancedFilters({
   paymentMethod,
   sckCode,
   product,
+  source,
   onBillingTypeChange,
   onPaymentMethodChange,
   onSckCodeChange,
   onProductChange,
+  onSourceChange,
   totalFilteredTransactions,
 }: AdvancedFiltersProps) {
   const { data: filterOptions, isLoading } = useFilterOptions();
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const hasActiveFilters = billingType || paymentMethod || sckCode || product;
+  const hasActiveFilters = billingType || paymentMethod || sckCode || product || source;
 
   const clearAllFilters = () => {
     onBillingTypeChange(null);
     onPaymentMethodChange(null);
     onSckCodeChange(null);
     onProductChange(null);
+    onSourceChange?.(null);
   };
 
-  const activeFiltersCount = [billingType, paymentMethod, sckCode, product].filter(Boolean).length;
+  const activeFiltersCount = [billingType, paymentMethod, sckCode, product, source].filter(Boolean).length;
 
   return (
     <div className="space-y-3">
@@ -171,6 +176,32 @@ export function AdvancedFilters({
               ))}
             </SelectContent>
           </Select>
+
+          {onSourceChange && (
+            <Select
+              value={source || 'all'}
+              onValueChange={(value) => onSourceChange(value === 'all' ? null : value)}
+            >
+              <SelectTrigger className="w-full sm:w-[130px] h-8 sm:h-9 text-xs sm:text-sm bg-background">
+                <SelectValue placeholder="Origem" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                <SelectItem value="all">Todas origens</SelectItem>
+                <SelectItem value="webhook">
+                  <span className="flex items-center gap-2">
+                    <Webhook className="h-3 w-3 text-emerald-500" />
+                    <span>Webhook</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="csv">
+                  <span className="flex items-center gap-2">
+                    <FileSpreadsheet className="h-3 w-3 text-blue-500" />
+                    <span>CSV</span>
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {hasActiveFilters && (
@@ -227,6 +258,17 @@ export function AdvancedFilters({
               <span className="hidden sm:inline">Produto:</span> {product.length > 15 ? `${product.slice(0, 15)}...` : product}
               <button
                 onClick={() => onProductChange(null)}
+                className="ml-1 hover:text-destructive"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {source && onSourceChange && (
+            <Badge variant="secondary" className="text-xs">
+              <span className="hidden sm:inline">Origem:</span> {source === 'webhook' ? 'Webhook' : 'CSV'}
+              <button
+                onClick={() => onSourceChange(null)}
                 className="ml-1 hover:text-destructive"
               >
                 <X className="h-3 w-3" />
