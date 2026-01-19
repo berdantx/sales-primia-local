@@ -112,28 +112,31 @@ function determineBillingType(
   recurrenceNumber: number | null,
   paymentType: string
 ): string {
-  // Check if it's a subscription-based payment (Recuperador Inteligente)
-  if (subscription && (subscription.subscriber?.code || subscription.status)) {
-    // If recurrence_number exists and installments > 1, it's a recovered monthly installment payment
-    if (recurrenceNumber && recurrenceNumber > 0 && installmentsNumber > 1) {
-      return 'Recuperador Inteligente';
-    }
-    // Traditional subscription/recurring payment
-    return 'Recorrência';
-  }
-  
-  // Parcelamento Inteligente: monthly payment via Hotmart (boleto/pix parcelado)
-  // payment_type = 'HOTMART_INSTALLMENTS' indicates Hotmart manages the monthly collection
+  // PRIORIDADE 1: Parcelamento Inteligente
+  // payment_type = 'HOTMART_INSTALLMENTS' indica que o cliente escolheu
+  // parcelar via Hotmart desde o início (boleto/pix mensal gerenciado pela Hotmart)
+  // Esta verificação deve vir ANTES da verificação de subscription
   if (paymentType === 'HOTMART_INSTALLMENTS' && installmentsNumber > 1) {
     return 'Parcelamento Inteligente';
   }
   
-  // Standard installment (credit card split - all charges at once)
+  // PRIORIDADE 2: Verificar subscription (Recuperador Inteligente ou Recorrência)
+  if (subscription && (subscription.subscriber?.code || subscription.status)) {
+    // Se tem recurrence_number + parcelas > 1, mas NÃO é HOTMART_INSTALLMENTS,
+    // significa que a Hotmart recuperou uma venda e ofereceu parcelamento (pix/boleto)
+    if (recurrenceNumber && recurrenceNumber > 0 && installmentsNumber > 1) {
+      return 'Recuperador Inteligente';
+    }
+    // Recorrência tradicional (assinatura mensal)
+    return 'Recorrência';
+  }
+  
+  // PRIORIDADE 3: Parcelamento Padrão (cartão de crédito parcelado - todas parcelas cobradas de uma vez)
   if (installmentsNumber > 1) {
     return 'Parcelamento Padrão';
   }
   
-  // One-time payment
+  // Pagamento à vista
   return 'À Vista';
 }
 
