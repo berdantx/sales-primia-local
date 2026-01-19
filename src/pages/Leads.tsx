@@ -6,6 +6,7 @@ import { useLeads, useLeadStats } from '@/hooks/useLeads';
 import { useTopItems, ViewMode } from '@/hooks/useTopAds';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
 import { AdTrendChart } from '@/components/leads/AdTrendChart';
+import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
 import { GroupBy } from '@/hooks/useAdTrend';
 import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
@@ -597,6 +598,21 @@ function Leads() {
             />
           </div>
         </motion.div>
+
+        {/* Geographic Distribution */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <LeadsByCountryChart
+            byCountry={stats?.byCountry || {}}
+            byCity={stats?.byCity || {}}
+            isLoading={isLoadingStats}
+            totalLeads={stats?.total || 0}
+          />
+        </motion.div>
+
         {/* Selected Filter Indicator */}
         {selectedTopItem && (
           <motion.div

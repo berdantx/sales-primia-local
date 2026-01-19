@@ -68,6 +68,55 @@ function isPrivateOrLocalIp(ip: string | null): boolean {
   return false;
 }
 
+// Lookup geolocation for an IP address
+interface GeolocationResult {
+  country: string | null;
+  country_code: string | null;
+  city: string | null;
+  region: string | null;
+  success: boolean;
+}
+
+async function lookupGeolocation(ip: string | null): Promise<GeolocationResult> {
+  if (!ip || isPrivateOrLocalIp(ip)) {
+    return {
+      country: null,
+      country_code: null,
+      city: null,
+      region: null,
+      success: false,
+    };
+  }
+
+  try {
+    // Use ip-api.com free API
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,message,country,countryCode,regionName,city`);
+    
+    if (!response.ok) {
+      console.error(`Geolocation API error: ${response.status}`);
+      return { country: null, country_code: null, city: null, region: null, success: false };
+    }
+
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      return {
+        country: data.country || null,
+        country_code: data.countryCode || null,
+        city: data.city || null,
+        region: data.regionName || null,
+        success: true,
+      };
+    } else {
+      console.warn(`Geolocation lookup failed for ${ip}: ${data.message}`);
+      return { country: null, country_code: null, city: null, region: null, success: false };
+    }
+  } catch (error) {
+    console.error('Geolocation lookup error:', error);
+    return { country: null, country_code: null, city: null, region: null, success: false };
+  }
+}
+
 // Parse Active Campaign format: contact[field] and contact[fields][field]
 function parseActiveCampaignPayload(body: Record<string, string>): LeadData {
   return {
@@ -473,6 +522,10 @@ serve(async (req) => {
       isPayloadIpPrivate: isPrivateOrLocalIp(payloadIp)
     });
 
+    // Lookup geolocation for the IP
+    const geo = await lookupGeolocation(finalIpAddress);
+    console.log('Geolocation result:', geo);
+
     // Prepare lead record
     const leadRecord = {
       client_id: resolvedClientId,
@@ -482,6 +535,10 @@ serve(async (req) => {
       last_name: leadData.last_name,
       phone: leadData.phone,
       ip_address: finalIpAddress,
+      country: geo.country,
+      country_code: geo.country_code,
+      city: geo.city,
+      region: geo.region,
       organization: leadData.organization,
       customer_account: leadData.customer_account,
       tags: leadData.tags,

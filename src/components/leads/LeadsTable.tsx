@@ -17,7 +17,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { formatDateTimeBR } from '@/lib/dateUtils';
-import { FileSpreadsheet, Eye, FlaskConical, Building2 } from 'lucide-react';
+import { FileSpreadsheet, Eye, FlaskConical, Building2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LeadDetailDialog } from './LeadDetailDialog';
 import { useClients } from '@/hooks/useClients';
@@ -86,8 +86,16 @@ function LeadCard({ lead, onViewDetails }: { lead: Lead; onViewDetails: (lead: L
           </Badge>
         </div>
         <div className="flex justify-between items-end">
-          <div className="text-xs text-muted-foreground">
-            {formatDateTimeBR(lead.created_at, 'dd/MM/yy HH:mm')}
+          <div className="flex flex-col gap-0.5">
+            <div className="text-xs text-muted-foreground">
+              {formatDateTimeBR(lead.created_at, 'dd/MM/yy HH:mm')}
+            </div>
+            {lead.country && (
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {lead.city ? `${lead.city}, ${lead.country}` : lead.country}
+              </div>
+            )}
           </div>
           <div className="flex gap-1 flex-wrap justify-end">
             {lead.utm_source && (
@@ -170,6 +178,7 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                   <TableHead className="min-w-[150px]">Nome</TableHead>
                   <TableHead className="min-w-[180px]">Email</TableHead>
                   <TableHead>Telefone</TableHead>
+                  <TableHead>Localização</TableHead>
                   <TableHead>Fonte</TableHead>
                   <TableHead>UTM Source</TableHead>
                   <TableHead className="min-w-[150px]">Tags</TableHead>
@@ -181,7 +190,9 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                   const tags = parseTags(lead.tags);
                   const source = lead.source || 'desconhecido';
                   const isTest = isTestLead(lead.tags);
-                  
+                  const locationLabel = lead.city && lead.country 
+                    ? `${lead.city}, ${lead.country_code || lead.country}`
+                    : lead.country || null;
                   return (
                     <TableRow 
                       key={lead.id} 
@@ -222,6 +233,25 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                       </TableCell>
                       <TableCell className="text-sm">
                         {lead.phone || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {locationLabel ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-sm flex items-center gap-1 cursor-help">
+                                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                                  {locationLabel}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">{lead.city}, {lead.region}, {lead.country}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge 

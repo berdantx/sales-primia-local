@@ -619,7 +619,10 @@ export type Database = {
       }
       leads: {
         Row: {
+          city: string | null
           client_id: string | null
+          country: string | null
+          country_code: string | null
           created_at: string | null
           customer_account: string | null
           email: string
@@ -632,6 +635,7 @@ export type Database = {
           page_url: string | null
           phone: string | null
           raw_payload: Json | null
+          region: string | null
           series_id: string | null
           source: string | null
           tags: string | null
@@ -644,7 +648,10 @@ export type Database = {
           utm_term: string | null
         }
         Insert: {
+          city?: string | null
           client_id?: string | null
+          country?: string | null
+          country_code?: string | null
           created_at?: string | null
           customer_account?: string | null
           email: string
@@ -657,6 +664,7 @@ export type Database = {
           page_url?: string | null
           phone?: string | null
           raw_payload?: Json | null
+          region?: string | null
           series_id?: string | null
           source?: string | null
           tags?: string | null
@@ -669,7 +677,10 @@ export type Database = {
           utm_term?: string | null
         }
         Update: {
+          city?: string | null
           client_id?: string | null
+          country?: string | null
+          country_code?: string | null
           created_at?: string | null
           customer_account?: string | null
           email?: string
@@ -682,6 +693,7 @@ export type Database = {
           page_url?: string | null
           phone?: string | null
           raw_payload?: Json | null
+          region?: string | null
           series_id?: string | null
           source?: string | null
           tags?: string | null
