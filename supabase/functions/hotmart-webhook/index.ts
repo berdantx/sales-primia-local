@@ -109,23 +109,32 @@ interface HotmartWebhookEvent {
 function determineBillingType(
   subscription: SubscriptionData | undefined,
   installmentsNumber: number,
-  recurrenceNumber: number | null
+  recurrenceNumber: number | null,
+  paymentType: string
 ): string {
-  // Check if it's a subscription-based payment (Recuperador Inteligente / Parcelamento Inteligente)
+  // Check if it's a subscription-based payment (Recuperador Inteligente)
   if (subscription && (subscription.subscriber?.code || subscription.status)) {
-    // If recurrence_number exists and installments > 1, it's monthly installment payment
+    // If recurrence_number exists and installments > 1, it's a recovered monthly installment payment
     if (recurrenceNumber && recurrenceNumber > 0 && installmentsNumber > 1) {
       return 'Recuperador Inteligente';
     }
     // Traditional subscription/recurring payment
     return 'Recorrência';
-  } else if (installmentsNumber > 1) {
-    // Standard installment (credit card split)
-    return 'Parcelamento Padrão';
-  } else {
-    // One-time payment
-    return 'À Vista';
   }
+  
+  // Parcelamento Inteligente: monthly payment via Hotmart (boleto/pix parcelado)
+  // payment_type = 'HOTMART_INSTALLMENTS' indicates Hotmart manages the monthly collection
+  if (paymentType === 'HOTMART_INSTALLMENTS' && installmentsNumber > 1) {
+    return 'Parcelamento Inteligente';
+  }
+  
+  // Standard installment (credit card split - all charges at once)
+  if (installmentsNumber > 1) {
+    return 'Parcelamento Padrão';
+  }
+  
+  // One-time payment
+  return 'À Vista';
 }
 
 // Helper function to extract commissions
@@ -338,9 +347,9 @@ serve(async (req) => {
         // recurrence_number comes from purchase (not subscription.plan) - indicates which installment is being paid
         const recurrenceNumber = (purchase as any)?.recurrence_number || null;
 
-        // Determine billing type (Recorrência, Parcelamento Padrão, Recuperador Inteligente, or À Vista)
-        const billingType = determineBillingType(subscription, installmentsNumber, recurrenceNumber);
-        console.log(`Billing type determined: ${billingType} (subscription: ${!!subscription}, installments: ${installmentsNumber}, recurrence: ${recurrenceNumber})`);
+        // Determine billing type (Recorrência, Parcelamento Padrão, Recuperador/Parcelamento Inteligente, or À Vista)
+        const billingType = determineBillingType(subscription, installmentsNumber, recurrenceNumber, paymentType);
+        console.log(`Billing type determined: ${billingType} (subscription: ${!!subscription}, installments: ${installmentsNumber}, recurrence: ${recurrenceNumber}, paymentType: ${paymentType})`);
 
         // Extract commissions
         const { marketplaceCommission, producerCommission } = extractCommissions(commissions);
