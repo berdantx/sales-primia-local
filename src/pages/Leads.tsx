@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useLeads, useLeadStats } from '@/hooks/useLeads';
+import { useTopAds } from '@/hooks/useTopAds';
+import { TopAdsCard } from '@/components/leads/TopAdsCard';
 import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,6 +82,7 @@ function Leads() {
 
   const { data: leads, isLoading } = useLeads(isReady ? filters : undefined);
   const { stats, isLoading: isLoadingStats } = useLeadStats(isReady ? filters : undefined);
+  const { topAds, totalAdsCount } = useTopAds({ leads });
 
   // Get unique sources and utm values for filters with counts
   const filterOptions = useMemo(() => {
@@ -509,13 +512,19 @@ function Leads() {
           </CardContent>
         </Card>
 
-        {/* Chart */}
+        {/* Chart + Top Ads */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-4"
         >
-          <LeadsByDayChart data={stats?.byDay || {}} isLoading={isLoadingStats} />
+          <div className="lg:col-span-2">
+            <LeadsByDayChart data={stats?.byDay || {}} isLoading={isLoadingStats} />
+          </div>
+          <div className="lg:col-span-1">
+            <TopAdsCard topAds={topAds} totalAdsCount={totalAdsCount} isLoading={isLoading} />
+          </div>
         </motion.div>
 
 
