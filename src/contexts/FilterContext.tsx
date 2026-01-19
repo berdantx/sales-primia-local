@@ -3,7 +3,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import { useClients } from '@/hooks/useClients';
 import { useUserRole } from '@/hooks/useUserRole';
 
-export type PlatformType = 'all' | 'hotmart' | 'tmb';
+export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz';
 
 interface FilterContextType {
   // Hotmart filters
@@ -16,6 +16,11 @@ interface FilterContextType {
   utmSource: string | null;
   utmMedium: string | null;
   utmCampaign: string | null;
+  // Eduzz filters
+  eduzzProduct: string | null;
+  eduzzUtmSource: string | null;
+  eduzzUtmMedium: string | null;
+  eduzzUtmCampaign: string | null;
   // Common filters
   clientId: string | null;
   platform: PlatformType;
@@ -30,15 +35,22 @@ interface FilterContextType {
   setUtmSource: (value: string | null) => void;
   setUtmMedium: (value: string | null) => void;
   setUtmCampaign: (value: string | null) => void;
+  // Eduzz setters
+  setEduzzProduct: (value: string | null) => void;
+  setEduzzUtmSource: (value: string | null) => void;
+  setEduzzUtmMedium: (value: string | null) => void;
+  setEduzzUtmCampaign: (value: string | null) => void;
   // Common setters
   setClientId: (value: string | null) => void;
   setPlatform: (value: PlatformType) => void;
   clearAllFilters: () => void;
   clearHotmartFilters: () => void;
   clearTmbFilters: () => void;
+  clearEduzzFilters: () => void;
   activeFiltersCount: number;
   hotmartFiltersCount: number;
   tmbFiltersCount: number;
+  eduzzFiltersCount: number;
 }
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -55,6 +67,12 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const [utmSource, setUtmSource] = useState<string | null>(null);
   const [utmMedium, setUtmMedium] = useState<string | null>(null);
   const [utmCampaign, setUtmCampaign] = useState<string | null>(null);
+  
+  // Eduzz filters
+  const [eduzzProduct, setEduzzProduct] = useState<string | null>(null);
+  const [eduzzUtmSource, setEduzzUtmSource] = useState<string | null>(null);
+  const [eduzzUtmMedium, setEduzzUtmMedium] = useState<string | null>(null);
+  const [eduzzUtmCampaign, setEduzzUtmCampaign] = useState<string | null>(null);
   
   // Common filters
   const [clientId, setClientId] = useState<string | null>(null);
@@ -85,9 +103,17 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     setUtmCampaign(null);
   };
 
+  const clearEduzzFilters = () => {
+    setEduzzProduct(null);
+    setEduzzUtmSource(null);
+    setEduzzUtmMedium(null);
+    setEduzzUtmCampaign(null);
+  };
+
   const clearAllFilters = () => {
     clearHotmartFilters();
     clearTmbFilters();
+    clearEduzzFilters();
     setPlatform('all');
     // Don't clear clientId for non-master users
     if (isMaster) {
@@ -97,7 +123,8 @@ export function FilterProvider({ children }: { children: ReactNode }) {
 
   const hotmartFiltersCount = [billingType, paymentMethod, sckCode, product].filter(Boolean).length;
   const tmbFiltersCount = [tmbProduct, utmSource, utmMedium, utmCampaign].filter(Boolean).length;
-  const activeFiltersCount = hotmartFiltersCount + tmbFiltersCount;
+  const eduzzFiltersCount = [eduzzProduct, eduzzUtmSource, eduzzUtmMedium, eduzzUtmCampaign].filter(Boolean).length;
+  const activeFiltersCount = hotmartFiltersCount + tmbFiltersCount + eduzzFiltersCount;
   
   // isReady indicates when client context is properly set for data fetching
   // For master users: always ready (they can see all data)
@@ -117,6 +144,11 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         utmSource,
         utmMedium,
         utmCampaign,
+        // Eduzz filters
+        eduzzProduct,
+        eduzzUtmSource,
+        eduzzUtmMedium,
+        eduzzUtmCampaign,
         // Common filters
         clientId,
         platform,
@@ -131,15 +163,22 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         setUtmSource,
         setUtmMedium,
         setUtmCampaign,
+        // Eduzz setters
+        setEduzzProduct,
+        setEduzzUtmSource,
+        setEduzzUtmMedium,
+        setEduzzUtmCampaign,
         // Common setters
         setClientId,
         setPlatform,
         clearAllFilters,
         clearHotmartFilters,
         clearTmbFilters,
+        clearEduzzFilters,
         activeFiltersCount,
         hotmartFiltersCount,
         tmbFiltersCount,
+        eduzzFiltersCount,
       }}
     >
       {children}
