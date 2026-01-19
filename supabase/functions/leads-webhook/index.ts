@@ -28,6 +28,46 @@ interface LeadData {
 
 type LeadSource = 'active_campaign' | 'hotmart' | 'eduzz' | 'n8n' | 'unknown';
 
+// Extract real IP from request headers (proxies, CDNs, load balancers)
+function extractRealIpFromRequest(req: Request): string | null {
+  // Headers in order of priority (most reliable first)
+  const xRealIp = req.headers.get('x-real-ip');
+  const cfConnectingIp = req.headers.get('cf-connecting-ip'); // Cloudflare
+  const trueClientIp = req.headers.get('true-client-ip');
+  const xForwardedFor = req.headers.get('x-forwarded-for');
+  
+  if (xRealIp) return xRealIp.trim();
+  if (cfConnectingIp) return cfConnectingIp.trim();
+  if (trueClientIp) return trueClientIp.trim();
+  if (xForwardedFor) return xForwardedFor.split(',')[0].trim();
+  
+  return null;
+}
+
+// Check if an IP is local or private (should be ignored)
+function isPrivateOrLocalIp(ip: string | null): boolean {
+  if (!ip) return true;
+  
+  const normalizedIp = ip.trim().toLowerCase();
+  
+  // Local IPs
+  if (normalizedIp === '127.0.0.1' || normalizedIp === '::1' || normalizedIp === 'localhost') {
+    return true;
+  }
+  
+  // Private network ranges
+  // 10.0.0.0 – 10.255.255.255
+  if (/^10\./.test(normalizedIp)) return true;
+  
+  // 172.16.0.0 – 172.31.255.255
+  if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(normalizedIp)) return true;
+  
+  // 192.168.0.0 – 192.168.255.255
+  if (/^192\.168\./.test(normalizedIp)) return true;
+  
+  return false;
+}
+
 // Parse Active Campaign format: contact[field] and contact[fields][field]
 function parseActiveCampaignPayload(body: Record<string, string>): LeadData {
   return {
@@ -417,6 +457,22 @@ serve(async (req) => {
       });
     }
 
+    // Resolve final IP address - prefer payload IP unless it's private/local
+    const requestIp = extractRealIpFromRequest(req);
+    const payloadIp = leadData.ip_address;
+    
+    // Use payload IP only if valid (not private/local), otherwise use request IP
+    const finalIpAddress = payloadIp && !isPrivateOrLocalIp(payloadIp)
+      ? payloadIp
+      : requestIp;
+    
+    console.log('IP resolution:', {
+      payloadIp,
+      requestIp,
+      finalIp: finalIpAddress,
+      isPayloadIpPrivate: isPrivateOrLocalIp(payloadIp)
+    });
+
     // Prepare lead record
     const leadRecord = {
       client_id: resolvedClientId,
@@ -425,7 +481,7 @@ serve(async (req) => {
       first_name: leadData.first_name,
       last_name: leadData.last_name,
       phone: leadData.phone,
-      ip_address: leadData.ip_address,
+      ip_address: finalIpAddress,
       organization: leadData.organization,
       customer_account: leadData.customer_account,
       tags: leadData.tags,
