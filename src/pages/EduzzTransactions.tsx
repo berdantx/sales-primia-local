@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -27,7 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC, formatDateTimeBR, formatDateTimeUTC } from '@/lib/dateUtils';
 import {
   Tooltip,
@@ -48,12 +49,19 @@ import {
   Calendar,
   ArrowUp,
   ArrowDown,
-  ArrowUpDown
+  ArrowUpDown,
+  BarChart3,
+  TrendingUp
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { EduzzTransactionDetailDialog } from '@/components/eduzz/EduzzTransactionDetailDialog';
 import { EduzzTransactionCard } from '@/components/eduzz/EduzzTransactionCard';
 import { EduzzAdvancedFilters } from '@/components/dashboard/EduzzAdvancedFilters';
+import { SalesByDayChart, SalesValueMode } from '@/components/sales/SalesByDayChart';
+import { SalesTrendChart } from '@/components/sales/SalesTrendChart';
+import { TopSalesCard } from '@/components/sales/TopSalesCard';
+import { useTopSales, SalesViewMode } from '@/hooks/useTopSales';
+import { SalesGroupBy } from '@/hooks/useSalesTrend';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -77,6 +85,14 @@ function EduzzTransactions() {
   const [utmSourceFilter, setUtmSourceFilter] = useState<string | null>(null);
   const [utmMediumFilter, setUtmMediumFilter] = useState<string | null>(null);
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string | null>(null);
+  
+  // Analytics state
+  const [topMode, setTopMode] = useState<SalesViewMode>('products');
+  const [trendGroupBy, setTrendGroupBy] = useState<SalesGroupBy>('day');
+  const [chartTab, setChartTab] = useState<'daily' | 'evolution'>('daily');
+  const [chartValueMode, setChartValueMode] = useState<SalesValueMode>('count');
+  const [trendValueMode, setTrendValueMode] = useState<'count' | 'value'>('count');
+  const [selectedTopItem, setSelectedTopItem] = useState<string | null>(null);
 
   // Debounce search to avoid excessive API calls
   useEffect(() => {
@@ -143,9 +159,53 @@ function EduzzTransactions() {
       if (utmMediumFilter && t.utm_medium !== utmMediumFilter) return false;
       if (utmCampaignFilter && t.utm_campaign !== utmCampaignFilter) return false;
       
+      // Filter by selected top item
+      if (selectedTopItem) {
+        if (topMode === 'products' && t.product !== selectedTopItem) return false;
+        if (topMode === 'campaigns' && t.utm_campaign !== selectedTopItem) return false;
+      }
+      
       return true;
     });
-  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter]);
+  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, selectedTopItem, topMode]);
+
+  // Top sales hook
+  const { topItems, totalCount } = useTopSales({
+    transactions: filteredTransactions,
+    mode: topMode,
+    productField: 'product',
+    campaignField: 'utm_campaign',
+    valueField: 'sale_value',
+  });
+  const topItemNames = useMemo(() => topItems.map(item => item.name), [topItems]);
+
+  // Sales by day data
+  const salesByDay = useMemo(() => {
+    if (!filteredTransactions) return {};
+    
+    const groups: Record<string, { count: number; value: number }> = {};
+    filteredTransactions.forEach(t => {
+      if (!t.sale_date) return;
+      try {
+        const dateStr = t.sale_date.replace(' ', 'T').replace(/([+-]\d{2})$/, '$1:00');
+        const date = format(parseISO(dateStr), 'yyyy-MM-dd');
+        if (!groups[date]) {
+          groups[date] = { count: 0, value: 0 };
+        }
+        groups[date].count++;
+        groups[date].value += Number(t.sale_value) || 0;
+      } catch {
+        // Skip invalid dates
+      }
+    });
+    return groups;
+  }, [filteredTransactions]);
+
+  // Handle mode change - reset selected item
+  const handleTopModeChange = (mode: SalesViewMode) => {
+    setTopMode(mode);
+    setSelectedTopItem(null);
+  };
 
   // Sort and paginate
   const sortedTransactions = useMemo(() => {
@@ -285,7 +345,95 @@ function EduzzTransactions() {
           />
         </motion.div>
 
-        {/* Period Selector */}
+        {/* Chart + Top Sales Analytics */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+        >
+          <div className="lg:col-span-2 h-[420px]">
+            <Card className="h-full flex flex-col">
+              <Tabs value={chartTab} onValueChange={(v) => setChartTab(v as 'daily' | 'evolution')} className="flex flex-col h-full">
+                <div className="px-4 pt-4 pb-2">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="daily" className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      <span className="hidden sm:inline">Vendas por Dia</span>
+                      <span className="sm:hidden">Por Dia</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="evolution" className="flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" />
+                      <span className="hidden sm:inline">Evolução {topMode === 'products' ? 'Produtos' : 'Campanhas'}</span>
+                      <span className="sm:hidden">Evolução</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                <CardContent className="pt-2 flex-1 overflow-hidden">
+                  <TabsContent value="daily" className="mt-0 h-full">
+                    <SalesByDayChart 
+                      data={salesByDay} 
+                      isLoading={isLoading} 
+                      embedded
+                      valueMode={chartValueMode}
+                      onValueModeChange={setChartValueMode}
+                      currency="BRL"
+                    />
+                  </TabsContent>
+                  <TabsContent value="evolution" className="mt-0 h-full">
+                    <SalesTrendChart
+                      transactions={filteredTransactions}
+                      topItemNames={topItemNames}
+                      mode={topMode}
+                      groupBy={trendGroupBy}
+                      onGroupByChange={setTrendGroupBy}
+                      isLoading={isLoading}
+                      embedded
+                      dateField="sale_date"
+                      productField="product"
+                      campaignField="utm_campaign"
+                      valueField="sale_value"
+                      valueMode={trendValueMode}
+                      onValueModeChange={setTrendValueMode}
+                    />
+                  </TabsContent>
+                </CardContent>
+              </Tabs>
+            </Card>
+          </div>
+          <div className="lg:col-span-1 h-[420px]">
+            <TopSalesCard
+              topItems={topItems}
+              totalCount={totalCount}
+              isLoading={isLoading}
+              mode={topMode}
+              onModeChange={handleTopModeChange}
+              selectedItem={selectedTopItem}
+              onItemClick={(item) => {
+                setSelectedTopItem(item);
+                setCurrentPage(1);
+              }}
+              showOrigins={false}
+              currency="BRL"
+            />
+          </div>
+        </motion.div>
+
+        {/* Selected Filter Indicator */}
+        {selectedTopItem && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <Badge variant="secondary" className="gap-2 px-3 py-1.5">
+              Filtrado por {topMode === 'products' ? 'produto' : 'campanha'}: {selectedTopItem}
+              <X 
+                className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                onClick={() => setSelectedTopItem(null)}
+              />
+            </Badge>
+          </motion.div>
+        )}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
