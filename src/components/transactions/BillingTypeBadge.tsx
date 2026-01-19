@@ -7,6 +7,8 @@ interface BillingTypeBadgeProps {
   paymentMethod?: string | null;
   className?: string;
   showPaymentMethod?: boolean;
+  recurrenceNumber?: number | null;
+  totalInstallments?: number | null;
 }
 
 type CategoryKey = 'pix' | 'a_vista' | 'parcelado' | 'recuperador' | 'parc_inteligente' | 'recorrencia' | 'outro';
@@ -104,13 +106,19 @@ export function BillingTypeBadge({
   billingType, 
   paymentMethod, 
   className,
-  showPaymentMethod = true 
+  showPaymentMethod = true,
+  recurrenceNumber,
+  totalInstallments
 }: BillingTypeBadgeProps) {
   const category = getCategoryFromBillingType(billingType, paymentMethod);
   const config = BILLING_TYPE_CONFIG[category];
   const Icon = config.icon;
   
   const PaymentIcon = paymentMethod ? PAYMENT_METHOD_ICONS[paymentMethod] : null;
+  
+  // Show installment badge for Recuperador Inteligente / Parcelamento Inteligente
+  const showInstallmentBadge = recurrenceNumber && totalInstallments && totalInstallments > 1 &&
+    (category === 'recuperador' || category === 'parc_inteligente');
 
   return (
     <div className={cn("flex items-center gap-1", className)}>
@@ -122,7 +130,14 @@ export function BillingTypeBadge({
         {config.label}
       </Badge>
       
-      {showPaymentMethod && PaymentIcon && category !== 'pix' && (
+      {/* Installment indicator for Recuperador/Parcelamento Inteligente */}
+      {showInstallmentBadge && (
+        <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
+          {recurrenceNumber}/{totalInstallments}
+        </Badge>
+      )}
+      
+      {showPaymentMethod && PaymentIcon && category !== 'pix' && !showInstallmentBadge && (
         <Badge variant="outline" className="text-xs px-1.5">
           <PaymentIcon className="h-3 w-3" />
         </Badge>

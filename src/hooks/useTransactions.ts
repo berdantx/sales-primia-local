@@ -18,6 +18,7 @@ export interface Transaction {
   buyer_email: string | null;
   purchase_date: string | null;
   created_at: string;
+  recurrence_number: number | null;
 }
 
 export interface TransactionFilters {
