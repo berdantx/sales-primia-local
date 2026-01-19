@@ -138,12 +138,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border bg-card p-4 overflow-hidden w-full max-w-full">
+    <div className="rounded-xl border bg-card p-4 overflow-hidden w-full" style={{ maxWidth: '760px' }}>
       <div className="flex items-center gap-2 mb-3">
         <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
-      <div className="space-y-1 overflow-hidden w-full max-w-full">
+      <div className="space-y-1 overflow-hidden w-full" style={{ maxWidth: '760px' }}>
         {children}
       </div>
     </div>
@@ -198,7 +198,7 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
         <Separator />
 
         <ScrollArea className="max-h-[calc(90vh-140px)] w-full">
-          <div className="p-6 space-y-4 w-full max-w-full overflow-hidden">
+          <div className="p-6 space-y-4 w-full overflow-hidden" style={{ maxWidth: '760px' }}>
             {/* Contact Info */}
             <Section icon={Mail} title="Informações de Contato">
               <InfoItem icon={Mail} label="Email" value={lead.email} copyable />
