@@ -16,9 +16,9 @@ const platforms = [
 
 export function PlatformFilter({ value, onChange }: PlatformFilterProps) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-medium text-muted-foreground">Plataforma:</span>
-      <div className="flex rounded-lg border bg-muted/30 p-1">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+      <span className="text-sm font-medium text-muted-foreground shrink-0">Plataforma:</span>
+      <div className="flex flex-wrap rounded-lg border bg-muted/30 p-1 gap-1">
         {platforms.map((platform) => {
           const Icon = platform.icon;
           const isActive = value === platform.value;
@@ -28,14 +28,14 @@ export function PlatformFilter({ value, onChange }: PlatformFilterProps) {
               key={platform.value}
               onClick={() => onChange(platform.value)}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all',
+                'flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-all whitespace-nowrap',
                 isActive
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
               )}
             >
-              <Icon className="h-4 w-4" />
-              {platform.label}
+              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span>{platform.label}</span>
             </button>
           );
         })}
