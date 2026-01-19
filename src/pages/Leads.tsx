@@ -75,6 +75,7 @@ function Leads() {
   const [topMode, setTopMode] = useState<ViewMode>('ads');
   const [trendGroupBy, setTrendGroupBy] = useState<GroupBy>('day');
   const [chartTab, setChartTab] = useState<'daily' | 'evolution'>('daily');
+  const [selectedTopItem, setSelectedTopItem] = useState<string | null>(null);
   
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
@@ -155,6 +156,13 @@ function Leads() {
       const matchesUtmContent = utmContentFilter === 'all' || l.utm_content === utmContentFilter;
       const matchesUtmTerm = utmTermFilter === 'all' || l.utm_term === utmTermFilter;
       
+      // Filter by selected top item (ad or campaign)
+      const matchesSelectedTopItem = !selectedTopItem || (
+        topMode === 'ads' 
+          ? l.utm_content === selectedTopItem 
+          : l.utm_campaign === selectedTopItem
+      );
+      
       // Test filter
       const isTest = isTestLead(l.tags);
       const matchesTestFilter = 
@@ -162,9 +170,9 @@ function Leads() {
         (testFilter === 'hide' && !isTest) || 
         (testFilter === 'only' && isTest);
       
-      return matchesSearch && matchesSource && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter;
+      return matchesSearch && matchesSource && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter && matchesSelectedTopItem;
     });
-  }, [leads, search, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter]);
+  }, [leads, search, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter, selectedTopItem, topMode]);
 
   // Count test leads
   const testLeadsCount = useMemo(() => {
@@ -225,9 +233,16 @@ function Leads() {
     setSelectedPeriod('30days');
     setDateRange({ from: subDays(new Date(), 30), to: new Date() });
     setCurrentPage(1);
+    setSelectedTopItem(null);
   };
 
-  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || testFilter !== 'hide' || selectedPeriod !== '30days';
+  const hasActiveFilters = search || sourceFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || testFilter !== 'hide' || selectedPeriod !== '30days' || selectedTopItem;
+
+  // Handle mode change - reset selected item when mode changes
+  const handleTopModeChange = (mode: ViewMode) => {
+    setTopMode(mode);
+    setSelectedTopItem(null);
+  };
 
   const handleDeleteTestLeads = async () => {
     if (!leads) return;
@@ -573,10 +588,37 @@ function Leads() {
               totalCount={totalCount} 
               isLoading={isLoading}
               mode={topMode}
-              onModeChange={setTopMode}
+              onModeChange={handleTopModeChange}
+              selectedItem={selectedTopItem}
+              onItemClick={(item) => {
+                setSelectedTopItem(item);
+                setCurrentPage(1);
+              }}
             />
           </div>
         </motion.div>
+        {/* Selected Filter Indicator */}
+        {selectedTopItem && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20"
+          >
+            <span className="text-sm text-primary font-medium">
+              Filtrando por {topMode === 'ads' ? 'anúncio' : 'campanha'}:
+            </span>
+            <span className="text-sm font-semibold truncate max-w-[300px]">{selectedTopItem}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedTopItem(null)}
+              className="h-6 w-6 p-0 ml-auto hover:bg-primary/20"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </motion.div>
+        )}
+
         {/* Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
