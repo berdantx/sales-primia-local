@@ -345,11 +345,11 @@ function EduzzTransactions() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="min-w-[100px]">Data (BRT)</TableHead>
                   <TableHead className="min-w-[100px]">ID Venda</TableHead>
                   <TableHead className="min-w-[150px]">Produto</TableHead>
                   <TableHead className="min-w-[150px]">Cliente</TableHead>
                   <TableHead className="text-right min-w-[100px]">Valor</TableHead>
-                  <TableHead className="min-w-[100px]">Data (BRT)</TableHead>
                   <TableHead className="hidden lg:table-cell">UTM Source</TableHead>
                 </TableRow>
               </TableHeader>
@@ -363,25 +363,6 @@ function EduzzTransactions() {
                       setIsDetailOpen(true);
                     }}
                   >
-                    <TableCell className="font-mono text-xs">
-                      {transaction.sale_id.slice(0, 12)}...
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {transaction.product || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-[180px]">
-                        <p className="truncate font-medium text-sm">
-                          {transaction.buyer_name || '-'}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {transaction.buyer_email}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(Number(transaction.sale_value), 'BRL')}
-                    </TableCell>
                     <TableCell className="text-xs">
                       <TooltipProvider>
                         <Tooltip>
@@ -403,6 +384,25 @@ function EduzzTransactions() {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {transaction.sale_id.slice(0, 12)}...
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {transaction.product || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-[180px]">
+                        <p className="truncate font-medium text-sm">
+                          {transaction.buyer_name || '-'}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {transaction.buyer_email}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(Number(transaction.sale_value), 'BRL')}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {transaction.utm_source ? (
