@@ -81,12 +81,17 @@ function InfoItem({
     }
   };
   
+  // Truncar URLs longos para exibição
+  const displayValue = isLink && value.length > 60 
+    ? value.substring(0, 60) + '...' 
+    : value;
+  
   return (
     <div className="flex items-start gap-3 py-3 group">
       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted shrink-0">
         <Icon className="h-4 w-4 text-muted-foreground" />
       </div>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
         <div className="flex items-center gap-2">
           {isLink ? (
@@ -94,13 +99,14 @@ function InfoItem({
               href={value.startsWith('http') ? value : `https://${value}`} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline break-all inline-flex items-center gap-1"
+              className="text-sm text-primary hover:underline truncate max-w-full inline-flex items-center gap-1"
+              title={value}
             >
-              {value}
+              <span className="truncate">{displayValue}</span>
               <ExternalLink className="h-3 w-3 shrink-0" />
             </a>
           ) : (
-            <p className="text-sm font-medium break-all">{value}</p>
+            <p className="text-sm font-medium break-words">{value}</p>
           )}
           {copyable && (
             <Button
