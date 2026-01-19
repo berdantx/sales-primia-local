@@ -99,9 +99,22 @@ export function formatDateBR(date: Date | string, formatStr: string = 'dd/MM/yyy
  */
 export function formatDateTimeBR(date: Date | string | null | undefined, formatStr: string = 'dd/MM/yyyy HH:mm'): string {
   if (!date) return '-';
-  const d = typeof date === 'string' ? parseISO(date) : date;
-  // Subtrair 3 horas para converter UTC -> BRT (UTC-3)
-  const brasilia = new Date(d.getTime() + (BRASILIA_OFFSET_HOURS * 3600000));
+  
+  let d: Date;
+  if (typeof date === 'string') {
+    // Normalizar formato: Supabase retorna "2026-01-19 02:28:53.002118+00"
+    // parseISO espera formato ISO com "T": "2026-01-19T02:28:53.002118+00"
+    const normalizedDate = date.replace(' ', 'T');
+    d = parseISO(normalizedDate);
+  } else {
+    d = date;
+  }
+  
+  // Verificar se é uma data válida
+  if (isNaN(d.getTime())) return '-';
+  
+  // Converter para Brasília usando toBrasilia
+  const brasilia = toBrasilia(d);
   return format(brasilia, formatStr, { locale: ptBR });
 }
 
