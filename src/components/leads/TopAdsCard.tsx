@@ -13,6 +13,8 @@ interface TopAdsCardProps {
   isLoading?: boolean;
   mode: ViewMode;
   onModeChange: (mode: ViewMode) => void;
+  selectedItem?: string | null;
+  onItemClick?: (itemName: string | null) => void;
 }
 
 const getRankIcon = (index: number) => {
@@ -41,7 +43,7 @@ const getRankBgColor = (index: number) => {
   }
 };
 
-export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange }: TopAdsCardProps) {
+export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange, selectedItem, onItemClick }: TopAdsCardProps) {
   const title = mode === 'ads' ? 'Anúncios' : 'Campanhas';
   const relatedLabel = mode === 'ads' ? 'Campanhas' : 'Anúncios';
   const emptyMessage = mode === 'ads' 
@@ -117,55 +119,66 @@ export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange
           </div>
         ) : (
           <div className="space-y-2">
-            {topItems.map((item, index) => (
-              <motion.div
-                key={item.name}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={`p-3 rounded-lg border ${getRankBgColor(index)}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    {getRankIcon(index)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <p className="text-sm font-medium truncate cursor-help">
-                              {item.name}
-                            </p>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs">
-                            <p className="font-medium">{item.name}</p>
-                            {item.related.length > 0 && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {relatedLabel}: {item.related.slice(0, 5).join(', ')}
-                                {item.related.length > 5 && ` +${item.related.length - 5} mais`}
+            {topItems.map((item, index) => {
+              const isSelected = selectedItem === item.name;
+              return (
+                <motion.div
+                  key={item.name}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  onClick={() => onItemClick?.(isSelected ? null : item.name)}
+                  className={`p-3 rounded-lg border cursor-pointer transition-all ${getRankBgColor(index)} ${
+                    isSelected 
+                      ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' 
+                      : 'hover:opacity-80'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      {getRankIcon(index)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <p className="text-sm font-medium truncate cursor-pointer">
+                                {item.name}
                               </p>
-                            )}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <Badge variant="secondary" className="flex-shrink-0 text-xs">
-                        {item.lead_count.toLocaleString('pt-BR')}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Progress 
-                        value={(item.lead_count / maxCount) * 100} 
-                        className="h-1.5 flex-1"
-                      />
-                      <span className="text-xs text-muted-foreground w-12 text-right">
-                        {item.percentage.toFixed(1)}%
-                      </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p className="font-medium">{item.name}</p>
+                              {item.related.length > 0 && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {relatedLabel}: {item.related.slice(0, 5).join(', ')}
+                                  {item.related.length > 5 && ` +${item.related.length - 5} mais`}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Clique para {isSelected ? 'remover filtro' : 'filtrar leads'}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <Badge variant="secondary" className="flex-shrink-0 text-xs">
+                          {item.lead_count.toLocaleString('pt-BR')}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Progress 
+                          value={(item.lead_count / maxCount) * 100} 
+                          className="h-1.5 flex-1"
+                        />
+                        <span className="text-xs text-muted-foreground w-12 text-right">
+                          {item.percentage.toFixed(1)}%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </CardContent>
