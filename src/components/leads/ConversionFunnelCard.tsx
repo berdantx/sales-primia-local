@@ -1,9 +1,12 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Target, ShoppingCart, DollarSign, ArrowDown, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Target, ShoppingCart, DollarSign, ArrowDown, ExternalLink, FileDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LandingPageConversion } from '@/hooks/useLandingPageConversion';
+import { generateFunnelPdf } from '@/lib/export/generateFunnelPdf';
+import { toast } from 'sonner';
 import {
   Tooltip,
   TooltipContent,
@@ -17,6 +20,8 @@ interface ConversionFunnelCardProps {
   totalRevenue: number;
   topConvertingPages?: LandingPageConversion[];
   isLoading?: boolean;
+  clientName?: string;
+  dateRange?: string;
 }
 
 interface FunnelStage {
@@ -53,8 +58,33 @@ export function ConversionFunnelCard({
   totalRevenue,
   topConvertingPages = [],
   isLoading = false,
+  clientName,
+  dateRange,
 }: ConversionFunnelCardProps) {
   const averageTicket = convertedLeads > 0 ? totalRevenue / convertedLeads : 0;
+  const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
+  const qualificationRate = totalLeads > 0 ? (qualifiedLeads / totalLeads) * 100 : 0;
+
+  const handleExportPdf = () => {
+    try {
+      generateFunnelPdf({
+        totalLeads,
+        qualifiedLeads,
+        convertedLeads,
+        totalRevenue,
+        averageTicket,
+        conversionRate,
+        qualificationRate,
+        topPages: topConvertingPages,
+        clientName,
+        dateRange,
+      });
+      toast.success('PDF exportado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      toast.error('Erro ao exportar PDF');
+    }
+  };
 
   const stages: FunnelStage[] = [
     {
@@ -133,11 +163,29 @@ export function ConversionFunnelCard({
         <CardTitle className="text-base sm:text-lg font-semibold flex items-center gap-2">
           <Target className="h-5 w-5 text-primary" />
           Funil de Conversão
-          {averageTicket > 0 && (
-            <span className="ml-auto text-sm font-normal text-muted-foreground">
-              Ticket Médio: {formatCurrency(averageTicket)}
-            </span>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            {averageTicket > 0 && (
+              <span className="text-sm font-normal text-muted-foreground">
+                Ticket Médio: {formatCurrency(averageTicket)}
+              </span>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleExportPdf}
+                  className="h-8 gap-1.5"
+                >
+                  <FileDown className="h-4 w-4" />
+                  <span className="hidden sm:inline">PDF</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Exportar relatório em PDF</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0">

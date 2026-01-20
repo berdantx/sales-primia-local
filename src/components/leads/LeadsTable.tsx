@@ -17,10 +17,15 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { formatDateTimeBR } from '@/lib/dateUtils';
-import { FileSpreadsheet, Eye, FlaskConical, Building2, MapPin } from 'lucide-react';
+import { FileSpreadsheet, Eye, FlaskConical, Building2, MapPin, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LeadDetailDialog } from './LeadDetailDialog';
 import { useClients } from '@/hooks/useClients';
+
+// Check if lead is qualified (has all required UTM parameters)
+function isQualifiedLead(lead: Lead): boolean {
+  return !!(lead.utm_source && lead.utm_medium && lead.utm_campaign);
+}
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -57,6 +62,7 @@ function LeadCard({ lead, onViewDetails }: { lead: Lead; onViewDetails: (lead: L
   const tags = parseTags(lead.tags);
   const source = lead.source || 'desconhecido';
   const isTest = isTestLead(lead.tags);
+  const isQualified = isQualifiedLead(lead);
   
   return (
     <Card className="mb-2 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onViewDetails(lead)}>
@@ -69,6 +75,18 @@ function LeadCard({ lead, onViewDetails }: { lead: Lead; onViewDetails: (lead: L
                   ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim()
                   : lead.email}
               </p>
+              {isQualified && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Lead qualificado (UTMs completos)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               {isTest && (
                 <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px] px-1.5 py-0 shrink-0">
                   <FlaskConical className="h-2.5 w-2.5 mr-0.5" />
@@ -186,10 +204,11 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {leads.map((lead) => {
+              {leads.map((lead) => {
                   const tags = parseTags(lead.tags);
                   const source = lead.source || 'desconhecido';
                   const isTest = isTestLead(lead.tags);
+                  const isQualified = isQualifiedLead(lead);
                   const locationLabel = lead.city && lead.country 
                     ? `${lead.city}, ${lead.country_code || lead.country}`
                     : lead.country || null;
@@ -204,6 +223,18 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
+                          {isQualified && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Lead qualificado (UTMs completos)</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           <span>
                             {lead.first_name || lead.last_name 
                               ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim()
