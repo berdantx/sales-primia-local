@@ -6,12 +6,14 @@ import { normalizePageUrl } from '@/lib/urlUtils';
 interface Lead {
   id: string;
   email: string;
+  phone: string | null;
   page_url: string | null;
   created_at: string | null;
 }
 
 interface Transaction {
   buyer_email: string | null;
+  buyer_phone: string | null;
   computed_value?: number;
   sale_value?: number;
   ticket_value?: number;
@@ -37,6 +39,14 @@ interface UseLandingPageConversionProps {
   endDate?: Date;
 }
 
+// Normalize phone: remove non-digits, keep last 11 digits (Brazil DDD + phone)
+function normalizePhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 8) return null; // Too short to be valid
+  return digits.slice(-11); // Last 11 digits (DDD + phone)
+}
+
 export function useLandingPageConversion({
   clientId,
   leads,
@@ -52,12 +62,13 @@ export function useLandingPageConversion({
       // Fetch Hotmart transactions
       const { data: hotmartData } = await supabase
         .from('transactions')
-        .select('buyer_email, computed_value, currency')
+        .select('buyer_email, buyer_phone, computed_value, currency')
         .eq('client_id', clientId || '');
       
       if (hotmartData) {
         transactions.push(...hotmartData.map(t => ({
           buyer_email: t.buyer_email,
+          buyer_phone: t.buyer_phone,
           computed_value: t.computed_value,
           currency: t.currency,
         })));
@@ -66,12 +77,13 @@ export function useLandingPageConversion({
       // Fetch Eduzz transactions
       const { data: eduzzData } = await supabase
         .from('eduzz_transactions')
-        .select('buyer_email, sale_value, currency')
+        .select('buyer_email, buyer_phone, sale_value, currency')
         .eq('client_id', clientId || '');
       
       if (eduzzData) {
         transactions.push(...eduzzData.map(t => ({
           buyer_email: t.buyer_email,
+          buyer_phone: t.buyer_phone,
           sale_value: t.sale_value,
           currency: t.currency,
         })));
@@ -80,12 +92,13 @@ export function useLandingPageConversion({
       // Fetch TMB transactions
       const { data: tmbData } = await supabase
         .from('tmb_transactions')
-        .select('buyer_email, ticket_value, currency')
+        .select('buyer_email, buyer_phone, ticket_value, currency')
         .eq('client_id', clientId || '');
       
       if (tmbData) {
         transactions.push(...tmbData.map(t => ({
           buyer_email: t.buyer_email,
+          buyer_phone: t.buyer_phone,
           ticket_value: t.ticket_value,
           currency: t.currency,
         })));
@@ -97,28 +110,41 @@ export function useLandingPageConversion({
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Build a map of emails to transaction values
-  const transactionsByEmail = useMemo(() => {
-    const map = new Map<string, { totalValue: number; count: number; currency: string }>();
+  // Build maps of emails/phones to transaction values
+  const { transactionsByEmail, transactionsByPhone } = useMemo(() => {
+    const emailMap = new Map<string, { totalValue: number; count: number; currency: string }>();
+    const phoneMap = new Map<string, { totalValue: number; count: number; currency: string }>();
     
-    if (!allTransactions) return map;
+    if (!allTransactions) return { transactionsByEmail: emailMap, transactionsByPhone: phoneMap };
     
     for (const t of allTransactions) {
-      if (!t.buyer_email) continue;
-      
-      const email = t.buyer_email.toLowerCase().trim();
       const value = t.computed_value || t.sale_value || t.ticket_value || 0;
       const currency = t.currency || 'BRL';
       
-      const existing = map.get(email) || { totalValue: 0, count: 0, currency };
-      map.set(email, {
-        totalValue: existing.totalValue + value,
-        count: existing.count + 1,
-        currency,
-      });
+      // Index by email
+      if (t.buyer_email) {
+        const email = t.buyer_email.toLowerCase().trim();
+        const existing = emailMap.get(email) || { totalValue: 0, count: 0, currency };
+        emailMap.set(email, {
+          totalValue: existing.totalValue + value,
+          count: existing.count + 1,
+          currency,
+        });
+      }
+      
+      // Index by phone
+      const normalizedPhone = normalizePhone(t.buyer_phone);
+      if (normalizedPhone) {
+        const existing = phoneMap.get(normalizedPhone) || { totalValue: 0, count: 0, currency };
+        phoneMap.set(normalizedPhone, {
+          totalValue: existing.totalValue + value,
+          count: existing.count + 1,
+          currency,
+        });
+      }
     }
     
-    return map;
+    return { transactionsByEmail: emailMap, transactionsByPhone: phoneMap };
   }, [allTransactions]);
 
   // Calculate conversion stats per landing page
@@ -128,7 +154,8 @@ export function useLandingPageConversion({
     // Group leads by normalized URL
     const pageGroups = new Map<string, {
       leads: Lead[];
-      uniqueEmails: Set<string>;
+      uniqueContacts: Set<string>; // email or phone as unique identifier
+      emailToPhone: Map<string, string | null>; // Map email to phone for lookup
     }>();
     
     for (const lead of leads) {
@@ -137,11 +164,14 @@ export function useLandingPageConversion({
       
       const existing = pageGroups.get(normalizedUrl) || {
         leads: [],
-        uniqueEmails: new Set<string>(),
+        uniqueContacts: new Set<string>(),
+        emailToPhone: new Map<string, string | null>(),
       };
       
       existing.leads.push(lead);
-      existing.uniqueEmails.add(lead.email.toLowerCase().trim());
+      const normalizedEmail = lead.email.toLowerCase().trim();
+      existing.uniqueContacts.add(normalizedEmail);
+      existing.emailToPhone.set(normalizedEmail, lead.phone);
       pageGroups.set(normalizedUrl, existing);
     }
     
@@ -152,17 +182,36 @@ export function useLandingPageConversion({
       let convertedLeads = 0;
       let totalRevenue = 0;
       let currency = 'BRL';
+      const countedContacts = new Set<string>(); // Avoid double-counting
       
-      for (const email of group.uniqueEmails) {
-        const transaction = transactionsByEmail.get(email);
-        if (transaction) {
+      for (const email of group.uniqueContacts) {
+        if (countedContacts.has(email)) continue;
+        
+        // Try matching by email first
+        const matchByEmail = transactionsByEmail.get(email);
+        if (matchByEmail) {
           convertedLeads++;
-          totalRevenue += transaction.totalValue;
-          currency = transaction.currency;
+          totalRevenue += matchByEmail.totalValue;
+          currency = matchByEmail.currency;
+          countedContacts.add(email);
+          continue;
+        }
+        
+        // Try matching by phone
+        const leadPhone = group.emailToPhone.get(email);
+        const normalizedLeadPhone = normalizePhone(leadPhone);
+        if (normalizedLeadPhone) {
+          const matchByPhone = transactionsByPhone.get(normalizedLeadPhone);
+          if (matchByPhone) {
+            convertedLeads++;
+            totalRevenue += matchByPhone.totalValue;
+            currency = matchByPhone.currency;
+            countedContacts.add(email);
+          }
         }
       }
       
-      const uniqueEmails = group.uniqueEmails.size;
+      const uniqueEmails = group.uniqueContacts.size;
       const conversionRate = uniqueEmails > 0 ? (convertedLeads / uniqueEmails) * 100 : 0;
       const averageTicket = convertedLeads > 0 ? totalRevenue / convertedLeads : 0;
       
@@ -181,7 +230,7 @@ export function useLandingPageConversion({
     
     // Sort by conversion rate descending
     return stats.sort((a, b) => b.conversionRate - a.conversionRate);
-  }, [leads, transactionsByEmail]);
+  }, [leads, transactionsByEmail, transactionsByPhone]);
 
   // Total conversion summary
   const totalConversion = useMemo(() => {
