@@ -2,10 +2,12 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Megaphone, Target, Trophy, Medal, Award, Info } from 'lucide-react';
+import { Megaphone, Target, Trophy, Medal, Award, Info, FileText, Sparkles } from 'lucide-react';
 import { TopItem, ViewMode } from '@/hooks/useTopAds';
 import { Progress } from '@/components/ui/progress';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface TopAdsCardProps {
   topItems: TopItem[];
@@ -43,13 +45,34 @@ const getRankBgColor = (index: number) => {
   }
 };
 
+const getModeConfig = (mode: ViewMode) => {
+  switch (mode) {
+    case 'ads':
+      return {
+        title: 'Anúncios',
+        relatedLabel: 'Campanhas',
+        emptyMessage: 'Nenhum anúncio (utm_content) encontrado no período selecionado.',
+        totalLabel: 'anúncios',
+      };
+    case 'campaigns':
+      return {
+        title: 'Campanhas',
+        relatedLabel: 'Anúncios',
+        emptyMessage: 'Nenhuma campanha (utm_campaign) encontrada no período selecionado.',
+        totalLabel: 'campanhas',
+      };
+    case 'pages':
+      return {
+        title: 'Páginas',
+        relatedLabel: 'Campanhas',
+        emptyMessage: 'Nenhuma página de origem encontrada no período selecionado.',
+        totalLabel: 'páginas',
+      };
+  }
+};
+
 export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange, selectedItem, onItemClick }: TopAdsCardProps) {
-  const title = mode === 'ads' ? 'Anúncios' : 'Campanhas';
-  const relatedLabel = mode === 'ads' ? 'Campanhas' : 'Anúncios';
-  const emptyMessage = mode === 'ads' 
-    ? 'Nenhum anúncio (utm_content) encontrado no período selecionado.' 
-    : 'Nenhuma campanha (utm_campaign) encontrada no período selecionado.';
-  const totalLabel = mode === 'ads' ? 'anúncios' : 'campanhas';
+  const config = getModeConfig(mode);
 
   if (isLoading) {
     return (
@@ -57,7 +80,7 @@ export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Megaphone className="h-4 w-4 text-primary" />
-            Top 5 {title}
+            Top 5 {config.title}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -86,11 +109,11 @@ export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange
                 <TooltipTrigger asChild>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground cursor-help">
                     <Info className="h-3 w-3" />
-                    <span>{totalCount} {totalLabel}</span>
+                    <span>{totalCount} {config.totalLabel}</span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Total de {totalLabel} únicos no período</p>
+                  <p>Total de {config.totalLabel} únicos no período</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -109,13 +132,17 @@ export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange
               <Target className="h-3 w-3" />
               <span className="hidden sm:inline ml-1 text-xs">Campanhas</span>
             </ToggleGroupItem>
+            <ToggleGroupItem value="pages" aria-label="Ver páginas" className="h-7 px-2">
+              <FileText className="h-3 w-3" />
+              <span className="hidden sm:inline ml-1 text-xs">Páginas</span>
+            </ToggleGroupItem>
           </ToggleGroup>
         </div>
       </CardHeader>
       <CardContent className="flex-1 overflow-auto">
         {topItems.length === 0 ? (
           <div className="text-sm text-muted-foreground py-8 text-center">
-            {emptyMessage}
+            {config.emptyMessage}
           </div>
         ) : (
           <div className="space-y-2">
@@ -143,15 +170,30 @@ export function TopAdsCard({ topItems, totalCount, isLoading, mode, onModeChange
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <p className="text-sm font-medium truncate cursor-pointer">
-                                {item.name}
-                              </p>
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-medium truncate cursor-pointer">
+                                  {item.name}
+                                </p>
+                                {item.isNew && (
+                                  <Sparkles className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                                )}
+                              </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-xs">
                               <p className="font-medium">{item.name}</p>
+                              {item.isNew && (
+                                <p className="text-xs text-blue-500 mt-1">
+                                  🆕 Nova página (menos de 7 dias)
+                                </p>
+                              )}
+                              {item.firstLeadDate && mode === 'pages' && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  1º lead: {format(item.firstLeadDate, "dd/MM/yyyy", { locale: ptBR })}
+                                </p>
+                              )}
                               {item.related.length > 0 && (
                                 <p className="text-xs text-muted-foreground mt-1">
-                                  {relatedLabel}: {item.related.slice(0, 5).join(', ')}
+                                  {config.relatedLabel}: {item.related.slice(0, 5).join(', ')}
                                   {item.related.length > 5 && ` +${item.related.length - 5} mais`}
                                 </p>
                               )}

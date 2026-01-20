@@ -4,10 +4,13 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useLeads, useLeadStats } from '@/hooks/useLeads';
 import { useTopItems, ViewMode } from '@/hooks/useTopAds';
+import { useLandingPageStats } from '@/hooks/useLandingPageStats';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
 import { AdTrendChart } from '@/components/leads/AdTrendChart';
 import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
 import { LeadsWorldMap } from '@/components/leads/LeadsWorldMap';
+import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
+import { LandingPageTrendChart } from '@/components/leads/LandingPageTrendChart';
 import { GroupBy } from '@/hooks/useAdTrend';
 import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
@@ -30,6 +33,7 @@ import { DateRange } from 'react-day-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { normalizePageUrl } from '@/lib/urlUtils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,7 +58,8 @@ import {
   FlaskConical,
   Trash2,
   BarChart3,
-  MapPin
+  MapPin,
+  FileText
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 20;
@@ -68,6 +73,7 @@ function Leads() {
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string>('all');
   const [utmContentFilter, setUtmContentFilter] = useState<string>('all');
   const [utmTermFilter, setUtmTermFilter] = useState<string>('all');
+  const [pageFilter, setPageFilter] = useState<string>('all');
   const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -96,13 +102,14 @@ function Leads() {
   const { data: leads, isLoading } = useLeads(isReady ? filters : undefined);
   const { stats, isLoading: isLoadingStats } = useLeadStats(isReady ? filters : undefined);
   const { topItems, totalCount } = useTopItems({ leads, mode: topMode });
+  const { stats: landingPageStats, totalPagesCount, pageOptions } = useLandingPageStats({ leads, limit: 10 });
   const topItemNames = useMemo(() => topItems.map(item => item.name), [topItems]);
 
   // Get unique sources, countries and utm values for filters with counts
   const filterOptions = useMemo(() => {
     if (!leads) return { 
-      sources: [], countries: [], utmSources: [], utmMediums: [], utmCampaigns: [], utmContents: [], utmTerms: [],
-      sourceCounts: {}, countryCounts: {}, utmSourceCounts: {}, utmMediumCounts: {}, utmCampaignCounts: {}, utmContentCounts: {}, utmTermCounts: {}
+      sources: [], countries: [], utmSources: [], utmMediums: [], utmCampaigns: [], utmContents: [], utmTerms: [], pages: [],
+      sourceCounts: {}, countryCounts: {}, utmSourceCounts: {}, utmMediumCounts: {}, utmCampaignCounts: {}, utmContentCounts: {}, utmTermCounts: {}, pageCounts: {}
     };
     
     const sourceCounts: Record<string, number> = {};
@@ -112,6 +119,7 @@ function Leads() {
     const utmCampaignCounts: Record<string, number> = {};
     const utmContentCounts: Record<string, number> = {};
     const utmTermCounts: Record<string, number> = {};
+    const pageCounts: Record<string, number> = {};
     
     leads.forEach(l => {
       if (l.source) sourceCounts[l.source] = (sourceCounts[l.source] || 0) + 1;
@@ -122,6 +130,8 @@ function Leads() {
       if (l.utm_campaign) utmCampaignCounts[l.utm_campaign] = (utmCampaignCounts[l.utm_campaign] || 0) + 1;
       if (l.utm_content) utmContentCounts[l.utm_content] = (utmContentCounts[l.utm_content] || 0) + 1;
       if (l.utm_term) utmTermCounts[l.utm_term] = (utmTermCounts[l.utm_term] || 0) + 1;
+      const normalizedPage = normalizePageUrl(l.page_url);
+      if (normalizedPage) pageCounts[normalizedPage] = (pageCounts[normalizedPage] || 0) + 1;
     });
     
     return {
@@ -132,6 +142,7 @@ function Leads() {
       utmCampaigns: Object.keys(utmCampaignCounts).sort(),
       utmContents: Object.keys(utmContentCounts).sort(),
       utmTerms: Object.keys(utmTermCounts).sort(),
+      pages: Object.keys(pageCounts).sort((a, b) => pageCounts[b] - pageCounts[a]),
       sourceCounts,
       countryCounts,
       utmSourceCounts,
@@ -139,6 +150,7 @@ function Leads() {
       utmCampaignCounts,
       utmContentCounts,
       utmTermCounts,
+      pageCounts,
     };
   }, [leads]);
 
@@ -169,12 +181,22 @@ function Leads() {
       const matchesUtmContent = utmContentFilter === 'all' || l.utm_content === utmContentFilter;
       const matchesUtmTerm = utmTermFilter === 'all' || l.utm_term === utmTermFilter;
       
-      // Filter by selected top item (ad or campaign)
-      const matchesSelectedTopItem = !selectedTopItem || (
-        topMode === 'ads' 
-          ? l.utm_content === selectedTopItem 
-          : l.utm_campaign === selectedTopItem
-      );
+      // Filter by selected top item (ad, campaign, or page)
+      let matchesSelectedTopItem = true;
+      if (selectedTopItem) {
+        if (topMode === 'ads') {
+          matchesSelectedTopItem = l.utm_content === selectedTopItem;
+        } else if (topMode === 'campaigns') {
+          matchesSelectedTopItem = l.utm_campaign === selectedTopItem;
+        } else if (topMode === 'pages') {
+          const normalizedLeadPage = normalizePageUrl(l.page_url);
+          // selectedTopItem comes with "/" prefix from getPageDisplayName
+          matchesSelectedTopItem = `/${normalizedLeadPage}` === selectedTopItem || normalizedLeadPage === selectedTopItem;
+        }
+      }
+
+      // Filter by page dropdown
+      const matchesPageFilter = pageFilter === 'all' || normalizePageUrl(l.page_url) === pageFilter;
       
       // Test filter
       const isTest = isTestLead(l.tags);
@@ -183,9 +205,9 @@ function Leads() {
         (testFilter === 'hide' && !isTest) || 
         (testFilter === 'only' && isTest);
       
-      return matchesSearch && matchesSource && matchesCountry && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter && matchesSelectedTopItem;
+      return matchesSearch && matchesSource && matchesCountry && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter && matchesSelectedTopItem && matchesPageFilter;
     });
-  }, [leads, search, sourceFilter, countryFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter, selectedTopItem, topMode]);
+  }, [leads, search, sourceFilter, countryFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter, selectedTopItem, topMode, pageFilter]);
 
   // Count test leads
   const testLeadsCount = useMemo(() => {
@@ -243,6 +265,7 @@ function Leads() {
     setUtmCampaignFilter('all');
     setUtmContentFilter('all');
     setUtmTermFilter('all');
+    setPageFilter('all');
     setTestFilter('hide');
     setSelectedPeriod('30days');
     setDateRange({ from: subDays(new Date(), 30), to: new Date() });
@@ -250,7 +273,7 @@ function Leads() {
     setSelectedTopItem(null);
   };
 
-  const hasActiveFilters = search || sourceFilter !== 'all' || countryFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || testFilter !== 'hide' || selectedPeriod !== '30days' || selectedTopItem;
+  const hasActiveFilters = search || sourceFilter !== 'all' || countryFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || pageFilter !== 'all' || testFilter !== 'hide' || selectedPeriod !== '30days' || selectedTopItem;
 
   // Backfill geolocation handler
   const handleBackfillGeolocation = async () => {
@@ -607,6 +630,21 @@ function Leads() {
                   </SelectContent>
                 </Select>
 
+                <Select value={pageFilter} onValueChange={(v) => { setPageFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[140px] sm:w-[180px] h-9 text-sm">
+                    <FileText className="h-3 w-3 mr-1 shrink-0" />
+                    <SelectValue placeholder="Página" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas páginas ({totalPagesCount})</SelectItem>
+                    {filterOptions.pages.map(p => (
+                      <SelectItem key={p} value={p}>
+                        /{p} ({filterOptions.pageCounts[p]})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 {hasActiveFilters && (
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2">
                     <X className="h-4 w-4" />
@@ -680,11 +718,47 @@ function Leads() {
           </div>
         </motion.div>
 
+        {/* Landing Page Comparison - Only show if there are multiple pages */}
+        {landingPageStats.length > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-4"
+          >
+            <LandingPageComparisonCard
+              stats={landingPageStats}
+              isLoading={isLoading}
+              selectedPage={pageFilter !== 'all' ? pageFilter : null}
+              onPageClick={(page) => {
+                setPageFilter(page || 'all');
+                setCurrentPage(1);
+              }}
+            />
+            <Card className="h-[300px]">
+              <CardContent className="h-full pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Evolução de Landing Pages</span>
+                </div>
+                <div className="h-[calc(100%-30px)]">
+                  <LandingPageTrendChart
+                    stats={landingPageStats.slice(0, 5)}
+                    dateRange={dateRange}
+                    isLoading={isLoading}
+                    embedded
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Interactive World Map */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
+          transition={{ delay: 0.3 }}
         >
           <LeadsWorldMap
             byCountry={stats?.byCountry || {}}
