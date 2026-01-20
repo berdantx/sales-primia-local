@@ -742,6 +742,18 @@ function Leads() {
                   </SelectContent>
                 </Select>
 
+                <Select value={qualifiedFilter} onValueChange={(v) => { setQualifiedFilter(v as 'all' | 'qualified' | 'unqualified'); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[140px] sm:w-[160px] h-9 text-sm">
+                    <Target className="h-3 w-3 mr-1 shrink-0" />
+                    <SelectValue placeholder="Qualificados" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos leads</SelectItem>
+                    <SelectItem value="qualified">Qualificados (UTMs)</SelectItem>
+                    <SelectItem value="unqualified">Não qualificados</SelectItem>
+                  </SelectContent>
+                </Select>
+
                 <Select value={testFilter} onValueChange={(v) => { setTestFilter(v); setCurrentPage(1); }}>
                   <SelectTrigger className="w-[140px] sm:w-[150px] h-9 text-sm">
                     <FlaskConical className="h-3 w-3 mr-1 shrink-0" />

@@ -29,6 +29,8 @@ interface FunnelStage {
   colorClass: string;
   bgClass: string;
   widthPercent: number;
+  hasTooltip?: boolean;
+  tooltipContent?: string;
 }
 
 function formatCurrency(value: number): string {
@@ -75,6 +77,8 @@ export function ConversionFunnelCard({
       colorClass: 'text-purple-600 dark:text-purple-400',
       bgClass: 'bg-purple-500/20',
       widthPercent: 75,
+      hasTooltip: true,
+      tooltipContent: 'Leads com UTM source, medium e campaign preenchidos',
     },
     {
       label: 'Convertidos',
@@ -160,9 +164,22 @@ export function ConversionFunnelCard({
                     <div className={cn('p-1.5 rounded-full bg-white/50 dark:bg-black/20', stage.colorClass)}>
                       <stage.icon className="h-4 w-4" />
                     </div>
-                    <span className="text-xs sm:text-sm font-medium text-foreground truncate">
-                      {stage.label}
-                    </span>
+                    {stage.hasTooltip ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="text-xs sm:text-sm font-medium text-foreground truncate cursor-help underline decoration-dotted underline-offset-2">
+                            {stage.label}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p className="text-xs">{stage.tooltipContent}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-xs sm:text-sm font-medium text-foreground truncate">
+                        {stage.label}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={cn('text-sm sm:text-base font-bold', stage.colorClass)}>
