@@ -21,6 +21,7 @@ import WebhookDocs from "./pages/WebhookDocs";
 import Users from "./pages/Users";
 import Clients from "./pages/Clients";
 import Leads from "./pages/Leads";
+import LeadsFunnel from "./pages/LeadsFunnel";
 import AcceptInvite from "./pages/AcceptInvite";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -83,6 +84,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/leads/funnel" element={<LeadsFunnel />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

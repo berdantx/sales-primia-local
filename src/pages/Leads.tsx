@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useLeads, useLeadStats } from '@/hooks/useLeads';
@@ -11,10 +12,7 @@ import { AdTrendChart } from '@/components/leads/AdTrendChart';
 import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
 import { LeadsWorldMap } from '@/components/leads/LeadsWorldMap';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
-import { ConversionFunnelCard } from '@/components/leads/ConversionFunnelCard';
-import { FunnelEvolutionChart } from '@/components/leads/FunnelEvolutionChart';
 import { LandingPageTrendChart } from '@/components/leads/LandingPageTrendChart';
-import { useFunnelEvolution } from '@/hooks/useFunnelEvolution';
 import { GroupBy } from '@/hooks/useAdTrend';
 import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
@@ -64,9 +62,8 @@ import {
   BarChart3,
   MapPin,
   FileText,
-  DollarSign,
-  ShoppingCart,
-  Target
+  Target,
+  ArrowRight
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 20;
@@ -96,7 +93,6 @@ function Leads() {
   const [chartTab, setChartTab] = useState<'daily' | 'evolution'>('daily');
   const [selectedTopItem, setSelectedTopItem] = useState<string | null>(null);
   const [qualifiedFilter, setQualifiedFilter] = useState<string>('all'); // 'all' | 'qualified' | 'unqualified'
-  const [funnelGroupBy, setFunnelGroupBy] = useState<'day' | 'week'>('day');
   
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
@@ -128,22 +124,6 @@ function Leads() {
     endDate: dateRange?.to,
   });
 
-  // Build set of converted emails for funnel evolution
-  const convertedEmails = useMemo(() => {
-    const emails = new Set<string>();
-    for (const stat of conversionStats) {
-      // We don't have direct access to converted emails, so we'll use the lead emails that have conversions
-      // This is a simplification - the actual conversion matching happens in the hook
-    }
-    return emails;
-  }, [conversionStats]);
-
-  // Funnel evolution over time
-  const funnelEvolutionData = useFunnelEvolution({
-    leads: leads || [],
-    convertedEmails,
-    groupBy: funnelGroupBy,
-  });
   // Get unique sources, countries and utm values for filters with counts
   const filterOptions = useMemo(() => {
     if (!leads) return { 
@@ -530,82 +510,36 @@ function Leads() {
           />
         </motion.div>
 
-        {/* Conversion KPIs */}
+        {/* Conversion Summary Link */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
         >
-          <ColoredKPICard
-            title="Taxa de Conversão"
-            value={`${totalConversion.conversionRate.toFixed(2)}%`}
-            subtitle="leads convertidos"
-            icon={TrendingUp}
-            variant="green"
-            delay={0}
-            tooltipContent={
-              <div className="text-xs space-y-1">
-                <p><strong>{totalConversion.totalConverted}</strong> de {totalConversion.totalLeads} leads únicos</p>
-                <p className="text-muted-foreground">Matching por email ou telefone</p>
+          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <Target className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm sm:text-base">Funil de Conversão</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      {totalConversion.totalConverted} conversões • {totalConversion.conversionRate.toFixed(1)}% taxa • {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(totalConversion.totalRevenue)} receita
+                    </p>
+                  </div>
+                </div>
+                <Button asChild variant="default" size="sm" className="gap-2">
+                  <Link to="/leads/funnel">
+                    Ver Funil Completo
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
-            }
-          />
-          <ColoredKPICard
-            title="Leads Convertidos"
-            value={totalConversion.totalConverted.toString()}
-            subtitle="com compra confirmada"
-            icon={ShoppingCart}
-            variant="cyan"
-            delay={1}
-          />
-          <ColoredKPICard
-            title="Receita Atribuída"
-            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(totalConversion.totalRevenue)}
-            subtitle="vendas de leads"
-            icon={DollarSign}
-            variant="yellow"
-            delay={2}
-          />
-          <ColoredKPICard
-            title="Ticket Médio"
-            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(totalConversion.averageTicket)}
-            subtitle="por lead convertido"
-            icon={BarChart3}
-            variant="orange"
-            delay={3}
-          />
+            </CardContent>
+          </Card>
         </motion.div>
-
-        {/* Conversion Funnel + Evolution */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <ConversionFunnelCard
-              totalLeads={totalConversion.totalLeads}
-              qualifiedLeads={totalConversion.qualifiedLeads}
-              convertedLeads={totalConversion.totalConverted}
-              totalRevenue={totalConversion.totalRevenue}
-              topConvertingPages={conversionStats}
-              isLoading={isLoadingConversion}
-            />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-          >
-            <FunnelEvolutionChart
-              data={funnelEvolutionData}
-              isLoading={isLoadingConversion}
-              groupBy={funnelGroupBy}
-              onGroupByChange={setFunnelGroupBy}
-            />
-          </motion.div>
-        </div>
 
         {/* Filters - moved above chart */}
         <Card>
