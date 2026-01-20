@@ -5,6 +5,7 @@ import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useLeads, useLeadStats } from '@/hooks/useLeads';
 import { useTopItems, ViewMode } from '@/hooks/useTopAds';
 import { useLandingPageStats } from '@/hooks/useLandingPageStats';
+import { useLandingPageConversion } from '@/hooks/useLandingPageConversion';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
 import { AdTrendChart } from '@/components/leads/AdTrendChart';
 import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
@@ -110,6 +111,14 @@ function Leads() {
     showAll: showAllPages 
   });
   const topItemNames = useMemo(() => topItems.map(item => item.name), [topItems]);
+  
+  // Conversion tracking - matches leads with transactions by email or phone
+  const { conversionStats, isLoading: isLoadingConversion } = useLandingPageConversion({
+    clientId,
+    leads: leads || [],
+    startDate: dateRange?.from,
+    endDate: dateRange?.to,
+  });
 
   // Get unique sources, countries and utm values for filters with counts
   const filterOptions = useMemo(() => {
@@ -748,7 +757,8 @@ function Leads() {
           >
             <LandingPageComparisonCard
               stats={landingPageStats}
-              isLoading={isLoading}
+              conversionStats={conversionStats}
+              isLoading={isLoading || isLoadingConversion}
               selectedPage={pageFilter !== 'all' ? pageFilter : null}
               onPageClick={(page) => {
                 setPageFilter(page || 'all');

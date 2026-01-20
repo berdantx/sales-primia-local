@@ -833,6 +833,7 @@ export type Database = {
         Row: {
           buyer_email: string | null
           buyer_name: string | null
+          buyer_phone: string | null
           client_id: string | null
           created_at: string | null
           currency: string | null
@@ -852,6 +853,7 @@ export type Database = {
         Insert: {
           buyer_email?: string | null
           buyer_name?: string | null
+          buyer_phone?: string | null
           client_id?: string | null
           created_at?: string | null
           currency?: string | null
@@ -871,6 +873,7 @@ export type Database = {
         Update: {
           buyer_email?: string | null
           buyer_name?: string | null
+          buyer_phone?: string | null
           client_id?: string | null
           created_at?: string | null
           currency?: string | null
@@ -910,6 +913,7 @@ export type Database = {
           business_model: string | null
           buyer_email: string | null
           buyer_name: string | null
+          buyer_phone: string | null
           client_id: string | null
           computed_value: number
           country: string | null
@@ -942,6 +946,7 @@ export type Database = {
           business_model?: string | null
           buyer_email?: string | null
           buyer_name?: string | null
+          buyer_phone?: string | null
           client_id?: string | null
           computed_value?: number
           country?: string | null
@@ -974,6 +979,7 @@ export type Database = {
           business_model?: string | null
           buyer_email?: string | null
           buyer_name?: string | null
+          buyer_phone?: string | null
           client_id?: string | null
           computed_value?: number
           country?: string | null

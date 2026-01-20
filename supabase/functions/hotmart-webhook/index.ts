@@ -64,6 +64,7 @@ interface ProductData {
 interface BuyerData {
   email?: string;
   name?: string;
+  checkout_phone?: string;
 }
 
 interface CommissionData {
@@ -517,6 +518,7 @@ serve(async (req) => {
           product: product?.name || null,
           buyer_email: buyer?.email || null,
           buyer_name: buyer?.name || null,
+          buyer_phone: buyer?.checkout_phone || null,
           currency: purchase.price?.currency_value || 'BRL',
           // gross_value_with_taxes = full_price (valor bruto com taxas / valor da parcela)
           gross_value_with_taxes: grossValue,
