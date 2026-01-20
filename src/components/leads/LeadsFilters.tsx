@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadsPeriodFilter } from './LeadsPeriodFilter';
 import { DateRange } from 'react-day-picker';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import {
   Search,
   Globe,
@@ -11,6 +13,11 @@ import {
   Target,
   X,
   Layers,
+  Link2,
+  Megaphone,
+  Tag,
+  MousePointerClick,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 interface FilterOptions {
@@ -33,15 +40,12 @@ interface FilterOptions {
 }
 
 interface LeadsFiltersProps {
-  // Period filter
   selectedPeriod: string;
   dateRange: DateRange | undefined;
   onPeriodChange: (period: string) => void;
   onDateRangeChange: (range: DateRange | undefined) => void;
-  // Search
   search: string;
   onSearchChange: (value: string) => void;
-  // Filters
   sourceFilter: string;
   onSourceFilterChange: (value: string) => void;
   countryFilter: string;
@@ -62,19 +66,63 @@ interface LeadsFiltersProps {
   onTestFilterChange: (value: string) => void;
   pageFilter: string;
   onPageFilterChange: (value: string) => void;
-  // Page options
   showAllPages: boolean;
   onShowAllPages: () => void;
   totalPagesCount: number;
   hiddenPagesCount: number;
-  // Counts
   totalLeads: number;
   testLeadsCount: number;
-  // Filter options
   filterOptions: FilterOptions;
-  // Actions
   hasActiveFilters: boolean;
   onClearFilters: () => void;
+}
+
+// Helper component for filter select with consistent styling
+function FilterSelect({
+  value,
+  onValueChange,
+  placeholder,
+  icon: Icon,
+  options,
+  counts,
+  allLabel,
+  allCount,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder: string;
+  icon?: React.ElementType;
+  options: string[];
+  counts: Record<string, number>;
+  allLabel: string;
+  allCount?: number;
+}) {
+  const isActive = value !== 'all';
+  
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger 
+        className={`w-auto min-w-[100px] h-9 text-xs gap-1.5 px-3 border-dashed transition-colors ${
+          isActive 
+            ? 'border-primary bg-primary/5 text-primary' 
+            : 'border-muted-foreground/30 hover:border-muted-foreground/50'
+        }`}
+      >
+        {Icon && <Icon className="h-3.5 w-3.5 shrink-0" />}
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all" className="text-muted-foreground">
+          {allLabel} {allCount !== undefined && `(${allCount})`}
+        </SelectItem>
+        {options.map(opt => (
+          <SelectItem key={opt} value={opt}>
+            {opt} ({counts[opt] || 0})
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 export function LeadsFilters({
@@ -114,9 +162,24 @@ export function LeadsFilters({
   hasActiveFilters,
   onClearFilters,
 }: LeadsFiltersProps) {
+  // Count active filters for badge
+  const activeFiltersCount = [
+    sourceFilter !== 'all',
+    countryFilter !== 'all',
+    utmSourceFilter !== 'all',
+    utmMediumFilter !== 'all',
+    utmCampaignFilter !== 'all',
+    utmContentFilter !== 'all',
+    utmTermFilter !== 'all',
+    qualifiedFilter !== 'all',
+    testFilter !== 'hide',
+    pageFilter !== 'all',
+    search.length > 0,
+  ].filter(Boolean).length;
+
   return (
-    <div className="flex flex-col gap-3">
-      {/* Row 1: Period + Search */}
+    <Card className="p-4 space-y-4 bg-card/50 backdrop-blur-sm border-border/50">
+      {/* Header with period and search */}
       <div className="flex flex-col sm:flex-row gap-3">
         <LeadsPeriodFilter
           selectedPeriod={selectedPeriod}
@@ -124,207 +187,196 @@ export function LeadsFilters({
           onPeriodChange={onPeriodChange}
           onDateRangeChange={onDateRangeChange}
         />
-        <div className="flex-1">
+        <div className="flex-1 max-w-md">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar email, nome, telefone..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 h-9 text-sm"
+              className="pl-10 h-9 text-sm bg-background"
             />
           </div>
         </div>
-      </div>
-
-      {/* Row 2: Main filters - Source, Country, UTMs */}
-      <div className="flex flex-wrap gap-2">
-        {/* Source Filter */}
-        <Select value={sourceFilter} onValueChange={onSourceFilterChange}>
-          <SelectTrigger className="w-auto min-w-[130px] h-8 text-xs gap-1 px-2.5">
-            <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <SelectValue placeholder="Fonte" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas fontes ({totalLeads})</SelectItem>
-            {filterOptions.sources.map(s => (
-              <SelectItem key={s} value={s}>
-                {s} ({filterOptions.sourceCounts[s]})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Country Filter */}
-        <Select value={countryFilter} onValueChange={onCountryFilterChange}>
-          <SelectTrigger className="w-auto min-w-[120px] h-8 text-xs gap-1 px-2.5">
-            <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <SelectValue placeholder="País" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos países</SelectItem>
-            {filterOptions.countries.map(c => (
-              <SelectItem key={c} value={c}>
-                {c} ({filterOptions.countryCounts[c]})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* UTM Source */}
-        <Select value={utmSourceFilter} onValueChange={onUtmSourceFilterChange}>
-          <SelectTrigger className="w-auto min-w-[110px] h-8 text-xs gap-1 px-2.5">
-            <SelectValue placeholder="Source" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Source</SelectItem>
-            {filterOptions.utmSources.map(s => (
-              <SelectItem key={s} value={s}>
-                {s} ({filterOptions.utmSourceCounts[s]})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* UTM Medium */}
-        <Select value={utmMediumFilter} onValueChange={onUtmMediumFilterChange}>
-          <SelectTrigger className="w-auto min-w-[110px] h-8 text-xs gap-1 px-2.5">
-            <SelectValue placeholder="Medium" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Medium</SelectItem>
-            {filterOptions.utmMediums.map(s => (
-              <SelectItem key={s} value={s}>
-                {s} ({filterOptions.utmMediumCounts[s]})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* UTM Campaign */}
-        <Select value={utmCampaignFilter} onValueChange={onUtmCampaignFilterChange}>
-          <SelectTrigger className="w-auto min-w-[120px] h-8 text-xs gap-1 px-2.5">
-            <SelectValue placeholder="Campaign" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Campaign</SelectItem>
-            {filterOptions.utmCampaigns.map(s => (
-              <SelectItem key={s} value={s}>
-                {s} ({filterOptions.utmCampaignCounts[s]})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* UTM Content */}
-        <Select value={utmContentFilter} onValueChange={onUtmContentFilterChange}>
-          <SelectTrigger className="w-auto min-w-[110px] h-8 text-xs gap-1 px-2.5">
-            <SelectValue placeholder="Content" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Content</SelectItem>
-            {filterOptions.utmContents.map(s => (
-              <SelectItem key={s} value={s}>
-                {s} ({filterOptions.utmContentCounts[s]})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* UTM Term */}
-        <Select value={utmTermFilter} onValueChange={onUtmTermFilterChange}>
-          <SelectTrigger className="w-auto min-w-[100px] h-8 text-xs gap-1 px-2.5">
-            <SelectValue placeholder="Term" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Term</SelectItem>
-            {filterOptions.utmTerms.map(s => (
-              <SelectItem key={s} value={s}>
-                {s} ({filterOptions.utmTermCounts[s]})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Qualified Filter */}
-        <Select value={qualifiedFilter} onValueChange={onQualifiedFilterChange}>
-          <SelectTrigger className="w-auto min-w-[110px] h-8 text-xs gap-1 px-2.5">
-            <Target className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <SelectValue placeholder="Qualificados" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos leads</SelectItem>
-            <SelectItem value="qualified">Qualificados</SelectItem>
-            <SelectItem value="unqualified">Não qualificados</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Row 3: Secondary filters - Tests, Pages, Clear */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Test Filter */}
-        <Select value={testFilter} onValueChange={onTestFilterChange}>
-          <SelectTrigger className="w-auto min-w-[120px] h-8 text-xs gap-1 px-2.5">
-            <FlaskConical className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <SelectValue placeholder="Testes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="hide">Ocultar testes</SelectItem>
-            <SelectItem value="all">Mostrar todos</SelectItem>
-            <SelectItem value="only">Apenas testes ({testLeadsCount})</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Page Filter */}
-        <Select 
-          value={pageFilter} 
-          onValueChange={(v) => {
-            if (v === '__show_all__') {
-              onShowAllPages();
-            } else {
-              onPageFilterChange(v);
-            }
-          }}
-        >
-          <SelectTrigger className="w-auto min-w-[150px] max-w-[200px] h-8 text-xs gap-1 px-2.5">
-            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <span className="truncate">
-              {pageFilter === 'all' 
-                ? `Todas páginas ativas..` 
-                : `/${pageFilter.length > 15 ? pageFilter.slice(0, 15) + '...' : pageFilter}`
-              }
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas páginas ativas ({totalPagesCount - hiddenPagesCount})</SelectItem>
-            {filterOptions.pages
-              .filter(p => showAllPages || filterOptions.pageCounts[p] >= 5)
-              .map(p => (
-                <SelectItem key={p} value={p}>
-                  /{p} ({filterOptions.pageCounts[p]})
-                </SelectItem>
-              ))}
-            {!showAllPages && hiddenPagesCount > 0 && (
-              <SelectItem value="__show_all__" className="text-muted-foreground italic">
-                Mostrar inativas ({hiddenPagesCount})
-              </SelectItem>
-            )}
-          </SelectContent>
-        </Select>
-
-        {/* Clear Filters Button */}
+        
+        {/* Active filters badge and clear */}
         {hasActiveFilters && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onClearFilters} 
-            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5 mr-1" />
-            Limpar filtros
-          </Button>
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <Badge variant="secondary" className="gap-1 text-xs font-normal">
+              <SlidersHorizontal className="h-3 w-3" />
+              {activeFiltersCount} filtro{activeFiltersCount > 1 ? 's' : ''} ativo{activeFiltersCount > 1 ? 's' : ''}
+            </Badge>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onClearFilters} 
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Limpar
+            </Button>
+          </div>
         )}
       </div>
-    </div>
+
+      {/* Divider */}
+      <div className="border-t border-border/50" />
+
+      {/* Filter Groups */}
+      <div className="space-y-3">
+        {/* Primary Filters: Source & Location */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mr-1">
+            Origem
+          </span>
+          
+          <FilterSelect
+            value={sourceFilter}
+            onValueChange={onSourceFilterChange}
+            placeholder="Fonte"
+            icon={Layers}
+            options={filterOptions.sources}
+            counts={filterOptions.sourceCounts}
+            allLabel="Todas fontes"
+            allCount={totalLeads}
+          />
+
+          <FilterSelect
+            value={countryFilter}
+            onValueChange={onCountryFilterChange}
+            placeholder="País"
+            icon={Globe}
+            options={filterOptions.countries}
+            counts={filterOptions.countryCounts}
+            allLabel="Todos países"
+          />
+
+          <FilterSelect
+            value={pageFilter === 'all' ? 'all' : pageFilter}
+            onValueChange={(v) => {
+              if (v === '__show_all__') {
+                onShowAllPages();
+              } else {
+                onPageFilterChange(v);
+              }
+            }}
+            placeholder="Página"
+            icon={FileText}
+            options={[
+              ...filterOptions.pages.filter(p => showAllPages || filterOptions.pageCounts[p] >= 5),
+              ...(!showAllPages && hiddenPagesCount > 0 ? ['__show_all__'] : [])
+            ]}
+            counts={{
+              ...Object.fromEntries(
+                filterOptions.pages.map(p => [`/${p}`, filterOptions.pageCounts[p]])
+              ),
+              '__show_all__': hiddenPagesCount
+            }}
+            allLabel="Todas páginas"
+            allCount={totalPagesCount - hiddenPagesCount}
+          />
+        </div>
+
+        {/* UTM Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mr-1">
+            UTMs
+          </span>
+
+          <FilterSelect
+            value={utmSourceFilter}
+            onValueChange={onUtmSourceFilterChange}
+            placeholder="Source"
+            icon={Link2}
+            options={filterOptions.utmSources}
+            counts={filterOptions.utmSourceCounts}
+            allLabel="Todos"
+          />
+
+          <FilterSelect
+            value={utmMediumFilter}
+            onValueChange={onUtmMediumFilterChange}
+            placeholder="Medium"
+            icon={Megaphone}
+            options={filterOptions.utmMediums}
+            counts={filterOptions.utmMediumCounts}
+            allLabel="Todos"
+          />
+
+          <FilterSelect
+            value={utmCampaignFilter}
+            onValueChange={onUtmCampaignFilterChange}
+            placeholder="Campaign"
+            icon={Target}
+            options={filterOptions.utmCampaigns}
+            counts={filterOptions.utmCampaignCounts}
+            allLabel="Todos"
+          />
+
+          <FilterSelect
+            value={utmContentFilter}
+            onValueChange={onUtmContentFilterChange}
+            placeholder="Content"
+            icon={MousePointerClick}
+            options={filterOptions.utmContents}
+            counts={filterOptions.utmContentCounts}
+            allLabel="Todos"
+          />
+
+          <FilterSelect
+            value={utmTermFilter}
+            onValueChange={onUtmTermFilterChange}
+            placeholder="Term"
+            icon={Tag}
+            options={filterOptions.utmTerms}
+            counts={filterOptions.utmTermCounts}
+            allLabel="Todos"
+          />
+        </div>
+
+        {/* Status Filters */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mr-1">
+            Status
+          </span>
+
+          <Select value={qualifiedFilter} onValueChange={onQualifiedFilterChange}>
+            <SelectTrigger 
+              className={`w-auto min-w-[120px] h-9 text-xs gap-1.5 px-3 border-dashed transition-colors ${
+                qualifiedFilter !== 'all' 
+                  ? 'border-primary bg-primary/5 text-primary' 
+                  : 'border-muted-foreground/30 hover:border-muted-foreground/50'
+              }`}
+            >
+              <Target className="h-3.5 w-3.5 shrink-0" />
+              <SelectValue placeholder="Qualificação" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-muted-foreground">Todos leads</SelectItem>
+              <SelectItem value="qualified">✓ Qualificados</SelectItem>
+              <SelectItem value="unqualified">✗ Não qualificados</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={testFilter} onValueChange={onTestFilterChange}>
+            <SelectTrigger 
+              className={`w-auto min-w-[130px] h-9 text-xs gap-1.5 px-3 border-dashed transition-colors ${
+                testFilter !== 'hide' 
+                  ? 'border-primary bg-primary/5 text-primary' 
+                  : 'border-muted-foreground/30 hover:border-muted-foreground/50'
+              }`}
+            >
+              <FlaskConical className="h-3.5 w-3.5 shrink-0" />
+              <SelectValue placeholder="Testes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hide">Ocultar testes</SelectItem>
+              <SelectItem value="all">Mostrar todos</SelectItem>
+              <SelectItem value="only">Apenas testes ({testLeadsCount})</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </Card>
   );
 }
