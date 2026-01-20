@@ -11,6 +11,7 @@ import { AdTrendChart } from '@/components/leads/AdTrendChart';
 import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
 import { LeadsWorldMap } from '@/components/leads/LeadsWorldMap';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
+import { ConversionFunnelCard } from '@/components/leads/ConversionFunnelCard';
 import { LandingPageTrendChart } from '@/components/leads/LandingPageTrendChart';
 import { GroupBy } from '@/hooks/useAdTrend';
 import { useFilter } from '@/contexts/FilterContext';
@@ -60,7 +61,9 @@ import {
   Trash2,
   BarChart3,
   MapPin,
-  FileText
+  FileText,
+  DollarSign,
+  ShoppingCart
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 20;
@@ -113,7 +116,7 @@ function Leads() {
   const topItemNames = useMemo(() => topItems.map(item => item.name), [topItems]);
   
   // Conversion tracking - matches leads with transactions by email or phone
-  const { conversionStats, isLoading: isLoadingConversion } = useLandingPageConversion({
+  const { conversionStats, totalConversion, isLoading: isLoadingConversion } = useLandingPageConversion({
     clientId,
     leads: leads || [],
     startDate: dateRange?.from,
@@ -495,6 +498,68 @@ function Leads() {
             variant="green"
             delay={2}
             className="col-span-2 lg:col-span-1"
+          />
+        </motion.div>
+
+        {/* Conversion KPIs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
+        >
+          <ColoredKPICard
+            title="Taxa de Conversão"
+            value={`${totalConversion.conversionRate.toFixed(2)}%`}
+            subtitle="leads convertidos"
+            icon={TrendingUp}
+            variant="green"
+            delay={0}
+            tooltipContent={
+              <div className="text-xs space-y-1">
+                <p><strong>{totalConversion.totalConverted}</strong> de {totalConversion.totalLeads} leads únicos</p>
+                <p className="text-muted-foreground">Matching por email ou telefone</p>
+              </div>
+            }
+          />
+          <ColoredKPICard
+            title="Leads Convertidos"
+            value={totalConversion.totalConverted.toString()}
+            subtitle="com compra confirmada"
+            icon={ShoppingCart}
+            variant="cyan"
+            delay={1}
+          />
+          <ColoredKPICard
+            title="Receita Atribuída"
+            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(totalConversion.totalRevenue)}
+            subtitle="vendas de leads"
+            icon={DollarSign}
+            variant="yellow"
+            delay={2}
+          />
+          <ColoredKPICard
+            title="Ticket Médio"
+            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(totalConversion.averageTicket)}
+            subtitle="por lead convertido"
+            icon={BarChart3}
+            variant="orange"
+            delay={3}
+          />
+        </motion.div>
+
+        {/* Conversion Funnel */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <ConversionFunnelCard
+            totalLeads={totalConversion.totalLeads}
+            qualifiedLeads={totalConversion.qualifiedLeads}
+            convertedLeads={totalConversion.totalConverted}
+            totalRevenue={totalConversion.totalRevenue}
+            isLoading={isLoadingConversion}
           />
         </motion.div>
 
