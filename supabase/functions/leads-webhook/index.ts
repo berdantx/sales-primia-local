@@ -286,6 +286,142 @@ function detectSource(body: any, querySource: string | null): LeadSource {
   return 'unknown';
 }
 
+// Normalize URL to extract page path
+function normalizePageUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  
+  try {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      const parsed = new URL(url);
+      url = parsed.pathname;
+    }
+    
+    url = url.split('?')[0].split('#')[0];
+    url = url.replace(/^\/+|\/+$/g, '');
+    
+    if (!url) return '/';
+    return url;
+  } catch {
+    return url.split('?')[0].split('#')[0].replace(/^\/+|\/+$/g, '') || '/';
+  }
+}
+
+// Check if this is a new landing page and send alert
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function checkAndAlertNewLandingPage(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  clientId: string,
+  pageUrl: string,
+  leadId: string,
+  leadData: LeadData
+) {
+  try {
+    const normalizedUrl = normalizePageUrl(pageUrl);
+    if (!normalizedUrl || normalizedUrl === '/') {
+      console.log('Page URL is empty or root, skipping new page check');
+      return;
+    }
+
+    // Check if this page already exists for this client
+    const { data: existingPage, error: checkError } = await supabase
+      .from('known_landing_pages')
+      .select('id, alert_sent')
+      .eq('client_id', clientId)
+      .eq('normalized_url', normalizedUrl)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('Error checking known landing pages:', checkError);
+      return;
+    }
+
+    if (existingPage) {
+      console.log(`Landing page ${normalizedUrl} already known for client ${clientId}`);
+      return;
+    }
+
+    // This is a new landing page! Insert it
+    console.log(`New landing page detected: ${normalizedUrl} for client ${clientId}`);
+    
+    const { error: insertError } = await supabase
+      .from('known_landing_pages')
+      .insert({
+        client_id: clientId,
+        normalized_url: normalizedUrl,
+        first_lead_id: leadId,
+        first_seen_at: new Date().toISOString(),
+        alert_sent: false,
+      });
+
+    if (insertError) {
+      // If unique constraint violation, page was just added by another concurrent request
+      if (insertError.code === '23505') {
+        console.log('Landing page was just added by another request, skipping');
+        return;
+      }
+      console.error('Error inserting known landing page:', insertError);
+      return;
+    }
+
+    // Get client name for the alert
+    const { data: client } = await supabase
+      .from('clients')
+      .select('name')
+      .eq('id', clientId)
+      .single();
+
+    // Send alert via edge function
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    console.log('Sending new landing page alert...');
+    
+    const alertPayload = {
+      clientId,
+      clientName: client?.name || 'Cliente',
+      normalizedUrl: `/${normalizedUrl}`,
+      firstLeadId: leadId,
+      firstLeadData: {
+        email: leadData.email,
+        firstName: leadData.first_name,
+        lastName: leadData.last_name,
+        utmSource: leadData.utm_source,
+        utmMedium: leadData.utm_medium,
+        utmCampaign: leadData.utm_campaign,
+        utmContent: leadData.utm_content,
+        createdAt: new Date().toISOString(),
+      },
+    };
+
+    // Call the alert function
+    try {
+      const alertResponse = await fetch(
+        `${supabaseUrl}/functions/v1/new-landing-page-alert`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify(alertPayload),
+        }
+      );
+      
+      if (!alertResponse.ok) {
+        const errorText = await alertResponse.text();
+        console.error('Alert function error:', errorText);
+      } else {
+        console.log('New landing page alert sent successfully');
+      }
+    } catch (alertError) {
+      console.error('Error calling alert function:', alertError);
+    }
+  } catch (error) {
+    console.error('Error in checkAndAlertNewLandingPage:', error);
+  }
+}
+
 // Helper function to log webhook events
 async function logWebhookEvent(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -585,6 +721,17 @@ serve(async (req) => {
     }
 
     console.log('Lead inserted successfully:', data.id);
+
+    // Check if this is a new landing page for this client
+    if (leadData.page_url && resolvedClientId) {
+      await checkAndAlertNewLandingPage(
+        supabase,
+        resolvedClientId,
+        leadData.page_url,
+        data.id,
+        leadData
+      );
+    }
 
     // Log success
     await logWebhookEvent(
