@@ -9,6 +9,9 @@ interface Lead {
   phone: string | null;
   page_url: string | null;
   created_at: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
 }
 
 interface Transaction {
@@ -232,19 +235,35 @@ export function useLandingPageConversion({
     return stats.sort((a, b) => b.conversionRate - a.conversionRate);
   }, [leads, transactionsByEmail, transactionsByPhone]);
 
-  // Total conversion summary
+  // Total conversion summary including qualified leads calculation
   const totalConversion = useMemo(() => {
     const totalLeads = conversionStats.reduce((sum, s) => sum + s.uniqueEmails, 0);
     const totalConverted = conversionStats.reduce((sum, s) => sum + s.convertedLeads, 0);
     const totalRevenue = conversionStats.reduce((sum, s) => sum + s.totalRevenue, 0);
     
+    // Qualified leads = leads with complete UTM data (source + medium + campaign)
+    const qualifiedLeads = leads.filter(lead => 
+      lead.utm_source && 
+      lead.utm_medium && 
+      lead.utm_campaign
+    ).length;
+    
+    const conversionRate = totalLeads > 0 ? (totalConverted / totalLeads) * 100 : 0;
+    const qualificationRate = totalLeads > 0 ? (qualifiedLeads / totalLeads) * 100 : 0;
+    const qualifiedConversionRate = qualifiedLeads > 0 ? (totalConverted / qualifiedLeads) * 100 : 0;
+    const averageTicket = totalConverted > 0 ? totalRevenue / totalConverted : 0;
+    
     return {
       totalLeads,
+      qualifiedLeads,
       totalConverted,
-      conversionRate: totalLeads > 0 ? (totalConverted / totalLeads) * 100 : 0,
+      conversionRate,
+      qualificationRate,
+      qualifiedConversionRate,
       totalRevenue,
+      averageTicket,
     };
-  }, [conversionStats]);
+  }, [conversionStats, leads]);
 
   return {
     conversionStats,
