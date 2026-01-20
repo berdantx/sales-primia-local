@@ -19,6 +19,14 @@ import { subDays, startOfDay, endOfDay, format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { Link } from 'react-router-dom';
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import {
   Loader2,
   TrendingUp,
   ShoppingCart,
@@ -26,7 +34,6 @@ import {
   BarChart3,
   Target,
   Users,
-  ArrowLeft,
   Percent,
 } from 'lucide-react';
 
@@ -100,23 +107,31 @@ function LeadsFunnel() {
   return (
     <MainLayout>
       <div className="space-y-4 sm:space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link to="/leads">Leads</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Funil de Conversão</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
         >
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/leads">
-                <ArrowLeft className="h-4 w-4" />
-              </Link>
-            </Button>
-            <ClientContextHeader
-              title="Funil de Conversão"
-              description="Análise de conversão de leads em vendas"
-            />
-          </div>
+          <ClientContextHeader
+            title="Funil de Conversão"
+            description="Análise de conversão de leads em vendas"
+          />
         </motion.div>
 
         {/* Period Filter */}
