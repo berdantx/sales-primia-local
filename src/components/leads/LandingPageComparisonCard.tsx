@@ -10,9 +10,11 @@ import {
   Sparkles, 
   Calendar,
   BarChart3,
-  Info
+  Info,
+  Target
 } from 'lucide-react';
 import { LandingPageStats } from '@/hooks/useLandingPageStats';
+import { LandingPageConversion } from '@/hooks/useLandingPageConversion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -26,6 +28,7 @@ import {
 
 interface LandingPageComparisonCardProps {
   stats: LandingPageStats[];
+  conversionStats?: LandingPageConversion[];
   isLoading?: boolean;
   selectedPage?: string | null;
   onPageClick?: (page: string | null) => void;
@@ -75,6 +78,7 @@ const getTrendColor = (trend: LandingPageStats['trend']) => {
 
 export function LandingPageComparisonCard({
   stats,
+  conversionStats = [],
   isLoading,
   selectedPage,
   onPageClick,
@@ -89,6 +93,11 @@ export function LandingPageComparisonCard({
   const isPageInactive = (page: LandingPageStats) => {
     return page.lastLeadDate && page.lastLeadDate < sevenDaysAgo;
   };
+
+  // Create a map for quick conversion lookup
+  const conversionMap = new Map(
+    conversionStats.map(c => [c.normalizedUrl, c])
+  );
   if (isLoading) {
     return (
       <Card>
@@ -155,7 +164,7 @@ export function LandingPageComparisonCard({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Página</TableHead>
+                <TableHead className="w-[180px]">Página</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-center">
                   <div className="flex items-center justify-center gap-1">
@@ -169,6 +178,12 @@ export function LandingPageComparisonCard({
                     <span>Média/Dia</span>
                   </div>
                 </TableHead>
+                <TableHead className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <Target className="h-3 w-3" />
+                    <span>Conversão</span>
+                  </div>
+                </TableHead>
                 <TableHead className="text-center">Tendência</TableHead>
               </TableRow>
             </TableHeader>
@@ -176,6 +191,8 @@ export function LandingPageComparisonCard({
               {stats.map((page, index) => {
                 const isSelected = selectedPage === page.normalizedUrl;
                 const inactive = isPageInactive(page);
+                const conversion = conversionMap.get(page.normalizedUrl);
+                const hasConversions = conversion && conversion.convertedLeads > 0;
                 return (
                   <motion.tr
                     key={page.normalizedUrl}
@@ -234,6 +251,27 @@ export function LandingPageComparisonCard({
                       {page.dailyAverage.toFixed(1)}
                     </TableCell>
                     <TableCell className="text-center">
+                      {hasConversions ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="default" className="font-mono bg-green-600 hover:bg-green-700">
+                                {conversion.conversionRate.toFixed(1)}%
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs space-y-1">
+                                <p>{conversion.convertedLeads} conversões</p>
+                                <p>R$ {conversion.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getTrendColor(page.trend)}`}>
                           {getTrendIcon(page.trend)}
@@ -249,7 +287,7 @@ export function LandingPageComparisonCard({
                   onClick={onToggleShowAll}
                   className="cursor-pointer hover:bg-muted/50"
                 >
-                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground italic py-3">
+                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground italic py-3">
                     Mostrar {hiddenPagesCount} página(s) inativa(s)
                   </TableCell>
                 </TableRow>

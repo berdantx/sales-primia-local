@@ -617,6 +617,51 @@ export type Database = {
           },
         ]
       }
+      known_landing_pages: {
+        Row: {
+          alert_sent: boolean
+          client_id: string
+          created_at: string
+          first_lead_id: string | null
+          first_seen_at: string
+          id: string
+          normalized_url: string
+        }
+        Insert: {
+          alert_sent?: boolean
+          client_id: string
+          created_at?: string
+          first_lead_id?: string | null
+          first_seen_at?: string
+          id?: string
+          normalized_url: string
+        }
+        Update: {
+          alert_sent?: boolean
+          client_id?: string
+          created_at?: string
+          first_lead_id?: string | null
+          first_seen_at?: string
+          id?: string
+          normalized_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "known_landing_pages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "known_landing_pages_first_lead_id_fkey"
+            columns: ["first_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           city: string | null

@@ -47,3 +47,21 @@ verify_jwt = false
 
 [functions.backfill-geolocation]
 verify_jwt = true
+
+[functions.new-landing-page-alert]
+verify_jwt = false
+
+[functions.eduzz-webhook]
+verify_jwt = false
+
+[functions.admin-reset-password]
+verify_jwt = true
+
+[functions.check-duplicate-alerts]
+verify_jwt = false
+
+[functions.export-backup]
+verify_jwt = true
+
+[functions.restore-backup]
+verify_jwt = true
