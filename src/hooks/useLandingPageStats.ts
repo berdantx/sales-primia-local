@@ -21,9 +21,11 @@ export interface LandingPageStats {
 export interface UseLandingPageStatsProps {
   leads: Lead[] | undefined;
   limit?: number;
+  minLeads?: number;
+  showAll?: boolean;
 }
 
-export function useLandingPageStats({ leads, limit = 10 }: UseLandingPageStatsProps) {
+export function useLandingPageStats({ leads, limit = 10, minLeads = 5, showAll = false }: UseLandingPageStatsProps) {
   const stats = useMemo(() => {
     if (!leads || leads.length === 0) return [];
 
@@ -141,11 +143,31 @@ export function useLandingPageStats({ leads, limit = 10 }: UseLandingPageStatsPr
       }
     );
 
-    // Sort by lead count and limit
-    return statsArray
-      .sort((a, b) => b.leadCount - a.leadCount)
+    // Filter by minLeads threshold (unless showAll is true) and sort
+    const filtered = showAll 
+      ? statsArray 
+      : statsArray.filter(s => s.leadCount >= minLeads);
+    
+    // Sort: active pages first (with recent activity), then by lead count
+    const currentDate = new Date();
+    const sevenDaysAgoDate = new Date(currentDate);
+    sevenDaysAgoDate.setDate(sevenDaysAgoDate.getDate() - 7);
+    
+    return filtered
+      .sort((a, b) => {
+        // Check if page is active (has leads in last 7 days)
+        const aIsActive = a.lastLeadDate && a.lastLeadDate >= sevenDaysAgoDate;
+        const bIsActive = b.lastLeadDate && b.lastLeadDate >= sevenDaysAgoDate;
+        
+        // Active pages come first
+        if (aIsActive && !bIsActive) return -1;
+        if (!aIsActive && bIsActive) return 1;
+        
+        // Then sort by lead count
+        return b.leadCount - a.leadCount;
+      })
       .slice(0, limit);
-  }, [leads, limit]);
+  }, [leads, limit, minLeads, showAll]);
 
   const totalPagesCount = useMemo(() => {
     if (!leads) return 0;
@@ -156,6 +178,21 @@ export function useLandingPageStats({ leads, limit = 10 }: UseLandingPageStatsPr
     );
     return uniquePages.size;
   }, [leads]);
+
+  // Count of hidden pages (below minLeads threshold)
+  const hiddenPagesCount = useMemo(() => {
+    if (!leads) return 0;
+    
+    const pageCounts: Record<string, number> = {};
+    leads.forEach((lead) => {
+      const normalized = normalizePageUrl(lead.page_url);
+      if (normalized) {
+        pageCounts[normalized] = (pageCounts[normalized] || 0) + 1;
+      }
+    });
+    
+    return Object.values(pageCounts).filter(count => count < minLeads).length;
+  }, [leads, minLeads]);
 
   // Get page options for filter dropdown
   const pageOptions = useMemo(() => {
@@ -178,5 +215,5 @@ export function useLandingPageStats({ leads, limit = 10 }: UseLandingPageStatsPr
       }));
   }, [leads]);
 
-  return { stats, totalPagesCount, pageOptions };
+  return { stats, totalPagesCount, pageOptions, hiddenPagesCount };
 }

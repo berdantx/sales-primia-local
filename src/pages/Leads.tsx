@@ -74,6 +74,7 @@ function Leads() {
   const [utmContentFilter, setUtmContentFilter] = useState<string>('all');
   const [utmTermFilter, setUtmTermFilter] = useState<string>('all');
   const [pageFilter, setPageFilter] = useState<string>('all');
+  const [showAllPages, setShowAllPages] = useState(false);
   const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -102,7 +103,12 @@ function Leads() {
   const { data: leads, isLoading } = useLeads(isReady ? filters : undefined);
   const { stats, isLoading: isLoadingStats } = useLeadStats(isReady ? filters : undefined);
   const { topItems, totalCount } = useTopItems({ leads, mode: topMode });
-  const { stats: landingPageStats, totalPagesCount, pageOptions } = useLandingPageStats({ leads, limit: 10 });
+  const { stats: landingPageStats, totalPagesCount, pageOptions, hiddenPagesCount } = useLandingPageStats({ 
+    leads, 
+    limit: 10,
+    minLeads: 5,
+    showAll: showAllPages 
+  });
   const topItemNames = useMemo(() => topItems.map(item => item.name), [topItems]);
 
   // Get unique sources, countries and utm values for filters with counts
@@ -630,18 +636,32 @@ function Leads() {
                   </SelectContent>
                 </Select>
 
-                <Select value={pageFilter} onValueChange={(v) => { setPageFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[180px] h-9 text-sm">
+                <Select value={pageFilter} onValueChange={(v) => { 
+                  if (v === '__show_all__') {
+                    setShowAllPages(true);
+                  } else {
+                    setPageFilter(v); 
+                    setCurrentPage(1); 
+                  }
+                }}>
+                  <SelectTrigger className="w-[140px] sm:w-[200px] h-9 text-sm">
                     <FileText className="h-3 w-3 mr-1 shrink-0" />
                     <SelectValue placeholder="Página" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas páginas ({totalPagesCount})</SelectItem>
-                    {filterOptions.pages.map(p => (
-                      <SelectItem key={p} value={p}>
-                        /{p} ({filterOptions.pageCounts[p]})
+                    <SelectItem value="all">Todas páginas ativas ({totalPagesCount - hiddenPagesCount})</SelectItem>
+                    {filterOptions.pages
+                      .filter(p => showAllPages || filterOptions.pageCounts[p] >= 5)
+                      .map(p => (
+                        <SelectItem key={p} value={p}>
+                          /{p} ({filterOptions.pageCounts[p]})
+                        </SelectItem>
+                      ))}
+                    {!showAllPages && hiddenPagesCount > 0 && (
+                      <SelectItem value="__show_all__" className="text-muted-foreground italic">
+                        Mostrar inativas ({hiddenPagesCount})
                       </SelectItem>
-                    ))}
+                    )}
                   </SelectContent>
                 </Select>
 
@@ -734,6 +754,9 @@ function Leads() {
                 setPageFilter(page || 'all');
                 setCurrentPage(1);
               }}
+              showAllPages={showAllPages}
+              hiddenPagesCount={hiddenPagesCount}
+              onToggleShowAll={() => setShowAllPages(true)}
             />
             <Card className="h-[300px]">
               <CardContent className="h-full pt-4">

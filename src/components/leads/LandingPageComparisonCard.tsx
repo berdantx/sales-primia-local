@@ -29,6 +29,9 @@ interface LandingPageComparisonCardProps {
   isLoading?: boolean;
   selectedPage?: string | null;
   onPageClick?: (page: string | null) => void;
+  showAllPages?: boolean;
+  hiddenPagesCount?: number;
+  onToggleShowAll?: () => void;
 }
 
 const getTrendIcon = (trend: LandingPageStats['trend']) => {
@@ -75,7 +78,17 @@ export function LandingPageComparisonCard({
   isLoading,
   selectedPage,
   onPageClick,
+  showAllPages,
+  hiddenPagesCount = 0,
+  onToggleShowAll,
 }: LandingPageComparisonCardProps) {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const isPageInactive = (page: LandingPageStats) => {
+    return page.lastLeadDate && page.lastLeadDate < sevenDaysAgo;
+  };
   if (isLoading) {
     return (
       <Card>
@@ -162,6 +175,7 @@ export function LandingPageComparisonCard({
             <TableBody>
               {stats.map((page, index) => {
                 const isSelected = selectedPage === page.normalizedUrl;
+                const inactive = isPageInactive(page);
                 return (
                   <motion.tr
                     key={page.normalizedUrl}
@@ -172,30 +186,39 @@ export function LandingPageComparisonCard({
                     className={`cursor-pointer transition-colors ${
                       isSelected 
                         ? 'bg-primary/10 hover:bg-primary/15' 
-                        : 'hover:bg-muted/50'
+                        : inactive
+                          ? 'opacity-60 hover:bg-muted/30'
+                          : 'hover:bg-muted/50'
                     }`}
                   >
                     <TableCell className="font-medium">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="truncate max-w-[180px] block">
-                              {page.displayName}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="right">
-                            <div className="space-y-1">
-                              <p className="font-medium">{page.displayName}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {page.percentage.toFixed(1)}% do total
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Clique para {isSelected ? 'remover' : 'filtrar'}
-                              </p>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <div className="flex items-center gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="truncate max-w-[160px] block">
+                                {page.displayName}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              <div className="space-y-1">
+                                <p className="font-medium">{page.displayName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {page.percentage.toFixed(1)}% do total
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Clique para {isSelected ? 'remover' : 'filtrar'}
+                                </p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        {inactive && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 text-muted-foreground">
+                            Inativa
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <Badge variant="secondary" className="font-mono">
@@ -221,6 +244,16 @@ export function LandingPageComparisonCard({
                   </motion.tr>
                 );
               })}
+              {!showAllPages && hiddenPagesCount > 0 && onToggleShowAll && (
+                <TableRow 
+                  onClick={onToggleShowAll}
+                  className="cursor-pointer hover:bg-muted/50"
+                >
+                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground italic py-3">
+                    Mostrar {hiddenPagesCount} página(s) inativa(s)
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
