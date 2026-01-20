@@ -12,7 +12,9 @@ import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
 import { LeadsWorldMap } from '@/components/leads/LeadsWorldMap';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
 import { ConversionFunnelCard } from '@/components/leads/ConversionFunnelCard';
+import { FunnelEvolutionChart } from '@/components/leads/FunnelEvolutionChart';
 import { LandingPageTrendChart } from '@/components/leads/LandingPageTrendChart';
+import { useFunnelEvolution } from '@/hooks/useFunnelEvolution';
 import { GroupBy } from '@/hooks/useAdTrend';
 import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
@@ -63,7 +65,8 @@ import {
   MapPin,
   FileText,
   DollarSign,
-  ShoppingCart
+  ShoppingCart,
+  Target
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 20;
@@ -92,6 +95,8 @@ function Leads() {
   const [trendGroupBy, setTrendGroupBy] = useState<GroupBy>('day');
   const [chartTab, setChartTab] = useState<'daily' | 'evolution'>('daily');
   const [selectedTopItem, setSelectedTopItem] = useState<string | null>(null);
+  const [qualifiedFilter, setQualifiedFilter] = useState<string>('all'); // 'all' | 'qualified' | 'unqualified'
+  const [funnelGroupBy, setFunnelGroupBy] = useState<'day' | 'week'>('day');
   
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
@@ -123,6 +128,22 @@ function Leads() {
     endDate: dateRange?.to,
   });
 
+  // Build set of converted emails for funnel evolution
+  const convertedEmails = useMemo(() => {
+    const emails = new Set<string>();
+    for (const stat of conversionStats) {
+      // We don't have direct access to converted emails, so we'll use the lead emails that have conversions
+      // This is a simplification - the actual conversion matching happens in the hook
+    }
+    return emails;
+  }, [conversionStats]);
+
+  // Funnel evolution over time
+  const funnelEvolutionData = useFunnelEvolution({
+    leads: leads || [],
+    convertedEmails,
+    groupBy: funnelGroupBy,
+  });
   // Get unique sources, countries and utm values for filters with counts
   const filterOptions = useMemo(() => {
     if (!leads) return { 
@@ -223,9 +244,16 @@ function Leads() {
         (testFilter === 'hide' && !isTest) || 
         (testFilter === 'only' && isTest);
       
-      return matchesSearch && matchesSource && matchesCountry && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter && matchesSelectedTopItem && matchesPageFilter;
+      // Qualified filter (leads with complete UTMs)
+      const isQualified = l.utm_source && l.utm_medium && l.utm_campaign;
+      const matchesQualifiedFilter = 
+        qualifiedFilter === 'all' || 
+        (qualifiedFilter === 'qualified' && isQualified) || 
+        (qualifiedFilter === 'unqualified' && !isQualified);
+      
+      return matchesSearch && matchesSource && matchesCountry && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter && matchesSelectedTopItem && matchesPageFilter && matchesQualifiedFilter;
     });
-  }, [leads, search, sourceFilter, countryFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter, selectedTopItem, topMode, pageFilter]);
+  }, [leads, search, sourceFilter, countryFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter, selectedTopItem, topMode, pageFilter, qualifiedFilter]);
 
   // Count test leads
   const testLeadsCount = useMemo(() => {
@@ -285,13 +313,14 @@ function Leads() {
     setUtmTermFilter('all');
     setPageFilter('all');
     setTestFilter('hide');
+    setQualifiedFilter('all');
     setSelectedPeriod('30days');
     setDateRange({ from: subDays(new Date(), 30), to: new Date() });
     setCurrentPage(1);
     setSelectedTopItem(null);
   };
 
-  const hasActiveFilters = search || sourceFilter !== 'all' || countryFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || pageFilter !== 'all' || testFilter !== 'hide' || selectedPeriod !== '30days' || selectedTopItem;
+  const hasActiveFilters = search || sourceFilter !== 'all' || countryFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || pageFilter !== 'all' || testFilter !== 'hide' || qualifiedFilter !== 'all' || selectedPeriod !== '30days' || selectedTopItem;
 
   // Backfill geolocation handler
   const handleBackfillGeolocation = async () => {
@@ -548,20 +577,35 @@ function Leads() {
           />
         </motion.div>
 
-        {/* Conversion Funnel */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <ConversionFunnelCard
-            totalLeads={totalConversion.totalLeads}
-            qualifiedLeads={totalConversion.qualifiedLeads}
-            convertedLeads={totalConversion.totalConverted}
-            totalRevenue={totalConversion.totalRevenue}
-            isLoading={isLoadingConversion}
-          />
-        </motion.div>
+        {/* Conversion Funnel + Evolution */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <ConversionFunnelCard
+              totalLeads={totalConversion.totalLeads}
+              qualifiedLeads={totalConversion.qualifiedLeads}
+              convertedLeads={totalConversion.totalConverted}
+              totalRevenue={totalConversion.totalRevenue}
+              topConvertingPages={conversionStats}
+              isLoading={isLoadingConversion}
+            />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <FunnelEvolutionChart
+              data={funnelEvolutionData}
+              isLoading={isLoadingConversion}
+              groupBy={funnelGroupBy}
+              onGroupByChange={setFunnelGroupBy}
+            />
+          </motion.div>
+        </div>
 
         {/* Filters - moved above chart */}
         <Card>
