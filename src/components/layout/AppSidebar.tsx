@@ -35,6 +35,7 @@ import {
   Building2,
   UserPlus,
   BookOpen,
+  Filter,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import defaultLogo from '@/assets/default-logo.png';
@@ -71,6 +72,7 @@ const menuGroups: MenuGroup[] = [
     label: 'Dados',
     items: [
       { title: 'Leads', url: '/leads', icon: UserPlus, roles: ['master', 'admin', 'user'] },
+      { title: 'Funil', url: '/leads/funnel', icon: Filter, roles: ['master', 'admin', 'user'] },
       { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin', 'user'] },
       { title: 'Upload', url: '/upload', icon: Upload, roles: ['master', 'admin'] },
     ]
