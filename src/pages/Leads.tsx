@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LeadsTable } from '@/components/leads/LeadsTable';
+import { LeadsFilters } from '@/components/leads/LeadsFilters';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { LeadsPeriodFilter } from '@/components/leads/LeadsPeriodFilter';
@@ -300,7 +301,7 @@ function Leads() {
     setSelectedTopItem(null);
   };
 
-  const hasActiveFilters = search || sourceFilter !== 'all' || countryFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || pageFilter !== 'all' || testFilter !== 'hide' || qualifiedFilter !== 'all' || selectedPeriod !== '30days' || selectedTopItem;
+  const hasActiveFilters = Boolean(search || sourceFilter !== 'all' || countryFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || pageFilter !== 'all' || testFilter !== 'hide' || qualifiedFilter !== 'all' || selectedPeriod !== '30days' || selectedTopItem);
 
   // Backfill geolocation handler
   const handleBackfillGeolocation = async () => {
@@ -541,201 +542,55 @@ function Leads() {
           </Card>
         </motion.div>
 
-        {/* Filters - moved above chart */}
+        {/* Filters */}
         <Card>
-          <CardContent className="p-3 sm:pt-6 sm:px-6">
-            <div className="flex flex-col gap-3">
-              {/* Date Range + Search Row */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <LeadsPeriodFilter
-                  selectedPeriod={selectedPeriod}
-                  dateRange={dateRange}
-                  onPeriodChange={(period) => {
-                    setSelectedPeriod(period);
-                    setCurrentPage(1);
-                  }}
-                  onDateRangeChange={(range) => {
-                    setDateRange(range);
-                    setCurrentPage(1);
-                  }}
-                />
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar email, nome, telefone..."
-                      value={search}
-                      onChange={(e) => {
-                        setSearch(e.target.value);
-                        setCurrentPage(1);
-                      }}
-                      className="pl-10 h-9 text-sm"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Other Filters Row */}
-              <div className="flex flex-wrap gap-2">
-                <Select value={sourceFilter} onValueChange={(v) => { setSourceFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
-                    <SelectValue placeholder="Fonte" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas fontes ({leads?.length || 0})</SelectItem>
-                    {filterOptions.sources.map(s => (
-                      <SelectItem key={s} value={s}>
-                        {s} ({filterOptions.sourceCounts[s]})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={countryFilter} onValueChange={(v) => { setCountryFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
-                    <Globe className="h-3 w-3 mr-1 shrink-0" />
-                    <SelectValue placeholder="País" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos países</SelectItem>
-                    {filterOptions.countries.map(c => (
-                      <SelectItem key={c} value={c}>
-                        {c} ({filterOptions.countryCounts[c]})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={utmSourceFilter} onValueChange={(v) => { setUtmSourceFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
-                    <SelectValue placeholder="UTM Source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Source</SelectItem>
-                    {filterOptions.utmSources.map(s => (
-                      <SelectItem key={s} value={s}>
-                        {s} ({filterOptions.utmSourceCounts[s]})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={utmMediumFilter} onValueChange={(v) => { setUtmMediumFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
-                    <SelectValue placeholder="UTM Medium" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Medium</SelectItem>
-                    {filterOptions.utmMediums.map(s => (
-                      <SelectItem key={s} value={s}>
-                        {s} ({filterOptions.utmMediumCounts[s]})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={utmCampaignFilter} onValueChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
-                    <SelectValue placeholder="UTM Campaign" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Campaign</SelectItem>
-                    {filterOptions.utmCampaigns.map(s => (
-                      <SelectItem key={s} value={s}>
-                        {s} ({filterOptions.utmCampaignCounts[s]})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={utmContentFilter} onValueChange={(v) => { setUtmContentFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
-                    <SelectValue placeholder="UTM Content" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Content</SelectItem>
-                    {filterOptions.utmContents.map(s => (
-                      <SelectItem key={s} value={s}>
-                        {s} ({filterOptions.utmContentCounts[s]})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={utmTermFilter} onValueChange={(v) => { setUtmTermFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[170px] h-9 text-sm">
-                    <SelectValue placeholder="UTM Term" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Term</SelectItem>
-                    {filterOptions.utmTerms.map(s => (
-                      <SelectItem key={s} value={s}>
-                        {s} ({filterOptions.utmTermCounts[s]})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={qualifiedFilter} onValueChange={(v) => { setQualifiedFilter(v as 'all' | 'qualified' | 'unqualified'); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[160px] h-9 text-sm">
-                    <Target className="h-3 w-3 mr-1 shrink-0" />
-                    <SelectValue placeholder="Qualificados" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos leads</SelectItem>
-                    <SelectItem value="qualified">Qualificados (UTMs)</SelectItem>
-                    <SelectItem value="unqualified">Não qualificados</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={testFilter} onValueChange={(v) => { setTestFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[140px] sm:w-[150px] h-9 text-sm">
-                    <FlaskConical className="h-3 w-3 mr-1 shrink-0" />
-                    <SelectValue placeholder="Teste" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hide">Ocultar testes</SelectItem>
-                    <SelectItem value="all">Mostrar todos</SelectItem>
-                    <SelectItem value="only">Apenas testes ({testLeadsCount})</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={pageFilter} onValueChange={(v) => { 
-                  if (v === '__show_all__') {
-                    setShowAllPages(true);
-                  } else {
-                    setPageFilter(v); 
-                    setCurrentPage(1); 
-                  }
-                }}>
-                  <SelectTrigger className="w-[140px] sm:w-[200px] h-9 text-sm">
-                    <FileText className="h-3 w-3 mr-1 shrink-0" />
-                    <SelectValue placeholder="Página" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas páginas ativas ({totalPagesCount - hiddenPagesCount})</SelectItem>
-                    {filterOptions.pages
-                      .filter(p => showAllPages || filterOptions.pageCounts[p] >= 5)
-                      .map(p => (
-                        <SelectItem key={p} value={p}>
-                          /{p} ({filterOptions.pageCounts[p]})
-                        </SelectItem>
-                      ))}
-                    {!showAllPages && hiddenPagesCount > 0 && (
-                      <SelectItem value="__show_all__" className="text-muted-foreground italic">
-                        Mostrar inativas ({hiddenPagesCount})
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-
-                {hasActiveFilters && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2">
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
+          <CardContent className="p-3 sm:p-4">
+            <LeadsFilters
+              selectedPeriod={selectedPeriod}
+              dateRange={dateRange}
+              onPeriodChange={(period) => {
+                setSelectedPeriod(period);
+                setCurrentPage(1);
+              }}
+              onDateRangeChange={(range) => {
+                setDateRange(range);
+                setCurrentPage(1);
+              }}
+              search={search}
+              onSearchChange={(value) => {
+                setSearch(value);
+                setCurrentPage(1);
+              }}
+              sourceFilter={sourceFilter}
+              onSourceFilterChange={(v) => { setSourceFilter(v); setCurrentPage(1); }}
+              countryFilter={countryFilter}
+              onCountryFilterChange={(v) => { setCountryFilter(v); setCurrentPage(1); }}
+              utmSourceFilter={utmSourceFilter}
+              onUtmSourceFilterChange={(v) => { setUtmSourceFilter(v); setCurrentPage(1); }}
+              utmMediumFilter={utmMediumFilter}
+              onUtmMediumFilterChange={(v) => { setUtmMediumFilter(v); setCurrentPage(1); }}
+              utmCampaignFilter={utmCampaignFilter}
+              onUtmCampaignFilterChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(1); }}
+              utmContentFilter={utmContentFilter}
+              onUtmContentFilterChange={(v) => { setUtmContentFilter(v); setCurrentPage(1); }}
+              utmTermFilter={utmTermFilter}
+              onUtmTermFilterChange={(v) => { setUtmTermFilter(v); setCurrentPage(1); }}
+              qualifiedFilter={qualifiedFilter}
+              onQualifiedFilterChange={(v) => { setQualifiedFilter(v as 'all' | 'qualified' | 'unqualified'); setCurrentPage(1); }}
+              testFilter={testFilter}
+              onTestFilterChange={(v) => { setTestFilter(v); setCurrentPage(1); }}
+              pageFilter={pageFilter}
+              onPageFilterChange={(v) => { setPageFilter(v); setCurrentPage(1); }}
+              showAllPages={showAllPages}
+              onShowAllPages={() => setShowAllPages(true)}
+              totalPagesCount={totalPagesCount}
+              hiddenPagesCount={hiddenPagesCount}
+              totalLeads={leads?.length || 0}
+              testLeadsCount={testLeadsCount}
+              filterOptions={filterOptions}
+              hasActiveFilters={hasActiveFilters}
+              onClearFilters={clearFilters}
+            />
           </CardContent>
         </Card>
 
