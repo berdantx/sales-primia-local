@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
-import { useLeads, useLeadStats } from '@/hooks/useLeads';
-import { useTopItems, ViewMode } from '@/hooks/useTopAds';
+import { useLeadsPaginated } from '@/hooks/useLeadsPaginated';
+import { useLeadStatsOptimized } from '@/hooks/useLeadStatsOptimized';
+import { useTopAdsOptimized } from '@/hooks/useTopAdsOptimized';
 import { useLandingPageStats } from '@/hooks/useLandingPageStats';
 import { useLandingPageConversion } from '@/hooks/useLandingPageConversion';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
@@ -13,13 +14,10 @@ import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
 import { LeadsWorldMap } from '@/components/leads/LeadsWorldMap';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
 import { LandingPageTrendChart } from '@/components/leads/LandingPageTrendChart';
-import { GroupBy } from '@/hooks/useAdTrend';
 import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +28,6 @@ import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadsFilters } from '@/components/leads/LeadsFilters';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
-import { LeadsPeriodFilter } from '@/components/leads/LeadsPeriodFilter';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,7 +46,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { 
-  Search, 
   Download, 
   Loader2, 
   ChevronLeft, 
@@ -62,12 +58,14 @@ import {
   Trash2,
   BarChart3,
   MapPin,
-  FileText,
   Target,
   ArrowRight
 } from 'lucide-react';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 50;
+
+type ViewMode = 'ads' | 'campaigns' | 'pages';
+type GroupBy = 'day' | 'week';
 
 function Leads() {
   const [search, setSearch] = useState('');
@@ -80,9 +78,9 @@ function Leads() {
   const [utmTermFilter, setUtmTermFilter] = useState<string>('all');
   const [pageFilter, setPageFilter] = useState<string>('all');
   const [showAllPages, setShowAllPages] = useState(false);
-  const [testFilter, setTestFilter] = useState<string>('hide'); // 'all' | 'hide' | 'only'
+  const [testFilter, setTestFilter] = useState<string>('hide');
   const [isBackfilling, setIsBackfilling] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('30days');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -93,86 +91,104 @@ function Leads() {
   const [trendGroupBy, setTrendGroupBy] = useState<GroupBy>('day');
   const [chartTab, setChartTab] = useState<'daily' | 'evolution'>('daily');
   const [selectedTopItem, setSelectedTopItem] = useState<string | null>(null);
-  const [qualifiedFilter, setQualifiedFilter] = useState<string>('all'); // 'all' | 'qualified' | 'unqualified'
+  const [qualifiedFilter, setQualifiedFilter] = useState<string>('all');
+  const [showCharts, setShowCharts] = useState(false);
   
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
 
-  const filters = useMemo(() => {
-    return {
-      startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
-      endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
-      clientId,
-    };
-  }, [clientId, dateRange]);
+  // Lazy load charts after initial render
+  useEffect(() => {
+    const timer = setTimeout(() => setShowCharts(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
-  const { data: leads, isLoading } = useLeads(isReady ? filters : undefined);
-  const { stats, isLoading: isLoadingStats } = useLeadStats(isReady ? filters : undefined);
-  const { topItems, totalCount } = useTopItems({ leads, mode: topMode });
-  const { stats: landingPageStats, totalPagesCount, pageOptions, hiddenPagesCount } = useLandingPageStats({ 
-    leads, 
+  // Date filters for stats
+  const statsFilters = useMemo(() => ({
+    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
+    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
+    clientId,
+  }), [clientId, dateRange]);
+
+  // Paginated filters for table
+  const paginatedFilters = useMemo(() => ({
+    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
+    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
+    clientId,
+    source: sourceFilter !== 'all' ? sourceFilter : undefined,
+    utmSource: utmSourceFilter !== 'all' ? utmSourceFilter : undefined,
+    utmMedium: utmMediumFilter !== 'all' ? utmMediumFilter : undefined,
+    utmCampaign: utmCampaignFilter !== 'all' ? utmCampaignFilter : undefined,
+    utmContent: utmContentFilter !== 'all' ? utmContentFilter : undefined,
+    utmTerm: utmTermFilter !== 'all' ? utmTermFilter : undefined,
+    country: countryFilter !== 'all' ? countryFilter : undefined,
+    pageUrl: pageFilter !== 'all' ? pageFilter : undefined,
+    search: search || undefined,
+    showTestLeads: testFilter !== 'hide',
+    showQualified: qualifiedFilter,
+  }), [clientId, dateRange, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, countryFilter, pageFilter, search, testFilter, qualifiedFilter]);
+
+  // Optimized stats from SQL function (single query)
+  const { data: stats, isLoading: isLoadingStats } = useLeadStatsOptimized(isReady ? statsFilters : undefined);
+
+  // Optimized top ads from SQL function
+  const { data: topAdsData, isLoading: isLoadingTopAds } = useTopAdsOptimized(isReady ? {
+    ...statsFilters,
+    mode: topMode,
+    limit: 10,
+  } : undefined);
+
+  // Paginated leads for table (only fetches what's needed)
+  const { data: paginatedData, isLoading: isLoadingLeads } = useLeadsPaginated({
+    filters: isReady ? paginatedFilters : undefined,
+    page: currentPage,
+    pageSize: ITEMS_PER_PAGE,
+  });
+
+  // Landing page stats (still needs leads for now - could be optimized later)
+  const { stats: landingPageStats, totalPagesCount, hiddenPagesCount } = useLandingPageStats({ 
+    leads: paginatedData?.leads || [], 
     limit: 10,
     minLeads: 5,
     showAll: showAllPages 
   });
-  const topItemNames = useMemo(() => topItems.map(item => item.name), [topItems]);
+
+  const topItemNames = useMemo(() => 
+    topAdsData?.items?.map(item => item.name) || [], 
+    [topAdsData]
+  );
   
-  // Conversion tracking - matches leads with transactions by email or phone
+  // Conversion tracking - only load when charts are visible
   const { conversionStats, totalConversion, isLoading: isLoadingConversion } = useLandingPageConversion({
     clientId,
-    leads: leads || [],
+    leads: paginatedData?.leads || [],
     startDate: dateRange?.from,
     endDate: dateRange?.to,
   });
 
-  // Get unique sources, countries and utm values for filters with counts
+  // Filter options from stats (already aggregated)
   const filterOptions = useMemo(() => {
-    if (!leads) return { 
-      sources: [], countries: [], utmSources: [], utmMediums: [], utmCampaigns: [], utmContents: [], utmTerms: [], pages: [],
-      sourceCounts: {}, countryCounts: {}, utmSourceCounts: {}, utmMediumCounts: {}, utmCampaignCounts: {}, utmContentCounts: {}, utmTermCounts: {}, pageCounts: {}
-    };
-    
-    const sourceCounts: Record<string, number> = {};
-    const countryCounts: Record<string, number> = {};
-    const utmSourceCounts: Record<string, number> = {};
-    const utmMediumCounts: Record<string, number> = {};
-    const utmCampaignCounts: Record<string, number> = {};
-    const utmContentCounts: Record<string, number> = {};
-    const utmTermCounts: Record<string, number> = {};
-    const pageCounts: Record<string, number> = {};
-    
-    leads.forEach(l => {
-      if (l.source) sourceCounts[l.source] = (sourceCounts[l.source] || 0) + 1;
-      const country = l.country || 'Desconhecido';
-      countryCounts[country] = (countryCounts[country] || 0) + 1;
-      if (l.utm_source) utmSourceCounts[l.utm_source] = (utmSourceCounts[l.utm_source] || 0) + 1;
-      if (l.utm_medium) utmMediumCounts[l.utm_medium] = (utmMediumCounts[l.utm_medium] || 0) + 1;
-      if (l.utm_campaign) utmCampaignCounts[l.utm_campaign] = (utmCampaignCounts[l.utm_campaign] || 0) + 1;
-      if (l.utm_content) utmContentCounts[l.utm_content] = (utmContentCounts[l.utm_content] || 0) + 1;
-      if (l.utm_term) utmTermCounts[l.utm_term] = (utmTermCounts[l.utm_term] || 0) + 1;
-      const normalizedPage = normalizePageUrl(l.page_url);
-      if (normalizedPage) pageCounts[normalizedPage] = (pageCounts[normalizedPage] || 0) + 1;
-    });
-    
     return {
-      sources: Object.keys(sourceCounts).sort(),
-      countries: Object.keys(countryCounts).sort((a, b) => countryCounts[b] - countryCounts[a]),
-      utmSources: Object.keys(utmSourceCounts).sort(),
-      utmMediums: Object.keys(utmMediumCounts).sort(),
-      utmCampaigns: Object.keys(utmCampaignCounts).sort(),
-      utmContents: Object.keys(utmContentCounts).sort(),
-      utmTerms: Object.keys(utmTermCounts).sort(),
-      pages: Object.keys(pageCounts).sort((a, b) => pageCounts[b] - pageCounts[a]),
-      sourceCounts,
-      countryCounts,
-      utmSourceCounts,
-      utmMediumCounts,
-      utmCampaignCounts,
-      utmContentCounts,
-      utmTermCounts,
-      pageCounts,
+      sources: Object.keys(stats?.bySource || {}).sort(),
+      countries: Object.keys(stats?.byCountry || {}).sort((a, b) => 
+        (stats?.byCountry[b] || 0) - (stats?.byCountry[a] || 0)
+      ),
+      utmSources: Object.keys(stats?.byUtmSource || {}).sort(),
+      utmMediums: [],
+      utmCampaigns: [],
+      utmContents: [],
+      utmTerms: [],
+      pages: [],
+      sourceCounts: stats?.bySource || {},
+      countryCounts: stats?.byCountry || {},
+      utmSourceCounts: stats?.byUtmSource || {},
+      utmMediumCounts: {},
+      utmCampaignCounts: {},
+      utmContentCounts: {},
+      utmTermCounts: {},
+      pageCounts: {},
     };
-  }, [leads]);
+  }, [stats]);
 
   // Check if lead is a test lead
   const isTestLead = (tags: string | null) => {
@@ -180,107 +196,71 @@ function Leads() {
     return tags.includes('[TESTE]') || tags.toLowerCase().includes('teste');
   };
 
-  // Filter leads
-  const filteredLeads = useMemo(() => {
-    if (!leads) return [];
+  // Count test leads from current page
+  const testLeadsCount = useMemo(() => {
+    if (!paginatedData?.leads) return 0;
+    return paginatedData.leads.filter(l => isTestLead(l.tags)).length;
+  }, [paginatedData?.leads]);
+
+  const totalPages = paginatedData?.totalPages || 1;
+  const totalCount = paginatedData?.totalCount || 0;
+
+  const handleExportCSV = async (excludeTests: boolean = false) => {
+    // For export, we need to fetch all leads matching filters
+    toast.info('Preparando exportação...');
     
-    return leads.filter(l => {
-      const matchesSearch = !search || 
-        l.email?.toLowerCase().includes(search.toLowerCase()) ||
-        l.first_name?.toLowerCase().includes(search.toLowerCase()) ||
-        l.last_name?.toLowerCase().includes(search.toLowerCase()) ||
-        l.phone?.toLowerCase().includes(search.toLowerCase());
-      
-      const matchesSource = sourceFilter === 'all' || l.source === sourceFilter;
-      const matchesCountry = countryFilter === 'all' || 
-        (countryFilter === 'unknown' && !l.country) ||
-        l.country === countryFilter;
-      const matchesUtmSource = utmSourceFilter === 'all' || l.utm_source === utmSourceFilter;
-      const matchesUtmMedium = utmMediumFilter === 'all' || l.utm_medium === utmMediumFilter;
-      const matchesUtmCampaign = utmCampaignFilter === 'all' || l.utm_campaign === utmCampaignFilter;
-      const matchesUtmContent = utmContentFilter === 'all' || l.utm_content === utmContentFilter;
-      const matchesUtmTerm = utmTermFilter === 'all' || l.utm_term === utmTermFilter;
-      
-      // Filter by selected top item (ad, campaign, or page)
-      let matchesSelectedTopItem = true;
-      if (selectedTopItem) {
-        if (topMode === 'ads') {
-          matchesSelectedTopItem = l.utm_content === selectedTopItem;
-        } else if (topMode === 'campaigns') {
-          matchesSelectedTopItem = l.utm_campaign === selectedTopItem;
-        } else if (topMode === 'pages') {
-          const normalizedLeadPage = normalizePageUrl(l.page_url);
-          // selectedTopItem comes with "/" prefix from getPageDisplayName
-          matchesSelectedTopItem = `/${normalizedLeadPage}` === selectedTopItem || normalizedLeadPage === selectedTopItem;
-        }
+    try {
+      let query = supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (paginatedFilters.clientId) {
+        query = query.eq('client_id', paginatedFilters.clientId);
+      }
+      if (paginatedFilters.startDate) {
+        query = query.gte('created_at', paginatedFilters.startDate.toISOString());
+      }
+      if (paginatedFilters.endDate) {
+        query = query.lte('created_at', paginatedFilters.endDate.toISOString());
       }
 
-      // Filter by page dropdown
-      const matchesPageFilter = pageFilter === 'all' || normalizePageUrl(l.page_url) === pageFilter;
+      const { data: leadsToExport, error } = await query;
+      if (error) throw error;
+
+      let filteredExport = leadsToExport || [];
+      if (excludeTests) {
+        filteredExport = filteredExport.filter(l => !isTestLead(l.tags));
+      }
+
+      const headers = ['Data', 'Nome', 'Email', 'Telefone', 'Fonte', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Tags', 'Página'];
+      const rows = filteredExport.map(l => [
+        l.created_at ? format(new Date(l.created_at), 'dd/MM/yyyy HH:mm') : '',
+        `${l.first_name || ''} ${l.last_name || ''}`.trim(),
+        l.email || '',
+        l.phone || '',
+        l.source || '',
+        l.utm_source || '',
+        l.utm_medium || '',
+        l.utm_campaign || '',
+        l.tags || '',
+        l.page_url || '',
+      ]);
       
-      // Test filter
-      const isTest = isTestLead(l.tags);
-      const matchesTestFilter = 
-        testFilter === 'all' || 
-        (testFilter === 'hide' && !isTest) || 
-        (testFilter === 'only' && isTest);
+      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const suffix = excludeTests ? '-sem-testes' : '';
+      a.download = `leads${suffix}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      a.click();
       
-      // Qualified filter (leads with complete UTMs)
-      const isQualified = l.utm_source && l.utm_medium && l.utm_campaign;
-      const matchesQualifiedFilter = 
-        qualifiedFilter === 'all' || 
-        (qualifiedFilter === 'qualified' && isQualified) || 
-        (qualifiedFilter === 'unqualified' && !isQualified);
-      
-      return matchesSearch && matchesSource && matchesCountry && matchesUtmSource && matchesUtmMedium && matchesUtmCampaign && matchesUtmContent && matchesUtmTerm && matchesTestFilter && matchesSelectedTopItem && matchesPageFilter && matchesQualifiedFilter;
-    });
-  }, [leads, search, sourceFilter, countryFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, testFilter, selectedTopItem, topMode, pageFilter, qualifiedFilter]);
-
-  // Count test leads
-  const testLeadsCount = useMemo(() => {
-    if (!leads) return 0;
-    return leads.filter(l => isTestLead(l.tags)).length;
-  }, [leads]);
-
-  // Paginate
-  const paginatedLeads = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredLeads.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredLeads, currentPage]);
-
-  const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
-
-  const handleExportCSV = (excludeTests: boolean = false) => {
-    let leadsToExport = filteredLeads;
-    
-    if (excludeTests) {
-      leadsToExport = filteredLeads.filter(l => !isTestLead(l.tags));
+      toast.success(`${filteredExport.length} leads exportados!`);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Erro ao exportar leads');
     }
-
-    const headers = ['Data', 'Nome', 'Email', 'Telefone', 'Fonte', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Tags', 'Página'];
-    const rows = leadsToExport.map(l => [
-      format(new Date(l.created_at), 'dd/MM/yyyy HH:mm'),
-      `${l.first_name || ''} ${l.last_name || ''}`.trim(),
-      l.email || '',
-      l.phone || '',
-      l.source || '',
-      l.utm_source || '',
-      l.utm_medium || '',
-      l.utm_campaign || '',
-      l.tags || '',
-      l.page_url || '',
-    ]);
-    
-    const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const suffix = excludeTests ? '-sem-testes' : '';
-    a.download = `leads${suffix}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-    a.click();
-    
-    toast.success(`${leadsToExport.length} leads exportados!`);
   };
 
   const clearFilters = () => {
@@ -297,11 +277,25 @@ function Leads() {
     setQualifiedFilter('all');
     setSelectedPeriod('30days');
     setDateRange({ from: subDays(new Date(), 30), to: new Date() });
-    setCurrentPage(1);
+    setCurrentPage(0);
     setSelectedTopItem(null);
   };
 
-  const hasActiveFilters = Boolean(search || sourceFilter !== 'all' || countryFilter !== 'all' || utmSourceFilter !== 'all' || utmMediumFilter !== 'all' || utmCampaignFilter !== 'all' || utmContentFilter !== 'all' || utmTermFilter !== 'all' || pageFilter !== 'all' || testFilter !== 'hide' || qualifiedFilter !== 'all' || selectedPeriod !== '30days' || selectedTopItem);
+  const hasActiveFilters = Boolean(
+    search || 
+    sourceFilter !== 'all' || 
+    countryFilter !== 'all' || 
+    utmSourceFilter !== 'all' || 
+    utmMediumFilter !== 'all' || 
+    utmCampaignFilter !== 'all' || 
+    utmContentFilter !== 'all' || 
+    utmTermFilter !== 'all' || 
+    pageFilter !== 'all' || 
+    testFilter !== 'hide' || 
+    qualifiedFilter !== 'all' || 
+    selectedPeriod !== '30days' || 
+    selectedTopItem
+  );
 
   // Backfill geolocation handler
   const handleBackfillGeolocation = async () => {
@@ -316,6 +310,7 @@ function Leads() {
       if (data?.success) {
         toast.success(`Geolocalização atualizada: ${data.stats.totalUpdated} leads processados`);
         queryClient.invalidateQueries({ queryKey: ['leads'] });
+        queryClient.invalidateQueries({ queryKey: ['lead-stats-optimized'] });
       } else {
         toast.error(data?.error || 'Erro ao processar geolocalização');
       }
@@ -327,12 +322,6 @@ function Leads() {
     }
   };
 
-  // Count leads without geolocation
-  const leadsWithoutGeolocation = useMemo(() => {
-    if (!leads) return 0;
-    return leads.filter(l => !l.country && l.ip_address).length;
-  }, [leads]);
-
   // Handle mode change - reset selected item when mode changes
   const handleTopModeChange = (mode: ViewMode) => {
     setTopMode(mode);
@@ -340,16 +329,35 @@ function Leads() {
   };
 
   const handleDeleteTestLeads = async () => {
-    if (!leads) return;
-    
-    const testLeadIds = leads.filter(l => isTestLead(l.tags)).map(l => l.id);
-    if (testLeadIds.length === 0) {
-      toast.info('Não há leads de teste para deletar.');
-      return;
-    }
-
     setIsDeleting(true);
     try {
+      // Get test lead IDs from current filters
+      let query = supabase
+        .from('leads')
+        .select('id, tags');
+
+      if (paginatedFilters.clientId) {
+        query = query.eq('client_id', paginatedFilters.clientId);
+      }
+      if (paginatedFilters.startDate) {
+        query = query.gte('created_at', paginatedFilters.startDate.toISOString());
+      }
+      if (paginatedFilters.endDate) {
+        query = query.lte('created_at', paginatedFilters.endDate.toISOString());
+      }
+
+      const { data: allLeads, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
+
+      const testLeadIds = (allLeads || [])
+        .filter(l => isTestLead(l.tags))
+        .map(l => l.id);
+
+      if (testLeadIds.length === 0) {
+        toast.info('Não há leads de teste para deletar.');
+        return;
+      }
+
       const { error } = await supabase
         .from('leads')
         .delete()
@@ -359,7 +367,8 @@ function Leads() {
 
       toast.success(`${testLeadIds.length} leads de teste deletados com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['leads-count'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['lead-stats-optimized'] });
     } catch (error) {
       console.error('Error deleting test leads:', error);
       toast.error('Erro ao deletar leads de teste.');
@@ -368,7 +377,22 @@ function Leads() {
     }
   };
 
-  if (!isReady || isLoading || isLoadingStats) {
+  // Transform topAdsData to match TopAdsCard expected format
+  const topItems = useMemo(() => {
+    if (!topAdsData?.items) return [];
+    return topAdsData.items.map(item => ({
+      name: item.name,
+      lead_count: item.count,
+      percentage: item.percentage,
+      isNew: item.isNew,
+      firstLeadDate: item.firstLeadDate ? new Date(item.firstLeadDate) : null,
+      related: [],
+    }));
+  }, [topAdsData]);
+
+  const isLoading = !isReady || isLoadingStats;
+
+  if (isLoading) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-[60vh]">
@@ -389,7 +413,7 @@ function Leads() {
         >
           <ClientContextHeader 
             title="Leads"
-            description={`${filteredLeads.length} leads encontrados`}
+            description={`${totalCount.toLocaleString('pt-BR')} leads encontrados`}
           />
           <div className="flex gap-2 w-full sm:w-auto">
             {testLeadsCount > 0 && (
@@ -406,7 +430,7 @@ function Leads() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Deletar leads de teste?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Esta ação irá deletar permanentemente <strong>{testLeadsCount}</strong> leads de teste 
+                      Esta ação irá deletar permanentemente leads de teste 
                       (com tag [TESTE] ou "teste"). Esta ação não pode ser desfeita.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -425,7 +449,7 @@ function Leads() {
                       ) : (
                         <>
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Deletar {testLeadsCount} leads
+                          Deletar leads de teste
                         </>
                       )}
                     </AlertDialogAction>
@@ -433,29 +457,26 @@ function Leads() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            {leadsWithoutGeolocation > 0 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleBackfillGeolocation}
-                disabled={isBackfilling}
-                className="flex-1 sm:flex-none"
-              >
-                {isBackfilling ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <MapPin className="h-4 w-4 mr-2" />
-                    <span className="hidden sm:inline">Atualizar Geo</span>
-                    <span className="sm:hidden">Geo</span>
-                    <span className="ml-1">({leadsWithoutGeolocation})</span>
-                  </>
-                )}
-              </Button>
-            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleBackfillGeolocation}
+              disabled={isBackfilling}
+              className="flex-1 sm:flex-none"
+            >
+              {isBackfilling ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <MapPin className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Atualizar Geo</span>
+                  <span className="sm:hidden">Geo</span>
+                </>
+              )}
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
@@ -466,11 +487,11 @@ function Leads() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => handleExportCSV(false)}>
                   <Download className="h-4 w-4 mr-2" />
-                  Exportar todos ({filteredLeads.length})
+                  Exportar todos
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExportCSV(true)}>
                   <FlaskConical className="h-4 w-4 mr-2" />
-                  Apenas reais ({filteredLeads.filter(l => !isTestLead(l.tags)).length})
+                  Apenas reais (sem testes)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -486,7 +507,7 @@ function Leads() {
         >
           <ColoredKPICard
             title="Total de Leads"
-            value={stats?.total.toString() || '0'}
+            value={stats?.total?.toLocaleString('pt-BR') || '0'}
             subtitle="no período"
             icon={Users}
             variant="blue"
@@ -550,42 +571,42 @@ function Leads() {
               dateRange={dateRange}
               onPeriodChange={(period) => {
                 setSelectedPeriod(period);
-                setCurrentPage(1);
+                setCurrentPage(0);
               }}
               onDateRangeChange={(range) => {
                 setDateRange(range);
-                setCurrentPage(1);
+                setCurrentPage(0);
               }}
               search={search}
               onSearchChange={(value) => {
                 setSearch(value);
-                setCurrentPage(1);
+                setCurrentPage(0);
               }}
               sourceFilter={sourceFilter}
-              onSourceFilterChange={(v) => { setSourceFilter(v); setCurrentPage(1); }}
+              onSourceFilterChange={(v) => { setSourceFilter(v); setCurrentPage(0); }}
               countryFilter={countryFilter}
-              onCountryFilterChange={(v) => { setCountryFilter(v); setCurrentPage(1); }}
+              onCountryFilterChange={(v) => { setCountryFilter(v); setCurrentPage(0); }}
               utmSourceFilter={utmSourceFilter}
-              onUtmSourceFilterChange={(v) => { setUtmSourceFilter(v); setCurrentPage(1); }}
+              onUtmSourceFilterChange={(v) => { setUtmSourceFilter(v); setCurrentPage(0); }}
               utmMediumFilter={utmMediumFilter}
-              onUtmMediumFilterChange={(v) => { setUtmMediumFilter(v); setCurrentPage(1); }}
+              onUtmMediumFilterChange={(v) => { setUtmMediumFilter(v); setCurrentPage(0); }}
               utmCampaignFilter={utmCampaignFilter}
-              onUtmCampaignFilterChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(1); }}
+              onUtmCampaignFilterChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(0); }}
               utmContentFilter={utmContentFilter}
-              onUtmContentFilterChange={(v) => { setUtmContentFilter(v); setCurrentPage(1); }}
+              onUtmContentFilterChange={(v) => { setUtmContentFilter(v); setCurrentPage(0); }}
               utmTermFilter={utmTermFilter}
-              onUtmTermFilterChange={(v) => { setUtmTermFilter(v); setCurrentPage(1); }}
+              onUtmTermFilterChange={(v) => { setUtmTermFilter(v); setCurrentPage(0); }}
               qualifiedFilter={qualifiedFilter}
-              onQualifiedFilterChange={(v) => { setQualifiedFilter(v as 'all' | 'qualified' | 'unqualified'); setCurrentPage(1); }}
+              onQualifiedFilterChange={(v) => { setQualifiedFilter(v as 'all' | 'qualified' | 'unqualified'); setCurrentPage(0); }}
               testFilter={testFilter}
-              onTestFilterChange={(v) => { setTestFilter(v); setCurrentPage(1); }}
+              onTestFilterChange={(v) => { setTestFilter(v); setCurrentPage(0); }}
               pageFilter={pageFilter}
-              onPageFilterChange={(v) => { setPageFilter(v); setCurrentPage(1); }}
+              onPageFilterChange={(v) => { setPageFilter(v); setCurrentPage(0); }}
               showAllPages={showAllPages}
               onShowAllPages={() => setShowAllPages(true)}
               totalPagesCount={totalPagesCount}
               hiddenPagesCount={hiddenPagesCount}
-              totalLeads={leads?.length || 0}
+              totalLeads={stats?.total || 0}
               testLeadsCount={testLeadsCount}
               filterOptions={filterOptions}
               hasActiveFilters={hasActiveFilters}
@@ -594,71 +615,73 @@ function Leads() {
           </CardContent>
         </Card>
 
-        {/* Chart + Top Ads */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-        >
-          <div className="lg:col-span-2 h-[420px]">
-            <Card className="h-full flex flex-col">
-              <Tabs value={chartTab} onValueChange={(v) => setChartTab(v as 'daily' | 'evolution')} className="flex flex-col h-full">
-                <div className="px-4 pt-4 pb-2">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="daily" className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" />
-                      <span className="hidden sm:inline">Leads por Dia</span>
-                      <span className="sm:hidden">Por Dia</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="evolution" className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      <span className="hidden sm:inline">Evolução {topMode === 'ads' ? 'Anúncios' : 'Campanhas'}</span>
-                      <span className="sm:hidden">Evolução</span>
-                    </TabsTrigger>
-                  </TabsList>
-                </div>
-                <CardContent className="pt-2 flex-1 overflow-hidden">
-                  <TabsContent value="daily" className="mt-0 h-full">
-                    <LeadsByDayChart 
-                      data={stats?.byDay || {}} 
-                      isLoading={isLoadingStats} 
-                      embedded 
-                    />
-                  </TabsContent>
-                  <TabsContent value="evolution" className="mt-0 h-full">
-                    <AdTrendChart
-                      leads={leads}
-                      topItemNames={topItemNames}
-                      mode={topMode}
-                      groupBy={trendGroupBy}
-                      onGroupByChange={setTrendGroupBy}
-                      isLoading={isLoading}
-                      embedded
-                    />
-                  </TabsContent>
-                </CardContent>
-              </Tabs>
-            </Card>
-          </div>
-          <div className="lg:col-span-1 h-[420px]">
-            <TopAdsCard
-              topItems={topItems} 
-              totalCount={totalCount} 
-              isLoading={isLoading}
-              mode={topMode}
-              onModeChange={handleTopModeChange}
-              selectedItem={selectedTopItem}
-              onItemClick={(item) => {
-                setSelectedTopItem(item);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-        </motion.div>
+        {/* Chart + Top Ads - Lazy loaded */}
+        {showCharts && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+          >
+            <div className="lg:col-span-2 h-[420px]">
+              <Card className="h-full flex flex-col">
+                <Tabs value={chartTab} onValueChange={(v) => setChartTab(v as 'daily' | 'evolution')} className="flex flex-col h-full">
+                  <div className="px-4 pt-4 pb-2">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="daily" className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        <span className="hidden sm:inline">Leads por Dia</span>
+                        <span className="sm:hidden">Por Dia</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="evolution" className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        <span className="hidden sm:inline">Evolução {topMode === 'ads' ? 'Anúncios' : 'Campanhas'}</span>
+                        <span className="sm:hidden">Evolução</span>
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+                  <CardContent className="pt-2 flex-1 overflow-hidden">
+                    <TabsContent value="daily" className="mt-0 h-full">
+                      <LeadsByDayChart 
+                        data={stats?.byDay || {}} 
+                        isLoading={isLoadingStats} 
+                        embedded 
+                      />
+                    </TabsContent>
+                    <TabsContent value="evolution" className="mt-0 h-full">
+                      <AdTrendChart
+                        leads={paginatedData?.leads}
+                        topItemNames={topItemNames}
+                        mode={topMode}
+                        groupBy={trendGroupBy}
+                        onGroupByChange={setTrendGroupBy}
+                        isLoading={isLoadingLeads}
+                        embedded
+                      />
+                    </TabsContent>
+                  </CardContent>
+                </Tabs>
+              </Card>
+            </div>
+            <div className="lg:col-span-1 h-[420px]">
+              <TopAdsCard
+                topItems={topItems} 
+                totalCount={topAdsData?.totalCount || 0} 
+                isLoading={isLoadingTopAds}
+                mode={topMode}
+                onModeChange={handleTopModeChange}
+                selectedItem={selectedTopItem}
+                onItemClick={(item) => {
+                  setSelectedTopItem(item);
+                  setCurrentPage(0);
+                }}
+              />
+            </div>
+          </motion.div>
+        )}
 
         {/* Landing Page Comparison - Only show if there are multiple pages */}
-        {landingPageStats.length > 1 && (
+        {showCharts && landingPageStats.length > 1 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -668,11 +691,11 @@ function Leads() {
             <LandingPageComparisonCard
               stats={landingPageStats}
               conversionStats={conversionStats}
-              isLoading={isLoading || isLoadingConversion}
+              isLoading={isLoadingLeads || isLoadingConversion}
               selectedPage={pageFilter !== 'all' ? pageFilter : null}
               onPageClick={(page) => {
                 setPageFilter(page || 'all');
-                setCurrentPage(1);
+                setCurrentPage(0);
               }}
               showAllPages={showAllPages}
               hiddenPagesCount={hiddenPagesCount}
@@ -688,7 +711,7 @@ function Leads() {
                   <LandingPageTrendChart
                     stats={landingPageStats.slice(0, 5)}
                     dateRange={dateRange}
-                    isLoading={isLoading}
+                    isLoading={isLoadingLeads}
                     embedded
                   />
                 </div>
@@ -697,36 +720,40 @@ function Leads() {
           </motion.div>
         )}
 
-        {/* Interactive World Map */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <LeadsWorldMap
-            byCountry={stats?.byCountry || {}}
-            isLoading={isLoadingStats}
-            totalLeads={stats?.total || 0}
-            onCountryClick={(country) => {
-              setCountryFilter(country);
-              setCurrentPage(1);
-            }}
-          />
-        </motion.div>
+        {/* Interactive World Map - Lazy loaded */}
+        {showCharts && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <LeadsWorldMap
+              byCountry={stats?.byCountry || {}}
+              isLoading={isLoadingStats}
+              totalLeads={stats?.total || 0}
+              onCountryClick={(country) => {
+                setCountryFilter(country);
+                setCurrentPage(0);
+              }}
+            />
+          </motion.div>
+        )}
 
-        {/* Geographic Distribution Charts */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <LeadsByCountryChart
-            byCountry={stats?.byCountry || {}}
-            byCity={stats?.byCity || {}}
-            isLoading={isLoadingStats}
-            totalLeads={stats?.total || 0}
-          />
-        </motion.div>
+        {/* Geographic Distribution Charts - Lazy loaded */}
+        {showCharts && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <LeadsByCountryChart
+              byCountry={stats?.byCountry || {}}
+              byCity={stats?.byCity || {}}
+              isLoading={isLoadingStats}
+              totalLeads={stats?.total || 0}
+            />
+          </motion.div>
+        )}
 
         {/* Selected Filter Indicator */}
         {selectedTopItem && (
@@ -756,30 +783,41 @@ function Leads() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <LeadsTable leads={paginatedLeads} hasActiveFilters={Boolean(hasActiveFilters)} />
+          {isLoadingLeads ? (
+            <Card className="p-8">
+              <div className="flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            </Card>
+          ) : (
+            <LeadsTable leads={paginatedData?.leads || []} hasActiveFilters={hasActiveFilters} />
+          )}
         </motion.div>
 
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} a{' '}
-              {Math.min(currentPage * ITEMS_PER_PAGE, filteredLeads.length)} de {filteredLeads.length}
+              Mostrando {currentPage * ITEMS_PER_PAGE + 1} a{' '}
+              {Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalCount)} de {totalCount.toLocaleString('pt-BR')}
             </p>
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                disabled={currentPage === 0}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
+              <span className="flex items-center px-3 text-sm text-muted-foreground">
+                {currentPage + 1} / {totalPages}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={currentPage >= totalPages - 1}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
