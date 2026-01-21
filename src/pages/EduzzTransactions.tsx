@@ -109,6 +109,7 @@ function EduzzTransactions() {
   const [utmMediumFilter, setUtmMediumFilter] = useState<string | null>(null);
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string | null>(null);
   const [utmContentFilter, setUtmContentFilter] = useState<string | null>(null);
+  const [trafficTypeFilter, setTrafficTypeFilter] = useState<'paid' | 'organic' | 'direct' | null>(null);
   // Analytics state
   const [topMode, setTopMode] = useState<SalesViewMode>('products');
   const [trendGroupBy, setTrendGroupBy] = useState<SalesGroupBy>('day');
@@ -182,6 +183,8 @@ function EduzzTransactions() {
       if (utmMediumFilter && t.utm_medium !== utmMediumFilter) return false;
       if (utmCampaignFilter && t.utm_campaign !== utmCampaignFilter) return false;
       if (utmContentFilter && t.utm_content !== utmContentFilter) return false;
+      // Traffic type filter
+      if (trafficTypeFilter && getTrafficType(t) !== trafficTypeFilter) return false;
       // Filter by selected top item
       if (selectedTopItem) {
         if (topMode === 'products' && t.product !== selectedTopItem) return false;
@@ -191,7 +194,7 @@ function EduzzTransactions() {
       
       return true;
     });
-  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, selectedTopItem, topMode]);
+  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, trafficTypeFilter, selectedTopItem, topMode]);
 
   // Traffic stats calculation
   const trafficStats = useMemo(() => {
@@ -334,10 +337,11 @@ function EduzzTransactions() {
     setUtmMediumFilter(null);
     setUtmCampaignFilter(null);
     setUtmContentFilter(null);
+    setTrafficTypeFilter(null);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter || !!utmContentFilter;
+  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter || !!utmContentFilter || !!trafficTypeFilter;
 
   if (isLoading || isLoadingStats) {
     return (
@@ -392,7 +396,11 @@ function EduzzTransactions() {
               icon={Megaphone}
               variant="blue"
               delay={1}
-              className="text-sm sm:text-base"
+              className={`text-sm sm:text-base cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${trafficTypeFilter === 'paid' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+              onClick={() => {
+                setTrafficTypeFilter(trafficTypeFilter === 'paid' ? null : 'paid');
+                setCurrentPage(1);
+              }}
             />
             <ColoredKPICard
               title="Orgânico"
@@ -401,7 +409,11 @@ function EduzzTransactions() {
               icon={Users}
               variant="yellow"
               delay={2}
-              className="text-sm sm:text-base"
+              className={`text-sm sm:text-base cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${trafficTypeFilter === 'organic' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+              onClick={() => {
+                setTrafficTypeFilter(trafficTypeFilter === 'organic' ? null : 'organic');
+                setCurrentPage(1);
+              }}
             />
             <ColoredKPICard
               title="Direto"
@@ -410,7 +422,11 @@ function EduzzTransactions() {
               icon={Link2}
               variant="gray"
               delay={3}
-              className="text-sm sm:text-base"
+              className={`text-sm sm:text-base cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${trafficTypeFilter === 'direct' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+              onClick={() => {
+                setTrafficTypeFilter(trafficTypeFilter === 'direct' ? null : 'direct');
+                setCurrentPage(1);
+              }}
             />
           </motion.div>
         ) : (
@@ -493,19 +509,31 @@ function EduzzTransactions() {
           </div>
         </motion.div>
 
-        {/* Selected Filter Indicator */}
-        {selectedTopItem && (
+        {/* Selected Filter Indicators */}
+        {(selectedTopItem || trafficTypeFilter) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-wrap gap-2"
           >
-            <Badge variant="secondary" className="gap-2 px-3 py-1.5">
-              Filtrado por {topMode === 'products' ? 'produto' : topMode === 'campaigns' ? 'campanha' : 'anúncio'}: {selectedTopItem}
-              <X 
-                className="h-3 w-3 cursor-pointer hover:text-destructive" 
-                onClick={() => setSelectedTopItem(null)}
-              />
-            </Badge>
+            {trafficTypeFilter && (
+              <Badge variant="secondary" className="gap-2 px-3 py-1.5">
+                Tipo de tráfego: {trafficTypeFilter === 'paid' ? 'Pago' : trafficTypeFilter === 'organic' ? 'Orgânico' : 'Direto'}
+                <X 
+                  className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                  onClick={() => setTrafficTypeFilter(null)}
+                />
+              </Badge>
+            )}
+            {selectedTopItem && (
+              <Badge variant="secondary" className="gap-2 px-3 py-1.5">
+                Filtrado por {topMode === 'products' ? 'produto' : topMode === 'campaigns' ? 'campanha' : 'anúncio'}: {selectedTopItem}
+                <X 
+                  className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                  onClick={() => setSelectedTopItem(null)}
+                />
+              </Badge>
+            )}
           </motion.div>
         )}
         <motion.div
