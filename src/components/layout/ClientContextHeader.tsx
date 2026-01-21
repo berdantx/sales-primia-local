@@ -31,32 +31,28 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
   const showClientSelector = isMaster || hasMultipleClients;
 
   return (
-    <div className="space-y-3">
-      {/* Title on left + Client name | Alterar on right */}
-      <div className="flex items-center justify-between gap-4">
+    <div className="space-y-2">
+      {/* Title + Client selector inline */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
           {title}
         </h1>
 
         {showClientSelector && clients && clients.length > 0 && !isLoadingClients && !isLoadingRole && (
-          <div className="flex items-center gap-2 text-sm shrink-0">
-            <span className="text-muted-foreground font-medium hidden sm:inline">
-              {displayName}
-            </span>
-            <span className="text-muted-foreground hidden sm:inline">|</span>
+          <>
+            <span className="text-muted-foreground text-lg sm:text-xl">•</span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-auto p-0 text-primary hover:text-primary/80 hover:bg-transparent hover:underline font-medium"
+                  className="h-auto p-0 text-muted-foreground hover:text-foreground hover:bg-transparent font-medium gap-1 text-base sm:text-lg"
                 >
-                  <span className="sm:hidden">{displayName}</span>
-                  <span className="hidden sm:inline">Alterar</span>
-                  <ChevronDown className="h-3 w-3 ml-1" />
+                  {displayName}
+                  <ChevronDown className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-popover">
+              <DropdownMenuContent align="start" className="w-56 bg-popover">
                 {isMaster && (
                   <>
                     <DropdownMenuItem 
@@ -86,7 +82,7 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
                 })}
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+          </>
         )}
       </div>
 
