@@ -45,7 +45,7 @@ export function Header() {
           <img 
             src={currentLogo} 
             alt={branding.appName || 'Logo'} 
-            className="h-7 sm:h-9 w-auto object-contain max-w-[260px] sm:max-w-[280px]"
+            className="h-7 sm:h-9 w-auto object-contain max-w-[200px] sm:max-w-[280px]"
           />
         </Link>
         
