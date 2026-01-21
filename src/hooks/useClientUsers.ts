@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface ClientUser {
   id: string;
@@ -153,15 +154,50 @@ export function useUpdateClientUserOwnership() {
 export function useUpdateFinancialAccess() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ id, clientId, canViewFinancials }: { id: string; clientId: string; canViewFinancials: boolean }) => {
-      const { error } = await supabase
+    mutationFn: async ({ 
+      id, 
+      clientId, 
+      targetUserId,
+      canViewFinancials, 
+      oldValue 
+    }: { 
+      id: string; 
+      clientId: string; 
+      targetUserId: string;
+      canViewFinancials: boolean; 
+      oldValue: boolean;
+    }) => {
+      // Update permission
+      const { error: updateError } = await supabase
         .from('client_users')
         .update({ can_view_financials: canViewFinancials })
         .eq('id', id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Log to audit table
+      if (user) {
+        const { error: auditError } = await supabase
+          .from('permission_audit_logs')
+          .insert({
+            target_user_id: targetUserId,
+            client_id: clientId,
+            changed_by: user.id,
+            action: canViewFinancials ? 'granted' : 'revoked',
+            permission_type: 'financial_access',
+            old_value: oldValue,
+            new_value: canViewFinancials,
+            user_agent: navigator.userAgent,
+          });
+
+        if (auditError) {
+          console.error('Failed to log permission change:', auditError);
+        }
+      }
+
       return { clientId, canViewFinancials };
     },
     onSuccess: (data) => {

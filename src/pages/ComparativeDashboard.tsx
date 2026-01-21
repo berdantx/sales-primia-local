@@ -8,7 +8,10 @@ import { ExportReportDialog } from '@/components/export/ExportReportDialog';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { CurrencyViewToggle, CurrencyView } from '@/components/dashboard/CurrencyViewToggle';
 import { DollarRateIndicator } from '@/components/dashboard/DollarRateIndicator';
+import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
 import { useDollarRate } from '@/hooks/useDollarRate';
+import { useFilter } from '@/contexts/FilterContext';
+import { useFinancialAccess } from '@/hooks/useFinancialAccess';
 import { 
   useTransactionStatsOptimized, 
   useSalesByDateOptimized 
@@ -39,7 +42,8 @@ function ComparativeDashboard() {
   const [period, setPeriod] = useState<PeriodFilter>('all');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [currencyView, setCurrencyView] = useState<CurrencyView>('combined');
-
+  const { clientId } = useFilter();
+  const { canViewFinancials, isLoading: isLoadingFinancialAccess } = useFinancialAccess(clientId);
   const dateRange = useMemo(() => {
     if (period === 'all') {
       return { startDate: undefined, endDate: undefined };
@@ -198,30 +202,36 @@ function ComparativeDashboard() {
           </div>
         </motion.div>
 
-        {/* Platform Comparison Cards */}
-        <PlatformComparisonCards 
-          hotmartStats={hotmartPlatformStats} 
-          tmbStats={tmbPlatformStats}
-          eduzzStats={eduzzPlatformStats}
-        />
+        {canViewFinancials ? (
+          <>
+            {/* Platform Comparison Cards */}
+            <PlatformComparisonCards 
+              hotmartStats={hotmartPlatformStats} 
+              tmbStats={tmbPlatformStats}
+              eduzzStats={eduzzPlatformStats}
+            />
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <ComparisonChart 
-              hotmartData={hotmartSales || {}} 
-              tmbData={tmbSales || {}}
-              eduzzData={eduzzSales || {}}
-            />
-          </div>
-          <div>
-            <PlatformSharePieChart 
-              hotmartTotal={hotmartTotalForPie} 
-              tmbTotal={tmbPlatformStats?.totalBRL || 0}
-              eduzzTotal={eduzzTotalForPie}
-            />
-          </div>
-        </div>
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <ComparisonChart 
+                  hotmartData={hotmartSales || {}} 
+                  tmbData={tmbSales || {}}
+                  eduzzData={eduzzSales || {}}
+                />
+              </div>
+              <div>
+                <PlatformSharePieChart 
+                  hotmartTotal={hotmartTotalForPie} 
+                  tmbTotal={tmbPlatformStats?.totalBRL || 0}
+                  eduzzTotal={eduzzTotalForPie}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <RestrictedFinancialSection />
+        )}
       </div>
     </MainLayout>
   );

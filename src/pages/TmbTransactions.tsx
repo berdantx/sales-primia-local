@@ -6,8 +6,10 @@ import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useTmbTransactions, TmbTransaction } from '@/hooks/useTmbTransactions';
 import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsOptimized';
 import { useFilter } from '@/contexts/FilterContext';
+import { useFinancialAccess } from '@/hooks/useFinancialAccess';
 import { TmbAdvancedFilters } from '@/components/dashboard/TmbAdvancedFilters';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
+import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,7 +105,7 @@ function TmbTransactions() {
   }, [search]);
 
   const { clientId, setClientId } = useFilter();
-
+  const { canViewFinancials, isLoading: isLoadingFinancialAccess } = useFinancialAccess(clientId);
   const dateRange = useMemo(() => {
     if (period === 'all') {
       return { startDate: undefined, endDate: undefined };
@@ -306,31 +308,35 @@ function TmbTransactions() {
         </motion.div>
 
         {/* Summary KPIs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4"
-        >
-          <ColoredKPICard
-            title="Faturamento Total (BRL)"
-            value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
-            subtitle={`${stats?.totalTransactions || 0} transações`}
-            icon={DollarSign}
-            variant="green"
-            delay={0}
-            className="text-sm sm:text-base"
-          />
-          <ColoredKPICard
-            title="Total de Transações"
-            value={(stats?.totalTransactions || 0).toString()}
-            subtitle="no período filtrado"
-            icon={Receipt}
-            variant="purple"
-            delay={1}
-            className="text-sm sm:text-base"
-          />
-        </motion.div>
+        {canViewFinancials ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4"
+          >
+            <ColoredKPICard
+              title="Faturamento Total (BRL)"
+              value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
+              subtitle={`${stats?.totalTransactions || 0} transações`}
+              icon={DollarSign}
+              variant="green"
+              delay={0}
+              className="text-sm sm:text-base"
+            />
+            <ColoredKPICard
+              title="Total de Transações"
+              value={(stats?.totalTransactions || 0).toString()}
+              subtitle="no período filtrado"
+              icon={Receipt}
+              variant="purple"
+              delay={1}
+              className="text-sm sm:text-base"
+            />
+          </motion.div>
+        ) : (
+          <RestrictedFinancialSection />
+        )}
 
         {/* Period Selector */}
         <motion.div

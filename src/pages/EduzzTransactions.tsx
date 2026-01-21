@@ -6,7 +6,9 @@ import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useEduzzTransactions, EduzzTransaction } from '@/hooks/useEduzzTransactions';
 import { useEduzzTransactionStatsOptimized } from '@/hooks/useEduzzTransactionStatsOptimized';
 import { useFilter } from '@/contexts/FilterContext';
+import { useFinancialAccess } from '@/hooks/useFinancialAccess';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
+import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -105,7 +107,7 @@ function EduzzTransactions() {
   }, [search]);
 
   const { clientId } = useFilter();
-
+  const { canViewFinancials, isLoading: isLoadingFinancialAccess } = useFinancialAccess(clientId);
   const dateRange = useMemo(() => {
     if (period === 'all') {
       return { startDate: undefined, endDate: undefined };
@@ -322,31 +324,35 @@ function EduzzTransactions() {
         </motion.div>
 
         {/* Summary KPIs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4"
-        >
-          <ColoredKPICard
-            title="Faturamento Total (BRL)"
-            value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
-            subtitle={`${stats?.totalTransactions || 0} transações`}
-            icon={DollarSign}
-            variant="green"
-            delay={0}
-            className="text-sm sm:text-base"
-          />
-          <ColoredKPICard
-            title="Total de Transações"
-            value={(stats?.totalTransactions || 0).toString()}
-            subtitle="no período filtrado"
-            icon={Receipt}
-            variant="purple"
-            delay={1}
-            className="text-sm sm:text-base"
-          />
-        </motion.div>
+        {canViewFinancials ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4"
+          >
+            <ColoredKPICard
+              title="Faturamento Total (BRL)"
+              value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
+              subtitle={`${stats?.totalTransactions || 0} transações`}
+              icon={DollarSign}
+              variant="green"
+              delay={0}
+              className="text-sm sm:text-base"
+            />
+            <ColoredKPICard
+              title="Total de Transações"
+              value={(stats?.totalTransactions || 0).toString()}
+              subtitle="no período filtrado"
+              icon={Receipt}
+              variant="purple"
+              delay={1}
+              className="text-sm sm:text-base"
+            />
+          </motion.div>
+        ) : (
+          <RestrictedFinancialSection />
+        )}
 
         {/* Chart + Top Sales Analytics */}
         <motion.div
