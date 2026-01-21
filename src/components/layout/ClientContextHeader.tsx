@@ -34,7 +34,7 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
     <div className="space-y-3">
       {/* Title on left + Client name | Alterar on right */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
           {title}
         </h1>
 
