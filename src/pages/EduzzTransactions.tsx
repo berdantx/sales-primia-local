@@ -47,13 +47,15 @@ import {
   FileSpreadsheet,
   X,
   DollarSign,
-  Receipt,
   Calendar,
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
   BarChart3,
-  TrendingUp
+  TrendingUp,
+  Megaphone,
+  Users,
+  Link2
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { EduzzTransactionDetailDialog } from '@/components/eduzz/EduzzTransactionDetailDialog';
@@ -68,6 +70,25 @@ import { SalesGroupBy } from '@/hooks/useSalesTrend';
 const ITEMS_PER_PAGE = 20;
 
 type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
+
+// Helper to classify traffic type based on UTM parameters
+function getTrafficType(t: EduzzTransaction): 'paid' | 'organic' | 'direct' {
+  const source = t.utm_source?.toLowerCase() || '';
+  const medium = t.utm_medium?.toLowerCase() || '';
+  
+  // Paid: source contains -ads or medium is cpc/ppc/paid/paidsocial
+  if (source.includes('-ads') || ['cpc', 'ppc', 'paid', 'paidsocial'].includes(medium)) {
+    return 'paid';
+  }
+  
+  // Direct: no UTM parameters
+  if (!t.utm_source && !t.utm_medium && !t.utm_campaign) {
+    return 'direct';
+  }
+  
+  // Organic: has UTMs but not paid
+  return 'organic';
+}
 
 function EduzzTransactions() {
   const [search, setSearch] = useState('');
@@ -171,6 +192,30 @@ function EduzzTransactions() {
       return true;
     });
   }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, selectedTopItem, topMode]);
+
+  // Traffic stats calculation
+  const trafficStats = useMemo(() => {
+    const stats = {
+      paid: { count: 0, value: 0 },
+      organic: { count: 0, value: 0 },
+      direct: { count: 0, value: 0 },
+    };
+    
+    filteredTransactions.forEach(t => {
+      const type = getTrafficType(t);
+      stats[type].count++;
+      stats[type].value += Number(t.sale_value) || 0;
+    });
+    
+    const total = filteredTransactions.length;
+    return {
+      ...stats,
+      total,
+      paidPercent: total > 0 ? Math.round((stats.paid.count / total) * 100) : 0,
+      organicPercent: total > 0 ? Math.round((stats.organic.count / total) * 100) : 0,
+      directPercent: total > 0 ? Math.round((stats.direct.count / total) * 100) : 0,
+    };
+  }, [filteredTransactions]);
 
   // Top sales hook
   const { topItems, totalCount } = useTopSales({
@@ -329,10 +374,10 @@ function EduzzTransactions() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4"
+            className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4"
           >
             <ColoredKPICard
-              title="Faturamento Total (BRL)"
+              title="Faturamento Total"
               value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
               subtitle={`${stats?.totalTransactions || 0} transações`}
               icon={DollarSign}
@@ -341,12 +386,30 @@ function EduzzTransactions() {
               className="text-sm sm:text-base"
             />
             <ColoredKPICard
-              title="Total de Transações"
-              value={(stats?.totalTransactions || 0).toString()}
-              subtitle="no período filtrado"
-              icon={Receipt}
-              variant="purple"
+              title="Tráfego Pago"
+              value={formatCurrency(trafficStats.paid.value, 'BRL')}
+              subtitle={`${trafficStats.paid.count} (${trafficStats.paidPercent}%)`}
+              icon={Megaphone}
+              variant="blue"
               delay={1}
+              className="text-sm sm:text-base"
+            />
+            <ColoredKPICard
+              title="Orgânico"
+              value={formatCurrency(trafficStats.organic.value, 'BRL')}
+              subtitle={`${trafficStats.organic.count} (${trafficStats.organicPercent}%)`}
+              icon={Users}
+              variant="yellow"
+              delay={2}
+              className="text-sm sm:text-base"
+            />
+            <ColoredKPICard
+              title="Direto"
+              value={formatCurrency(trafficStats.direct.value, 'BRL')}
+              subtitle={`${trafficStats.direct.count} (${trafficStats.directPercent}%)`}
+              icon={Link2}
+              variant="gray"
+              delay={3}
               className="text-sm sm:text-base"
             />
           </motion.div>
