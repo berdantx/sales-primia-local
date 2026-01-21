@@ -179,6 +179,11 @@ export function LeadsFilters({
 
   return (
     <Card className="p-4 space-y-4 bg-card/50 backdrop-blur-sm border-border/50">
+      {/* Section Title */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Filtros de Leads</h3>
+      </div>
+
       {/* Header with period and search */}
       <div className="flex flex-col sm:flex-row gap-3">
         <LeadsPeriodFilter
