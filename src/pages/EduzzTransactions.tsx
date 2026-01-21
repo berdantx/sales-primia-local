@@ -420,7 +420,7 @@ function EduzzTransactions() {
               value={formatCurrency(trafficStats.direct.value, 'BRL')}
               subtitle={`${trafficStats.direct.count} (${trafficStats.directPercent}%)`}
               icon={Link2}
-              variant="gray"
+              variant="cyan"
               delay={3}
               className={`text-sm sm:text-base cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${trafficTypeFilter === 'direct' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
               onClick={() => {
