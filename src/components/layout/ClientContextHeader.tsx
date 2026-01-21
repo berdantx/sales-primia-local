@@ -47,7 +47,7 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
         <img 
           src={logoUrl} 
           alt={settings.appName} 
-          className="h-10 w-auto object-contain"
+          className="h-10 w-auto max-w-[280px] object-contain"
         />
       )}
 
