@@ -41,85 +41,73 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
   const showClientSelector = isMaster || hasMultipleClients;
 
   return (
-    <div className="space-y-2">
-      {/* Main row: Title + Logo on left, Button on right */}
-      <div className="flex items-center justify-between gap-4">
-        {/* Left side: Title + App Logo */}
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            {title}
-          </h1>
-          
-          {/* App logo from branding settings */}
-          {logoUrl && (
-            <img 
-              src={logoUrl} 
-              alt={settings.appName} 
-              className="h-8 w-auto object-contain"
-            />
-          )}
-        </div>
+    <div className="space-y-3">
+      {/* Line 1: App Logo */}
+      {logoUrl && (
+        <img 
+          src={logoUrl} 
+          alt={settings.appName} 
+          className="h-10 w-auto object-contain"
+        />
+      )}
 
-        {/* Right side: Change client button */}
+      {/* Line 2: Title on left + Client name | Alterar on right */}
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          {title}
+        </h1>
+
         {showClientSelector && clients && clients.length > 0 && !isLoadingClients && !isLoadingRole && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-8 text-xs gap-1.5 shrink-0 border-primary/50 bg-primary/5 hover:bg-primary/10 text-primary font-medium"
-              >
-                <Building2 className="h-3.5 w-3.5" />
-                Alterar cliente
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-popover">
-              {/* Only masters can see "All clients" option */}
-              {isMaster && (
-                <>
-                  <DropdownMenuItem 
-                    onClick={() => setClientId(null)}
-                    className={!clientId ? 'bg-accent' : ''}
-                  >
-                    Todos os clientes
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              {clients.map(client => {
-                const leadCount = leadCounts?.[client.id] || 0;
-                return (
-                  <DropdownMenuItem 
-                    key={client.id} 
-                    onClick={() => setClientId(client.id)}
-                    className={`flex items-center justify-between ${clientId === client.id ? 'bg-accent' : ''}`}
-                  >
-                    <span>{client.name}</span>
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
-                      <Users className="h-3 w-3" />
-                      {leadCount}
-                    </span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2 text-sm shrink-0">
+            <span className="text-muted-foreground font-medium hidden sm:inline">
+              {displayName}
+            </span>
+            <span className="text-muted-foreground hidden sm:inline">|</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-auto p-0 text-primary hover:text-primary/80 hover:bg-transparent hover:underline font-medium"
+                >
+                  <span className="sm:hidden">{displayName}</span>
+                  <span className="hidden sm:inline">Alterar</span>
+                  <ChevronDown className="h-3 w-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-popover">
+                {isMaster && (
+                  <>
+                    <DropdownMenuItem 
+                      onClick={() => setClientId(null)}
+                      className={!clientId ? 'bg-accent' : ''}
+                    >
+                      Todos os clientes
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                {clients.map(client => {
+                  const leadCount = leadCounts?.[client.id] || 0;
+                  return (
+                    <DropdownMenuItem 
+                      key={client.id} 
+                      onClick={() => setClientId(client.id)}
+                      className={`flex items-center justify-between ${clientId === client.id ? 'bg-accent' : ''}`}
+                    >
+                      <span>{client.name}</span>
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
+                        <Users className="h-3 w-3" />
+                        {leadCount}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
       </div>
-
-      {/* Show badge for masters OR non-master users with multiple clients */}
-      {showClientSelector && (
-        <div className="flex items-center gap-2">
-          <Badge 
-            variant="outline" 
-            className="px-3 py-1.5 text-sm font-medium border-primary/50 bg-primary/10 text-primary"
-          >
-            <Building2 className="h-3.5 w-3.5 mr-1.5" />
-            {displayName}
-          </Badge>
-        </div>
-      )}
 
       {description && (
         <p className="text-muted-foreground text-xs sm:text-sm">
