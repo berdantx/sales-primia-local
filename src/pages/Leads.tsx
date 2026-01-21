@@ -513,35 +513,11 @@ function Leads() {
           className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
         >
           <ColoredKPICard
-            title="Total de Leads"
-            value={stats?.total?.toLocaleString('pt-BR') || '0'}
-            subtitle="no período"
-            icon={Users}
-            variant="blue"
-            delay={0}
-          />
-          <ColoredKPICard
-            title="Fontes Diferentes"
-            value={Object.keys(stats?.bySource || {}).length.toString()}
-            subtitle="origens de leads"
-            icon={Globe}
-            variant="purple"
-            delay={1}
-          />
-          <ColoredKPICard
-            title="Média Diária"
-            value={stats?.byDay ? (stats.total / Math.max(Object.keys(stats.byDay).length, 1)).toFixed(1) : '0'}
-            subtitle="leads por dia"
-            icon={TrendingUp}
-            variant="green"
-            delay={2}
-          />
-          <ColoredKPICard
             title="Tipo de Tráfego"
             value=""
             icon={Megaphone}
-            variant="cyan"
-            delay={3}
+            variant="blue"
+            delay={0}
             customContent={
               (() => {
                 const byType = stats?.byTrafficType || {};
@@ -589,6 +565,30 @@ function Leads() {
                 );
               })()
             }
+          />
+          <ColoredKPICard
+            title="Total de Leads"
+            value={stats?.total?.toLocaleString('pt-BR') || '0'}
+            subtitle="no período"
+            icon={Users}
+            variant="purple"
+            delay={1}
+          />
+          <ColoredKPICard
+            title="Fontes Diferentes"
+            value={Object.keys(stats?.bySource || {}).length.toString()}
+            subtitle="origens de leads"
+            icon={Globe}
+            variant="cyan"
+            delay={2}
+          />
+          <ColoredKPICard
+            title="Média Diária"
+            value={stats?.byDay ? (stats.total / Math.max(Object.keys(stats.byDay).length, 1)).toFixed(1) : '0'}
+            subtitle="leads por dia"
+            icon={TrendingUp}
+            variant="green"
+            delay={3}
           />
         </motion.div>
 
