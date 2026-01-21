@@ -378,7 +378,7 @@ function EduzzTransactions() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3"
           >
             <ColoredKPICard
               title="Faturamento Total"
