@@ -77,6 +77,7 @@ function Leads() {
   const [utmContentFilter, setUtmContentFilter] = useState<string>('all');
   const [utmTermFilter, setUtmTermFilter] = useState<string>('all');
   const [pageFilter, setPageFilter] = useState<string>('all');
+  const [trafficTypeFilter, setTrafficTypeFilter] = useState<string>('all');
   const [showAllPages, setShowAllPages] = useState(false);
   const [testFilter, setTestFilter] = useState<string>('hide');
   const [isBackfilling, setIsBackfilling] = useState(false);
@@ -126,7 +127,8 @@ function Leads() {
     search: search || undefined,
     showTestLeads: testFilter !== 'hide',
     showQualified: qualifiedFilter,
-  }), [clientId, dateRange, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, countryFilter, pageFilter, search, testFilter, qualifiedFilter]);
+    trafficType: trafficTypeFilter !== 'all' ? trafficTypeFilter : undefined,
+  }), [clientId, dateRange, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, countryFilter, pageFilter, search, testFilter, qualifiedFilter, trafficTypeFilter]);
 
   // Optimized stats from SQL function (single query)
   const { data: stats, isLoading: isLoadingStats } = useLeadStatsOptimized(isReady ? statsFilters : undefined);
@@ -174,19 +176,21 @@ function Leads() {
         (stats?.byCountry[b] || 0) - (stats?.byCountry[a] || 0)
       ),
       utmSources: Object.keys(stats?.byUtmSource || {}).sort(),
-      utmMediums: [],
-      utmCampaigns: [],
-      utmContents: [],
-      utmTerms: [],
-      pages: [],
+      utmMediums: Object.keys(stats?.byUtmMedium || {}).sort(),
+      utmCampaigns: Object.keys(stats?.byUtmCampaign || {}).sort(),
+      utmContents: Object.keys(stats?.byUtmContent || {}).sort(),
+      utmTerms: Object.keys(stats?.byUtmTerm || {}).sort(),
+      pages: Object.keys(stats?.byPage || {}).sort(),
+      trafficTypes: Object.keys(stats?.byTrafficType || {}).filter(t => t !== 'unknown').sort(),
       sourceCounts: stats?.bySource || {},
       countryCounts: stats?.byCountry || {},
       utmSourceCounts: stats?.byUtmSource || {},
-      utmMediumCounts: {},
-      utmCampaignCounts: {},
-      utmContentCounts: {},
-      utmTermCounts: {},
-      pageCounts: {},
+      utmMediumCounts: stats?.byUtmMedium || {},
+      utmCampaignCounts: stats?.byUtmCampaign || {},
+      utmContentCounts: stats?.byUtmContent || {},
+      utmTermCounts: stats?.byUtmTerm || {},
+      pageCounts: stats?.byPage || {},
+      trafficTypeCounts: stats?.byTrafficType || {},
     };
   }, [stats]);
 
@@ -273,6 +277,7 @@ function Leads() {
     setUtmContentFilter('all');
     setUtmTermFilter('all');
     setPageFilter('all');
+    setTrafficTypeFilter('all');
     setTestFilter('hide');
     setQualifiedFilter('all');
     setSelectedPeriod('30days');
@@ -291,6 +296,7 @@ function Leads() {
     utmContentFilter !== 'all' || 
     utmTermFilter !== 'all' || 
     pageFilter !== 'all' || 
+    trafficTypeFilter !== 'all' ||
     testFilter !== 'hide' || 
     qualifiedFilter !== 'all' || 
     selectedPeriod !== '30days' || 
@@ -602,6 +608,8 @@ function Leads() {
               onTestFilterChange={(v) => { setTestFilter(v); setCurrentPage(0); }}
               pageFilter={pageFilter}
               onPageFilterChange={(v) => { setPageFilter(v); setCurrentPage(0); }}
+              trafficTypeFilter={trafficTypeFilter}
+              onTrafficTypeFilterChange={(v) => { setTrafficTypeFilter(v); setCurrentPage(0); }}
               showAllPages={showAllPages}
               onShowAllPages={() => setShowAllPages(true)}
               totalPagesCount={totalPagesCount}

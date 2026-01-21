@@ -21,6 +21,7 @@ import { FileSpreadsheet, Eye, FlaskConical, Building2, MapPin, CheckCircle2 } f
 import { Button } from '@/components/ui/button';
 import { LeadDetailDialog } from './LeadDetailDialog';
 import { useClients } from '@/hooks/useClients';
+import { TrafficTypeBadge } from './TrafficTypeBadge';
 
 // Check if lead is qualified (has all required UTM parameters)
 function isQualifiedLead(lead: Lead): boolean {
@@ -96,12 +97,15 @@ function LeadCard({ lead, onViewDetails }: { lead: Lead; onViewDetails: (lead: L
             </div>
             <p className="text-xs text-muted-foreground truncate">{lead.email}</p>
           </div>
-          <Badge 
-            variant="outline" 
-            className={`ml-2 text-xs shrink-0 ${SOURCE_COLORS[source] || ''}`}
-          >
-            {SOURCE_LABELS[source] || source}
-          </Badge>
+          <div className="flex flex-col items-end gap-1 ml-2">
+            <TrafficTypeBadge type={lead.traffic_type} showLabel={false} />
+            <Badge 
+              variant="outline" 
+              className={`text-xs shrink-0 ${SOURCE_COLORS[source] || ''}`}
+            >
+              {SOURCE_LABELS[source] || source}
+            </Badge>
+          </div>
         </div>
         <div className="flex justify-between items-end">
           <div className="flex flex-col gap-0.5">
@@ -197,6 +201,7 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                   <TableHead className="min-w-[180px]">Email</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead>Localização</TableHead>
+                  <TableHead>Tráfego</TableHead>
                   <TableHead>Fonte</TableHead>
                   <TableHead>UTM Source</TableHead>
                   <TableHead className="min-w-[150px]">Tags</TableHead>
@@ -283,6 +288,9 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <TrafficTypeBadge type={lead.traffic_type} />
                       </TableCell>
                       <TableCell>
                         <Badge 
