@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Users } from 'lucide-react';
 import { useFilter } from '@/contexts/FilterContext';
 import { useClients } from '@/hooks/useClients';
@@ -18,6 +20,7 @@ interface ClientContextHeaderProps {
 }
 
 export function ClientContextHeader({ title, description }: ClientContextHeaderProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const { clientId, setClientId } = useFilter();
   const { data: clients, isLoading: isLoadingClients } = useClients();
   const { isMaster, isLoading: isLoadingRole } = useUserRole();
@@ -41,7 +44,7 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
         {showClientSelector && clients && clients.length > 0 && !isLoadingClients && !isLoadingRole && (
           <>
             <span className="text-muted-foreground text-lg sm:text-xl">•</span>
-            <DropdownMenu>
+            <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="ghost" 
@@ -49,37 +52,59 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
                   className="h-auto p-0 text-primary hover:text-primary/80 hover:bg-transparent font-medium gap-1 text-base sm:text-lg"
                 >
                   {displayName}
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  <motion.span
+                    animate={{ rotate: isOpen ? 180 : 0 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </motion.span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 bg-popover">
-                {isMaster && (
-                  <>
-                    <DropdownMenuItem 
-                      onClick={() => setClientId(null)}
-                      className={!clientId ? 'bg-accent' : ''}
-                    >
-                      Todos os clientes
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                {clients.map(client => {
-                  const leadCount = leadCounts?.[client.id] || 0;
-                  return (
-                    <DropdownMenuItem 
-                      key={client.id} 
-                      onClick={() => setClientId(client.id)}
-                      className={`flex items-center justify-between ${clientId === client.id ? 'bg-accent' : ''}`}
-                    >
-                      <span>{client.name}</span>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
-                        <Users className="h-3 w-3" />
-                        {leadCount}
-                      </span>
-                    </DropdownMenuItem>
-                  );
-                })}
+              <DropdownMenuContent 
+                align="start" 
+                className="w-56 bg-popover"
+                asChild
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                >
+                  {isMaster && (
+                    <>
+                      <DropdownMenuItem 
+                        onClick={() => setClientId(null)}
+                        className={!clientId ? 'bg-accent' : ''}
+                      >
+                        Todos os clientes
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {clients.map((client, index) => {
+                    const leadCount = leadCounts?.[client.id] || 0;
+                    return (
+                      <motion.div
+                        key={client.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03, duration: 0.15 }}
+                      >
+                        <DropdownMenuItem 
+                          onClick={() => setClientId(client.id)}
+                          className={`flex items-center justify-between ${clientId === client.id ? 'bg-accent' : ''}`}
+                        >
+                          <span>{client.name}</span>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
+                            <Users className="h-3 w-3" />
+                            {leadCount}
+                          </span>
+                        </DropdownMenuItem>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
