@@ -235,7 +235,7 @@ export default function Dashboard() {
           className="flex flex-col gap-3 sm:gap-4 pb-2"
         >
           <ClientContextHeader 
-            title={`Faturamento ${clients?.find(c => c.id === clientId)?.name || ''}`}
+            title="Faturamento"
             description="Acompanhe suas metas e desempenho financeiro"
           />
           
