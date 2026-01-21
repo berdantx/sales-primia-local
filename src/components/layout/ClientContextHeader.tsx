@@ -51,6 +51,9 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
         />
       )}
 
+      {/* Separador visual com gradiente */}
+      <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
       {/* Line 2: Title on left + Client name | Alterar on right */}
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
