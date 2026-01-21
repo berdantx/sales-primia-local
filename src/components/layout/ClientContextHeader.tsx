@@ -5,6 +5,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useClientLeadCounts } from '@/hooks/useClientLeadCounts';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,11 +34,29 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          {title}
-        </h1>
+      {/* Main row: Title + Logo on left, Button on right */}
+      <div className="flex items-center justify-between gap-4">
+        {/* Left side: Title + Client Logo */}
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            {title}
+          </h1>
+          
+          {/* Client logo */}
+          {selectedClient?.logo_url && (
+            <Avatar className="h-8 w-8 border border-border">
+              <AvatarImage 
+                src={selectedClient.logo_url} 
+                alt={selectedClient.name} 
+              />
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {selectedClient.name.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          )}
+        </div>
 
+        {/* Right side: Change client button */}
         {showClientSelector && clients && clients.length > 0 && !isLoadingClients && !isLoadingRole && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
