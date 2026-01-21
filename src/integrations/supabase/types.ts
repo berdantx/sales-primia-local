@@ -799,6 +799,56 @@ export type Database = {
         }
         Relationships: []
       }
+      permission_audit_logs: {
+        Row: {
+          action: string
+          changed_by: string
+          client_id: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          new_value: boolean
+          old_value: boolean | null
+          permission_type: string
+          target_user_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          changed_by: string
+          client_id: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_value: boolean
+          old_value?: boolean | null
+          permission_type?: string
+          target_user_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          changed_by?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: boolean
+          old_value?: boolean | null
+          permission_type?: string
+          target_user_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_audit_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -9,6 +9,8 @@ import { useEduzzTransactionStatsOptimized } from '@/hooks/useEduzzTransactionSt
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useFilter } from '@/contexts/FilterContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useFinancialAccess } from '@/hooks/useFinancialAccess';
+import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,6 +43,7 @@ const CURRENCIES = ['BRL', 'USD', 'EUR'];
 export default function Goals() {
   const { clientId, setClientId } = useFilter();
   const { isMaster } = useUserRole();
+  const { canViewFinancials, isLoading: isLoadingFinancialAccess } = useFinancialAccess(clientId);
   const { data: goals, isLoading } = useGoals(clientId);
   const { stats: hotmartStats } = useTransactionStats({ clientId });
   const { data: tmbStats } = useTmbTransactionStatsOptimized({ clientId: clientId || undefined });
@@ -154,6 +157,20 @@ export default function Goals() {
 
   const activeGoals = goals?.filter(g => g.is_active) || [];
   const inactiveGoals = goals?.filter(g => !g.is_active) || [];
+
+  if (!canViewFinancials) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <ClientContextHeader 
+            title="Metas de Vendas"
+            description="Defina e acompanhe suas metas de vendas"
+          />
+          <RestrictedFinancialSection />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

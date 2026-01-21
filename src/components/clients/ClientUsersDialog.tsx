@@ -74,7 +74,9 @@ export function ClientUsersDialog({ open, onOpenChange, client }: ClientUsersDia
     await updateFinancialAccess.mutateAsync({
       id: clientUser.id,
       clientId: client.id,
+      targetUserId: clientUser.user_id,
       canViewFinancials: !clientUser.can_view_financials,
+      oldValue: clientUser.can_view_financials,
     });
   };
 

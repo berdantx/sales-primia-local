@@ -8,8 +8,10 @@ import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimiz
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useProjectionStats } from '@/hooks/useSalesBreakdown';
 import { useFilter } from '@/contexts/FilterContext';
+import { useFinancialAccess } from '@/hooks/useFinancialAccess';
 import { AdvancedFilters } from '@/components/dashboard/AdvancedFilters';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
+import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -158,7 +160,7 @@ function Transactions() {
   }, [search]);
   
   const { clientId, setClientId } = useFilter();
-
+  const { canViewFinancials, isLoading: isLoadingFinancialAccess } = useFinancialAccess(clientId);
   const dateRange = useMemo(() => {
     if (period === 'all') {
       return { startDate: undefined, endDate: undefined };
@@ -496,33 +498,34 @@ function Transactions() {
         </motion.div>
 
         {/* Summary KPIs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
-        >
-          <ColoredKPICard
-            title="Faturamento Total (BRL)"
-            value={formatCurrency(summaryStats.totalCombinedBRL, 'BRL')}
-            subtitle={summaryStats.totalUSD > 0 && dollarRate 
-              ? `Inclui ${formatCurrency(summaryStats.totalUSD, 'USD')} convertidos (R$ ${dollarRate.rate.toFixed(2)})`
-              : `${summaryStats.countBRL} transações`
-            }
-            icon={DollarSign}
-            variant="green"
-            delay={0}
-            className="text-sm sm:text-base"
-          />
-          <ColoredKPICard
-            title="Projeção Faturamento"
-            value={formatCurrency(summaryStats.totalProjectedCombinedBRL, 'BRL')}
-            subtitle="Inclui recorrências"
-            icon={TrendingUp}
-            variant="cyan"
-            delay={1}
-            className="text-sm sm:text-base"
-            tooltipContent={
+        {canViewFinancials ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
+          >
+            <ColoredKPICard
+              title="Faturamento Total (BRL)"
+              value={formatCurrency(summaryStats.totalCombinedBRL, 'BRL')}
+              subtitle={summaryStats.totalUSD > 0 && dollarRate 
+                ? `Inclui ${formatCurrency(summaryStats.totalUSD, 'USD')} convertidos (R$ ${dollarRate.rate.toFixed(2)})`
+                : `${summaryStats.countBRL} transações`
+              }
+              icon={DollarSign}
+              variant="green"
+              delay={0}
+              className="text-sm sm:text-base"
+            />
+            <ColoredKPICard
+              title="Projeção Faturamento"
+              value={formatCurrency(summaryStats.totalProjectedCombinedBRL, 'BRL')}
+              subtitle="Inclui recorrências"
+              icon={TrendingUp}
+              variant="cyan"
+              delay={1}
+              className="text-sm sm:text-base"
+              tooltipContent={
               <div className="space-y-2 text-sm min-w-[220px]">
                 <p className="font-medium border-b pb-1 mb-2">Composição do Valor</p>
                 
@@ -582,6 +585,9 @@ function Transactions() {
             className="text-sm sm:text-base"
           />
         </motion.div>
+        ) : (
+          <RestrictedFinancialSection />
+        )}
 
         {/* Analytics Section */}
         <motion.div
