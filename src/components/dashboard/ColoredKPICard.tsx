@@ -52,25 +52,25 @@ export function ColoredKPICard({
       transition={{ delay: delay * 0.1 }}
       onClick={onClick}
       className={cn(
-        'rounded-lg p-2.5 sm:p-5 shadow-medium transition-transform hover:scale-[1.02]',
+        'rounded-lg p-3 sm:p-5 shadow-medium transition-transform hover:scale-[1.02]',
         variantStyles[variant],
         tooltipContent && 'cursor-help',
         onClick && 'cursor-pointer',
         className
       )}
     >
-      <div className="flex items-start justify-between gap-1">
-        <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
-          <p className="text-[10px] sm:text-sm font-medium opacity-90 truncate">{title}</p>
-          <p className="text-sm sm:text-2xl font-bold leading-tight break-all">{value}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1 min-w-0 flex-1">
+          <p className="text-xs sm:text-sm font-medium opacity-90 line-clamp-2">{title}</p>
+          <p className="text-base sm:text-2xl font-bold leading-tight">{value}</p>
           {subtitle && (
-            <p className="text-[10px] sm:text-sm opacity-80 leading-tight">{subtitle}</p>
+            <p className="text-xs sm:text-sm opacity-80 leading-tight">{subtitle}</p>
           )}
           {customContent}
         </div>
         {Icon && (
-          <div className="p-1 sm:p-2 rounded-full bg-white/20 shrink-0">
-            <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
+          <div className="p-1.5 sm:p-2 rounded-full bg-white/20 shrink-0">
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
         )}
       </div>
