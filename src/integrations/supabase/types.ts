@@ -687,6 +687,7 @@ export type Database = {
           series_id: string | null
           source: string | null
           tags: string | null
+          traffic_type: string | null
           updated_at: string | null
           utm_campaign: string | null
           utm_content: string | null
@@ -716,6 +717,7 @@ export type Database = {
           series_id?: string | null
           source?: string | null
           tags?: string | null
+          traffic_type?: string | null
           updated_at?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
@@ -745,6 +747,7 @@ export type Database = {
           series_id?: string | null
           source?: string | null
           tags?: string | null
+          traffic_type?: string | null
           updated_at?: string | null
           utm_campaign?: string | null
           utm_content?: string | null
