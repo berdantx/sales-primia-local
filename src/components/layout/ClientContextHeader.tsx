@@ -51,8 +51,8 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
         />
       )}
 
-      {/* Separador visual */}
-      <div className="h-px w-full bg-border" />
+      {/* Separador visual - expande para fora do container */}
+      <div className="h-px w-[100vw] -ml-4 sm:-ml-6 lg:-ml-8 bg-border" />
 
       {/* Line 2: Title on left + Client name | Alterar on right */}
       <div className="flex items-center justify-between gap-4">
