@@ -18,6 +18,7 @@ export interface LeadsPaginatedFilters {
   clientId?: string | null;
   showTestLeads?: boolean;
   showQualified?: string; // 'all' | 'qualified' | 'unqualified'
+  trafficType?: string; // 'paid' | 'organic' | 'direct'
 }
 
 export interface UseLeadsPaginatedOptions {
@@ -92,6 +93,11 @@ export function useLeadsPaginated({
       // Filter test leads (containing 'teste' or 'test' in tags)
       if (filters?.showTestLeads === false) {
         query = query.or('tags.is.null,tags.not.ilike.%test%');
+      }
+
+      // Filter by traffic type (using filter since column is generated and may not be in types)
+      if (filters?.trafficType) {
+        query = query.filter('traffic_type', 'eq', filters.trafficType);
       }
 
       // Apply pagination

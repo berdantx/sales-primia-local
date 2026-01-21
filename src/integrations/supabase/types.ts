@@ -1533,7 +1533,7 @@ export type Database = {
       }
       get_lead_stats: {
         Args: {
-          p_client_id?: string
+          p_client_id: string
           p_end_date?: string
           p_start_date?: string
         }

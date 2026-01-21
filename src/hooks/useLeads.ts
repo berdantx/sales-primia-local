@@ -31,6 +31,8 @@ export interface Lead {
   country_code: string | null;
   city: string | null;
   region: string | null;
+  // Traffic classification
+  traffic_type?: string | null;
 }
 
 export interface LeadFilters {

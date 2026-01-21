@@ -29,6 +29,7 @@ interface FilterOptions {
   utmContents: string[];
   utmTerms: string[];
   pages: string[];
+  trafficTypes: string[];
   sourceCounts: Record<string, number>;
   countryCounts: Record<string, number>;
   utmSourceCounts: Record<string, number>;
@@ -37,6 +38,7 @@ interface FilterOptions {
   utmContentCounts: Record<string, number>;
   utmTermCounts: Record<string, number>;
   pageCounts: Record<string, number>;
+  trafficTypeCounts: Record<string, number>;
 }
 
 interface LeadsFiltersProps {
@@ -66,6 +68,8 @@ interface LeadsFiltersProps {
   onTestFilterChange: (value: string) => void;
   pageFilter: string;
   onPageFilterChange: (value: string) => void;
+  trafficTypeFilter: string;
+  onTrafficTypeFilterChange: (value: string) => void;
   showAllPages: boolean;
   onShowAllPages: () => void;
   totalPagesCount: number;
@@ -152,6 +156,8 @@ export function LeadsFilters({
   onTestFilterChange,
   pageFilter,
   onPageFilterChange,
+  trafficTypeFilter,
+  onTrafficTypeFilterChange,
   showAllPages,
   onShowAllPages,
   totalPagesCount,
@@ -174,8 +180,15 @@ export function LeadsFilters({
     qualifiedFilter !== 'all',
     testFilter !== 'hide',
     pageFilter !== 'all',
+    trafficTypeFilter !== 'all',
     search.length > 0,
   ].filter(Boolean).length;
+
+  const TRAFFIC_LABELS: Record<string, string> = {
+    paid: '💰 Pago',
+    organic: '🌱 Orgânico',
+    direct: '🔗 Direto',
+  };
 
   return (
     <Card className="p-4 space-y-4 bg-card/50 backdrop-blur-sm border-border/50">
@@ -344,6 +357,30 @@ export function LeadsFilters({
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mr-1">
             Status
           </span>
+
+          {/* Traffic Type Filter */}
+          <Select value={trafficTypeFilter} onValueChange={onTrafficTypeFilterChange}>
+            <SelectTrigger 
+              className={`w-auto min-w-[120px] h-9 text-xs gap-1.5 px-3 border-dashed transition-colors ${
+                trafficTypeFilter !== 'all' 
+                  ? 'border-primary bg-primary/5 text-primary' 
+                  : 'border-muted-foreground/30 hover:border-muted-foreground/50'
+              }`}
+            >
+              <Megaphone className="h-3.5 w-3.5 shrink-0" />
+              <SelectValue placeholder="Tráfego" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" className="text-muted-foreground">
+                Todo tráfego ({totalLeads})
+              </SelectItem>
+              {filterOptions.trafficTypes.map(type => (
+                <SelectItem key={type} value={type}>
+                  {TRAFFIC_LABELS[type] || type} ({filterOptions.trafficTypeCounts[type] || 0})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <Select value={qualifiedFilter} onValueChange={onQualifiedFilterChange}>
             <SelectTrigger 
