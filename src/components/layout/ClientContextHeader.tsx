@@ -3,9 +3,10 @@ import { useFilter } from '@/contexts/FilterContext';
 import { useClients } from '@/hooks/useClients';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useClientLeadCounts } from '@/hooks/useClientLeadCounts';
+import { useBrandingSettings } from '@/hooks/useBrandingSettings';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,8 +25,15 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
   const { data: clients, isLoading: isLoadingClients } = useClients();
   const { isMaster, isLoading: isLoadingRole } = useUserRole();
   const { data: leadCounts } = useClientLeadCounts();
+  const { settings } = useBrandingSettings();
+  const { resolvedTheme } = useTheme();
 
   const selectedClient = clients?.find(c => c.id === clientId);
+  
+  // Get the appropriate logo based on current theme
+  const logoUrl = resolvedTheme === 'dark' 
+    ? (settings.logoUrlDark || settings.logoUrl) 
+    : settings.logoUrl;
   const displayName = selectedClient?.name || 'Todos os clientes';
   
   // Show client selector for master users OR non-master users with multiple clients
@@ -36,23 +44,19 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
     <div className="space-y-2">
       {/* Main row: Title + Logo on left, Button on right */}
       <div className="flex items-center justify-between gap-4">
-        {/* Left side: Title + Client Logo */}
+        {/* Left side: Title + App Logo */}
         <div className="flex items-center gap-3">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             {title}
           </h1>
           
-          {/* Client logo */}
-          {selectedClient?.logo_url && (
-            <Avatar className="h-8 w-8 border border-border">
-              <AvatarImage 
-                src={selectedClient.logo_url} 
-                alt={selectedClient.name} 
-              />
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {selectedClient.name.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+          {/* App logo from branding settings */}
+          {logoUrl && (
+            <img 
+              src={logoUrl} 
+              alt={settings.appName} 
+              className="h-8 w-auto object-contain"
+            />
           )}
         </div>
 
