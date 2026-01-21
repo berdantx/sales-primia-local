@@ -3,7 +3,13 @@ import { useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Bell, History, Target, Upload } from 'lucide-react';
+import { Bell, History, Target, Upload, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { HeaderFilters } from './HeaderFilters';
 import { ClientIndicator } from './ClientIndicator';
 import { useBrandingSettings } from '@/hooks/useBrandingSettings';
@@ -45,8 +51,8 @@ export function Header() {
         
         <div className="hidden md:block h-6 w-px bg-border mx-1" />
         
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 sm:gap-2">
+        {/* Action buttons - visible only on sm+ screens */}
+        <div className="hidden sm:flex items-center gap-1 sm:gap-2">
           <Button 
             variant="outline" 
             size="sm" 
@@ -75,10 +81,37 @@ export function Header() {
           </Button>
         </div>
 
+        {/* Mobile actions dropdown - visible only on mobile */}
+        <div className="flex sm:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => navigate('/transactions')}>
+                <History className="h-4 w-4 mr-2" />
+                Histórico
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/goals')}>
+                <Target className="h-4 w-4 mr-2" />
+                Metas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/upload')}>
+                <Upload className="h-4 w-4 mr-2" />
+                Importar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         <div className="flex-1" />
 
-        {/* Client Indicator */}
-        <ClientIndicator />
+        {/* Client Indicator - hidden on mobile */}
+        <div className="hidden sm:block">
+          <ClientIndicator />
+        </div>
 
         {/* Advanced Filters */}
         <HeaderFilters />
