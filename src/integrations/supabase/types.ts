@@ -79,6 +79,7 @@ export type Database = {
       }
       client_users: {
         Row: {
+          can_view_financials: boolean | null
           client_id: string
           created_at: string | null
           id: string
@@ -86,6 +87,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          can_view_financials?: boolean | null
           client_id: string
           created_at?: string | null
           id?: string
@@ -93,6 +95,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          can_view_financials?: boolean | null
           client_id?: string
           created_at?: string | null
           id?: string

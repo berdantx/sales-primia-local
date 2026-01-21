@@ -7,6 +7,7 @@ export interface ClientUser {
   client_id: string;
   user_id: string;
   is_owner: boolean;
+  can_view_financials: boolean;
   created_at: string;
   profile?: {
     full_name: string | null;
@@ -145,6 +146,31 @@ export function useUpdateClientUserOwnership() {
     },
     onError: (error) => {
       toast({ title: 'Erro ao atualizar usuário', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+export function useUpdateFinancialAccess() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, clientId, canViewFinancials }: { id: string; clientId: string; canViewFinancials: boolean }) => {
+      const { error } = await supabase
+        .from('client_users')
+        .update({ can_view_financials: canViewFinancials })
+        .eq('id', id);
+
+      if (error) throw error;
+      return { clientId, canViewFinancials };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['client-users', data.clientId] });
+      queryClient.invalidateQueries({ queryKey: ['financial-access'] });
+      toast({ title: data.canViewFinancials ? 'Acesso financeiro liberado!' : 'Acesso financeiro removido!' });
+    },
+    onError: (error) => {
+      toast({ title: 'Erro ao atualizar permissão', description: error.message, variant: 'destructive' });
     },
   });
 }
