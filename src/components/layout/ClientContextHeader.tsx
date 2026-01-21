@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Users } from 'lucide-react';
+import { ChevronDown, Users, Check } from 'lucide-react';
 import { useFilter } from '@/contexts/FilterContext';
 import { useClients } from '@/hooks/useClients';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -75,15 +75,17 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
                     <>
                       <DropdownMenuItem 
                         onClick={() => setClientId(null)}
-                        className={!clientId ? 'bg-accent' : ''}
+                        className={`flex items-center justify-between transition-all duration-150 hover:bg-primary/10 hover:text-primary hover:pl-4 ${!clientId ? 'bg-primary/5 text-primary font-medium' : ''}`}
                       >
-                        Todos os clientes
+                        <span>Todos os clientes</span>
+                        {!clientId && <Check className="h-4 w-4 text-primary" />}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
                   )}
                   {clients.map((client, index) => {
                     const leadCount = leadCounts?.[client.id] || 0;
+                    const isSelected = clientId === client.id;
                     return (
                       <motion.div
                         key={client.id}
@@ -93,9 +95,12 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
                       >
                         <DropdownMenuItem 
                           onClick={() => setClientId(client.id)}
-                          className={`flex items-center justify-between ${clientId === client.id ? 'bg-accent' : ''}`}
+                          className={`flex items-center justify-between transition-all duration-150 hover:bg-primary/10 hover:text-primary hover:pl-4 ${isSelected ? 'bg-primary/5 text-primary font-medium' : ''}`}
                         >
-                          <span>{client.name}</span>
+                          <span className="flex items-center gap-2">
+                            {client.name}
+                            {isSelected && <Check className="h-4 w-4 text-primary" />}
+                          </span>
                           <span className="flex items-center gap-1 text-xs text-muted-foreground ml-2">
                             <Users className="h-3 w-3" />
                             {leadCount}
