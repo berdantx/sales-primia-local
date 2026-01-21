@@ -46,7 +46,7 @@ export function ClientContextHeader({ title, description }: ClientContextHeaderP
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-auto p-0 text-muted-foreground hover:text-foreground hover:bg-transparent font-medium gap-1 text-base sm:text-lg"
+                  className="h-auto p-0 text-primary hover:text-primary/80 hover:bg-transparent font-medium gap-1 text-base sm:text-lg"
                 >
                   {displayName}
                   <ChevronDown className="h-3.5 w-3.5" />
