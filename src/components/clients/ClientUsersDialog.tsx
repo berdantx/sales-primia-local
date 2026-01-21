@@ -4,19 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Loader2, Plus, Trash2, Crown, User, UserPlus } from 'lucide-react';
+import { Loader2, Plus, Trash2, Crown, User, UserPlus, DollarSign } from 'lucide-react';
 import { 
   useClientUsers, 
   useAvailableUsers, 
   useAddUserToClient, 
   useRemoveUserFromClient,
   useUpdateClientUserOwnership,
+  useUpdateFinancialAccess,
   ClientUser
 } from '@/hooks/useClientUsers';
 import { Client } from '@/hooks/useClients';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ClientUsersDialogProps {
   open: boolean;
@@ -33,6 +35,7 @@ export function ClientUsersDialog({ open, onOpenChange, client }: ClientUsersDia
   const addUser = useAddUserToClient();
   const removeUser = useRemoveUserFromClient();
   const updateOwnership = useUpdateClientUserOwnership();
+  const updateFinancialAccess = useUpdateFinancialAccess();
 
   // Filter out users already associated with the client
   const usersNotInClient = availableUsers?.filter(
@@ -63,6 +66,15 @@ export function ClientUsersDialog({ open, onOpenChange, client }: ClientUsersDia
       id: clientUser.id, 
       clientId: client.id, 
       isOwner: !clientUser.is_owner 
+    });
+  };
+
+  const handleToggleFinancialAccess = async (clientUser: ClientUser) => {
+    if (!client) return;
+    await updateFinancialAccess.mutateAsync({
+      id: clientUser.id,
+      clientId: client.id,
+      canViewFinancials: !clientUser.can_view_financials,
     });
   };
 
@@ -177,15 +189,49 @@ export function ClientUsersDialog({ open, onOpenChange, client }: ClientUsersDia
                           Owner
                         </Badge>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleToggleOwnership(clientUser)}
-                        disabled={updateOwnership.isPending}
-                        title={clientUser.is_owner ? 'Remover owner' : 'Promover a owner'}
-                      >
-                        <Crown className={`h-4 w-4 ${clientUser.is_owner ? 'text-yellow-500' : 'text-muted-foreground'}`} />
-                      </Button>
+                      {clientUser.can_view_financials && (
+                        <Badge variant="outline" className="gap-1 border-green-500/50 text-green-600">
+                          <DollarSign className="h-3 w-3" />
+                          Financeiro
+                        </Badge>
+                      )}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleFinancialAccess(clientUser)}
+                              disabled={updateFinancialAccess.isPending}
+                              className={clientUser.can_view_financials ? 'text-green-600' : 'text-muted-foreground'}
+                            >
+                              <DollarSign className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {clientUser.can_view_financials 
+                              ? 'Remover acesso financeiro' 
+                              : 'Liberar acesso financeiro'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleOwnership(clientUser)}
+                              disabled={updateOwnership.isPending}
+                            >
+                              <Crown className={`h-4 w-4 ${clientUser.is_owner ? 'text-yellow-500' : 'text-muted-foreground'}`} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {clientUser.is_owner ? 'Remover owner' : 'Promover a owner'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="sm" className="text-destructive">

@@ -8,6 +8,7 @@ import { useLeadCount } from '@/hooks/useLeads';
 import { useSalesBreakdown, useProjectionStats } from '@/hooks/useSalesBreakdown';
 import { useFilter } from '@/contexts/FilterContext';
 import { useClients } from '@/hooks/useClients';
+import { useFinancialAccess } from '@/hooks/useFinancialAccess';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { KPICard } from '@/components/dashboard/KPICard';
@@ -15,6 +16,7 @@ import { ColoredDashboardCards } from '@/components/dashboard/ColoredDashboardCa
 import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 import { SalesBreakdownDialog } from '@/components/dashboard/SalesBreakdownDialog';
 import { DashboardSalesAnalytics } from '@/components/dashboard/DashboardSalesAnalytics';
+import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
 
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 
@@ -123,6 +125,9 @@ export default function Dashboard() {
   // Use combined stats hook that handles platform switching
   const { stats, topCustomers, salesByDate, currencies, isLoading, hotmartStats, tmbStats, eduzzStats } = useCombinedStats(filters, platform);
   
+  // Check financial access
+  const { canViewFinancials, isLoading: isLoadingAccess } = useFinancialAccess(clientId);
+  
   // Fetch dollar rate for USD conversion
   const { data: dollarRate, isLoading: isLoadingRate, isError: isRateError } = useDollarRate();
   
@@ -208,7 +213,7 @@ export default function Dashboard() {
            (eduzzStats?.totalTransactions || 0),
   }), [hotmartStats, tmbStats, eduzzStats]);
 
-  if (isLoading) {
+  if (isLoading || isLoadingAccess) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-[60vh]">
@@ -267,25 +272,27 @@ export default function Dashboard() {
             
             <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
             
-            <div className="flex items-center gap-2">
-              <CurrencyViewToggle value={currencyView} onChange={setCurrencyView} />
-              
-              <span className="text-xs text-muted-foreground hidden sm:inline">
-                Cotação do dólar hoje:
-              </span>
-              <DollarRateIndicator 
-                rate={dollarRate?.rate}
-                source={dollarRate?.source}
-                isLoading={isLoadingRate}
-                isError={isRateError}
-              />
-            </div>
+            {canViewFinancials && (
+              <div className="flex items-center gap-2">
+                <CurrencyViewToggle value={currencyView} onChange={setCurrencyView} />
+                
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  Cotação do dólar hoje:
+                </span>
+                <DollarRateIndicator 
+                  rate={dollarRate?.rate}
+                  source={dollarRate?.source}
+                  isLoading={isLoadingRate}
+                  isError={isRateError}
+                />
+              </div>
+            )}
           </div>
           
         </motion.div>
 
         {/* Goal Summary Section (when goal is active) - Above filters */}
-        {primaryGoal && hasData && (
+        {canViewFinancials && primaryGoal && hasData && (
           <GoalSummarySection 
             goal={primaryGoal} 
             totalSold={primaryGoalSales}
@@ -297,8 +304,13 @@ export default function Dashboard() {
           />
         )}
 
+        {/* Restricted Financial Section - Show when user doesn't have access */}
+        {!canViewFinancials && hasData && (
+          <RestrictedFinancialSection title="Dados Financeiros" />
+        )}
+
         {/* Currency and Transaction KPI Cards - right below goal cards */}
-        {hasData && (() => {
+        {canViewFinancials && hasData && (() => {
           // Get platform-specific values
           // Use projectionStats for Hotmart real values (computed_value based)
           const hotmartRealBRL = projectionStats?.totalRealBRL || (hotmartStats?.totalByCurrency?.['BRL'] || 0);
@@ -507,7 +519,7 @@ export default function Dashboard() {
         ) : (
           <>
             {/* Call to action for creating a goal - only when no goal exists */}
-            {!primaryGoal && (
+            {canViewFinancials && !primaryGoal && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -531,38 +543,42 @@ export default function Dashboard() {
               </motion.div>
             )}
 
-            {/* Charts Row - 2/3 + 1/3 layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-              {/* Main chart - 2/3 width */}
-              <div className="lg:col-span-2 min-w-0">
-                <SalesByTimeChart 
-                  data={salesByDate || {}} 
-                  currencies={currencies}
-                />
-              </div>
-              
-              {/* Secondary chart - 1/3 width */}
-              <div className="flex flex-col h-full min-w-0">
-                {(hotmartTotalBRL > 0 || tmbTotalBRL > 0 || eduzzTotalBRL > 0) && (
-                  <PlatformSharePieChart 
-                    hotmartTotal={hotmartTotalBRL} 
-                    tmbTotal={tmbTotalBRL}
-                    eduzzTotal={eduzzTotalBRL}
+            {/* Charts Row - 2/3 + 1/3 layout - Only for users with financial access */}
+            {canViewFinancials && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                {/* Main chart - 2/3 width */}
+                <div className="lg:col-span-2 min-w-0">
+                  <SalesByTimeChart 
+                    data={salesByDate || {}} 
+                    currencies={currencies}
                   />
-                )}
+                </div>
+                
+                {/* Secondary chart - 1/3 width */}
+                <div className="flex flex-col h-full min-w-0">
+                  {(hotmartTotalBRL > 0 || tmbTotalBRL > 0 || eduzzTotalBRL > 0) && (
+                    <PlatformSharePieChart 
+                      hotmartTotal={hotmartTotalBRL} 
+                      tmbTotal={tmbTotalBRL}
+                      eduzzTotal={eduzzTotalBRL}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Sales Analytics Section - Consolidated */}
-            <DashboardSalesAnalytics
-              startDate={dateRange.startDate}
-              endDate={dateRange.endDate}
-              clientId={clientId}
-              platform={platform}
-            />
+            {/* Sales Analytics Section - Consolidated - Only for users with financial access */}
+            {canViewFinancials && (
+              <DashboardSalesAnalytics
+                startDate={dateRange.startDate}
+                endDate={dateRange.endDate}
+                clientId={clientId}
+                platform={platform}
+              />
+            )}
 
-            {/* Top Customers */}
-            <TopCustomers customers={topCustomers || []} />
+            {/* Top Customers - Only for users with financial access */}
+            {canViewFinancials && <TopCustomers customers={topCustomers || []} />}
           </>
         )}
       </div>
