@@ -60,9 +60,9 @@ export function ColoredKPICard({
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="space-y-1 min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium opacity-90 line-clamp-2">{title}</p>
-          <p className="text-base sm:text-2xl font-bold leading-tight">{value}</p>
+        <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
+          <p className="text-[11px] sm:text-sm font-medium opacity-90 whitespace-nowrap overflow-hidden text-ellipsis">{title}</p>
+          <p className="text-sm sm:text-2xl font-bold leading-tight whitespace-nowrap">{value}</p>
           {subtitle && (
             <p className="text-xs sm:text-sm opacity-80 leading-tight">{subtitle}</p>
           )}
