@@ -59,7 +59,8 @@ import {
   BarChart3,
   MapPin,
   Target,
-  ArrowRight
+  ArrowRight,
+  Megaphone
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 50;
@@ -509,7 +510,7 @@ function Leads() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
         >
           <ColoredKPICard
             title="Total de Leads"
@@ -534,7 +535,60 @@ function Leads() {
             icon={TrendingUp}
             variant="green"
             delay={2}
-            className="col-span-2 lg:col-span-1"
+          />
+          <ColoredKPICard
+            title="Tipo de Tráfego"
+            value=""
+            icon={Megaphone}
+            variant="cyan"
+            delay={3}
+            customContent={
+              (() => {
+                const byType = stats?.byTrafficType || {};
+                const total = stats?.total || 0;
+                const paid = byType['paid'] || 0;
+                const organic = byType['organic'] || 0;
+                const direct = byType['direct'] || 0;
+                const paidPercent = total > 0 ? ((paid / total) * 100).toFixed(1) : '0';
+                const organicPercent = total > 0 ? ((organic / total) * 100).toFixed(1) : '0';
+                const directPercent = total > 0 ? ((direct / total) * 100).toFixed(1) : '0';
+                
+                return (
+                  <div className="space-y-1 mt-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-blue-400" />
+                        Pago
+                      </span>
+                      <span className="font-medium">
+                        {paid.toLocaleString('pt-BR')}
+                        <span className="text-xs text-white/70 ml-1">({paidPercent}%)</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                        Orgânico
+                      </span>
+                      <span className="font-medium">
+                        {organic.toLocaleString('pt-BR')}
+                        <span className="text-xs text-white/70 ml-1">({organicPercent}%)</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-gray-300" />
+                        Direto
+                      </span>
+                      <span className="font-medium">
+                        {direct.toLocaleString('pt-BR')}
+                        <span className="text-xs text-white/70 ml-1">({directPercent}%)</span>
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()
+            }
           />
         </motion.div>
 
