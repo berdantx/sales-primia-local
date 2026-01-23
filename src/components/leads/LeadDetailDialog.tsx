@@ -46,7 +46,7 @@ const SOURCE_LABELS: Record<string, string> = {
   hotmart: 'Hotmart',
   eduzz: 'Eduzz',
   n8n: 'n8n',
-  primia: 'Primia',
+  primia: 'Primia - Whatsapp',
 };
 
 function parseTags(tags: string | null): string[] {
