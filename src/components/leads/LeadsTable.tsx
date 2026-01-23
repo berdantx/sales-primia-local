@@ -197,14 +197,14 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[100px]">Data</TableHead>
-                  <TableHead className="min-w-[150px]">Nome</TableHead>
-                  <TableHead className="min-w-[180px]">Email</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead>Localização</TableHead>
+                  <TableHead className="min-w-[120px]">Nome</TableHead>
+                  <TableHead className="min-w-[160px]">Email</TableHead>
+                  <TableHead className="min-w-[130px]">Telefone</TableHead>
+                  <TableHead className="min-w-[120px]">Localização</TableHead>
                   <TableHead>Tráfego</TableHead>
-                  <TableHead>Fonte</TableHead>
+                  <TableHead className="min-w-[140px]">Fonte</TableHead>
                   <TableHead>UTM Source</TableHead>
-                  <TableHead className="min-w-[150px]">Tags</TableHead>
+                  <TableHead className="min-w-[130px]">Tags</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -295,7 +295,7 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                       <TableCell>
                         <Badge 
                           variant="outline" 
-                          className={SOURCE_COLORS[source] || ''}
+                          className={`text-xs whitespace-nowrap ${SOURCE_COLORS[source] || ''}`}
                         >
                           {SOURCE_LABELS[source] || source}
                         </Badge>
