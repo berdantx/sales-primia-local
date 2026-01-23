@@ -666,14 +666,77 @@ serve(async (req) => {
     const geo = await lookupGeolocation(finalIpAddress);
     console.log('Geolocation result:', geo);
 
+    // Check for duplicate leads (same phone or email within last 5 minutes for same client)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    
+    // Normalize phone for comparison (remove spaces, dashes, etc.)
+    const normalizedPhone = leadData.phone?.replace(/[\s\-\(\)\.]/g, '') || null;
+    const normalizedEmail = leadData.email?.toLowerCase().trim() || null;
+    
+    // Check for recent duplicates
+    let duplicateQuery = supabase
+      .from('leads')
+      .select('id, email, phone, created_at')
+      .gte('created_at', fiveMinutesAgo);
+    
+    // Filter by client if we have one
+    if (resolvedClientId) {
+      duplicateQuery = duplicateQuery.eq('client_id', resolvedClientId);
+    }
+    
+    // Check by phone or email (depending on what we have)
+    if (normalizedPhone) {
+      // Use phone as primary identifier
+      duplicateQuery = duplicateQuery.eq('phone', normalizedPhone);
+    } else if (normalizedEmail) {
+      // Use email as primary identifier
+      duplicateQuery = duplicateQuery.eq('email', normalizedEmail);
+    }
+    
+    const { data: existingLeads, error: checkError } = await duplicateQuery.limit(1);
+    
+    if (checkError) {
+      console.error('Error checking for duplicates:', checkError);
+      // Continue with insert on check error (fail open)
+    } else if (existingLeads && existingLeads.length > 0) {
+      console.log('Duplicate lead detected, skipping insert:', {
+        existingId: existingLeads[0].id,
+        phone: normalizedPhone,
+        email: normalizedEmail,
+        createdAt: existingLeads[0].created_at
+      });
+      
+      await logWebhookEvent(
+        supabase,
+        webhookUserId,
+        resolvedClientId,
+        'LEAD_RECEIVED',
+        normalizedEmail || normalizedPhone,
+        'duplicate',
+        rawPayload,
+        `Duplicate lead detected. Existing lead ID: ${existingLeads[0].id}`
+      );
+      
+      // Return 200 to prevent webhook retry loops
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Lead already exists (duplicate within 5 minutes)',
+        existing_lead_id: existingLeads[0].id,
+        received: true
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Prepare lead record
     const leadRecord = {
       client_id: resolvedClientId,
       external_id: leadData.external_id,
-      email: leadData.email,
+      email: normalizedEmail,  // Use normalized email
       first_name: leadData.first_name,
       last_name: leadData.last_name,
-      phone: leadData.phone,
+      phone: normalizedPhone,  // Use normalized phone
       ip_address: finalIpAddress,
       country: geo.country,
       country_code: geo.country_code,
@@ -690,7 +753,7 @@ serve(async (req) => {
       utm_content: leadData.utm_content,
       page_url: leadData.page_url,
       series_id: leadData.series_id,
-      source: source === 'unknown' ? 'n8n' : source,
+      source: source === 'unknown' ? 'primia' : source,
       raw_payload: rawPayload,
     };
 
