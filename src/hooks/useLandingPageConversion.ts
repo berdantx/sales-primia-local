@@ -5,7 +5,7 @@ import { normalizePageUrl } from '@/lib/urlUtils';
 
 interface Lead {
   id: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   page_url: string | null;
   created_at: string | null;
@@ -172,9 +172,16 @@ export function useLandingPageConversion({
       };
       
       existing.leads.push(lead);
-      const normalizedEmail = lead.email.toLowerCase().trim();
-      existing.uniqueContacts.add(normalizedEmail);
-      existing.emailToPhone.set(normalizedEmail, lead.phone);
+      
+      // Use email or phone as unique identifier
+      const contactIdentifier = lead.email 
+        ? lead.email.toLowerCase().trim() 
+        : (lead.phone ? `phone:${normalizePhone(lead.phone)}` : null);
+      
+      if (contactIdentifier) {
+        existing.uniqueContacts.add(contactIdentifier);
+        existing.emailToPhone.set(contactIdentifier, lead.phone);
+      }
       pageGroups.set(normalizedUrl, existing);
     }
     
