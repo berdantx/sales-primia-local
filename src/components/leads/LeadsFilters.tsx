@@ -190,11 +190,42 @@ export function LeadsFilters({
     direct: '🔗 Direto',
   };
 
+  // Check if Primia filter is active
+  const isPrimiaActive = sourceFilter === 'primia';
+  const primiaCount = filterOptions.sourceCounts['primia'] || 0;
+
   return (
     <Card className="p-4 space-y-4 bg-card/50 backdrop-blur-sm border-border/50">
-      {/* Section Title */}
-      <div className="flex items-center justify-between">
+      {/* Section Title with Quick Filters */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h3 className="text-sm font-semibold text-foreground">Filtros de Leads</h3>
+        
+        {/* Quick Filter: Primia - Whatsapp */}
+        {primiaCount > 0 && (
+          <Button
+            variant={isPrimiaActive ? "default" : "outline"}
+            size="sm"
+            onClick={() => onSourceFilterChange(isPrimiaActive ? 'all' : 'primia')}
+            className={`h-7 text-xs gap-1.5 ${
+              isPrimiaActive 
+                ? 'bg-purple-500 hover:bg-purple-600 text-white' 
+                : 'border-purple-500/30 text-purple-600 hover:bg-purple-500/10'
+            }`}
+          >
+            <span className="text-sm">📱</span>
+            Primia - Whatsapp
+            <Badge 
+              variant="secondary" 
+              className={`ml-1 h-5 px-1.5 text-[10px] ${
+                isPrimiaActive 
+                  ? 'bg-white/20 text-white' 
+                  : 'bg-purple-500/10 text-purple-600'
+              }`}
+            >
+              {primiaCount}
+            </Badge>
+          </Button>
+        )}
       </div>
 
       {/* Header with period and search */}
