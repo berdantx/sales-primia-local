@@ -245,6 +245,7 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
 
             {/* Origin Info */}
             <Section icon={LinkIcon} title="Origem">
+              <InfoItem icon={Code} label="ID do Lead" value={lead.id} copyable />
               <InfoItem icon={LinkIcon} label="Página" value={lead.page_url} isLink />
               <InfoItem icon={Tag} label="Series ID" value={lead.series_id} />
               <InfoItem icon={Code} label="External ID" value={lead.external_id} />
