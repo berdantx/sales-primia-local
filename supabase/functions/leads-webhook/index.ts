@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface LeadData {
   external_id: string | null;
-  email: string;
+  email: string | null;  // Now optional - can have phone only
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
@@ -211,7 +211,13 @@ function parseEduzzPayload(body: any): LeadData {
 function parseGenericPayload(body: any): LeadData {
   // Try to find email in various places
   const email = body.email || body.contact_email || body.buyer_email || 
-                body.customer?.email || body.contact?.email || '';
+                body.customer?.email || body.contact?.email || null;
+  
+  // Try to find phone in various places (expanded support)
+  const phone = body.phone || body.telefone || body.cellphone || body.whatsapp ||
+                body.mobile || body.phone_number || body.tel || body.numero ||
+                body.celular || body.telephone || body.contact_phone ||
+                body.customer?.phone || body.contact?.phone || null;
   
   // Try to find name
   const name = body.name || body.full_name || body.contact_name || 
@@ -223,7 +229,7 @@ function parseGenericPayload(body: any): LeadData {
     email,
     first_name: body.first_name || body.firstName || nameParts[0] || null,
     last_name: body.last_name || body.lastName || nameParts.slice(1).join(' ') || null,
-    phone: body.phone || body.telefone || body.cellphone || body.whatsapp || null,
+    phone,
     ip_address: body.ip || body.ip_address || body.buyer_ip || null,
     organization: body.organization || body.company || body.empresa || null,
     customer_account: body.customer_account || null,
@@ -618,8 +624,9 @@ serve(async (req) => {
 
     console.log('Parsed lead data:', JSON.stringify(leadData, null, 2));
     
-    if (!leadData.email) {
-      console.log('Missing email, skipping lead');
+    // Validate that we have at least one identifier (email OR phone)
+    if (!leadData.email && !leadData.phone) {
+      console.log('Missing both email and phone, skipping lead');
       await logWebhookEvent(
         supabase,
         webhookUserId,
@@ -628,19 +635,20 @@ serve(async (req) => {
         null,
         'skipped',
         rawPayload,
-        'Missing email'
+        'Missing email and phone - at least one identifier required'
       );
-      // Return 200 even for missing email to prevent webhook retry loops
-      // But indicate in the response that the lead was not processed
+      // Return 200 to prevent webhook retry loops
       return new Response(JSON.stringify({ 
         success: false, 
-        message: 'Lead skipped - missing email',
+        message: 'Lead skipped - missing email and phone (at least one required)',
         received: true
       }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('Lead identifier:', leadData.email ? `email: ${leadData.email}` : `phone: ${leadData.phone}`);
 
     // Resolve final IP address - prefer payload IP unless it's private/local
     const requestIp = extractRealIpFromRequest(req);
