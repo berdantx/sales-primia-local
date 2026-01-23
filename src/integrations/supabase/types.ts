@@ -673,7 +673,7 @@ export type Database = {
           country_code: string | null
           created_at: string | null
           customer_account: string | null
-          email: string
+          email: string | null
           external_id: string | null
           first_name: string | null
           id: string
@@ -703,7 +703,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string | null
           customer_account?: string | null
-          email: string
+          email?: string | null
           external_id?: string | null
           first_name?: string | null
           id?: string
@@ -733,7 +733,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string | null
           customer_account?: string | null
-          email?: string
+          email?: string | null
           external_id?: string | null
           first_name?: string | null
           id?: string
