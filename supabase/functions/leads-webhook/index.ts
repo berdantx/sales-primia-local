@@ -26,7 +26,7 @@ interface LeadData {
   series_id: string | null;
 }
 
-type LeadSource = 'active_campaign' | 'hotmart' | 'eduzz' | 'n8n' | 'unknown';
+type LeadSource = 'active_campaign' | 'hotmart' | 'eduzz' | 'n8n' | 'primia' | 'unknown';
 
 // Extract real IP from request headers (proxies, CDNs, load balancers)
 function extractRealIpFromRequest(req: Request): string | null {
@@ -251,13 +251,13 @@ function detectSource(body: any, querySource: string | null): LeadSource {
   // Explicit source in query or body
   if (querySource) {
     const normalized = querySource.toLowerCase();
-    if (['active_campaign', 'hotmart', 'eduzz', 'n8n'].includes(normalized)) {
+    if (['active_campaign', 'hotmart', 'eduzz', 'n8n', 'primia'].includes(normalized)) {
       return normalized as LeadSource;
     }
   }
   if (body.source) {
     const normalized = body.source.toLowerCase();
-    if (['active_campaign', 'hotmart', 'eduzz', 'n8n'].includes(normalized)) {
+    if (['active_campaign', 'hotmart', 'eduzz', 'n8n', 'primia'].includes(normalized)) {
       return normalized as LeadSource;
     }
   }
