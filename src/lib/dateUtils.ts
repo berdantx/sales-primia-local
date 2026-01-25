@@ -98,8 +98,8 @@ export function formatDateBR(date: Date | string, formatStr: string = 'dd/MM/yyy
  * Formata uma data ISO (UTC do banco) para exibição no horário de Brasília
  * Use esta função para exibir datas armazenadas em UTC convertidas para BRT
  * 
- * NOTA: parseISO já converte corretamente para o timezone local do navegador.
- * Subtrair 3h para Brasília (BRT = UTC-3)
+ * Usa Intl.DateTimeFormat com timezone fixo para garantir consistência
+ * independente do timezone do navegador do usuário
  */
 export function formatDateTimeBR(date: Date | string | null | undefined, formatStr: string = 'dd/MM/yyyy HH:mm'): string {
   if (!date) return '-';
@@ -130,9 +130,33 @@ export function formatDateTimeBR(date: Date | string | null | undefined, formatS
   // Verificar se é uma data válida
   if (isNaN(d.getTime())) return '-';
   
-  // Converter para Brasília usando toBrasilia
-  const brasilia = toBrasilia(d);
-  return format(brasilia, formatStr, { locale: ptBR });
+  // Usar Intl.DateTimeFormat com timezone fixo de Brasília
+  // Isso garante que a formatação seja consistente independente do navegador
+  const formatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  const parts = formatter.formatToParts(d);
+  const get = (type: string) => parts.find(p => p.type === type)?.value || '00';
+  
+  // Criar uma data "virtual" com os componentes de Brasília para usar com date-fns format
+  const brasiliaDate = new Date(
+    parseInt(get('year')),
+    parseInt(get('month')) - 1,
+    parseInt(get('day')),
+    parseInt(get('hour')),
+    parseInt(get('minute')),
+    parseInt(get('second'))
+  );
+  
+  return format(brasiliaDate, formatStr, { locale: ptBR });
 }
 
 /**
