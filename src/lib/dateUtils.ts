@@ -6,19 +6,23 @@ const BRASILIA_OFFSET_HOURS = -3;
 
 /**
  * Retorna a data/hora atual em Brasília (GMT-3)
+ * Usa UTC absoluto para garantir consistência independente do timezone do navegador
  */
 export function nowBrasilia(): Date {
   const now = new Date();
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-  return new Date(utc + (BRASILIA_OFFSET_HOURS * 3600000));
+  // Date.getTime() retorna milissegundos desde epoch em UTC
+  // Aplicar offset de Brasília diretamente (-3 horas)
+  return new Date(now.getTime() + (BRASILIA_OFFSET_HOURS * 3600000));
 }
 
 /**
  * Converte uma data para o horário de Brasília
+ * Usa UTC absoluto para garantir consistência independente do timezone do navegador
  */
 export function toBrasilia(date: Date): Date {
-  const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-  return new Date(utc + (BRASILIA_OFFSET_HOURS * 3600000));
+  // Date.getTime() retorna milissegundos desde epoch em UTC
+  // Aplicar offset de Brasília diretamente (-3 horas)
+  return new Date(date.getTime() + (BRASILIA_OFFSET_HOURS * 3600000));
 }
 
 /**
