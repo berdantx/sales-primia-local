@@ -5,6 +5,29 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz';
 
+// localStorage persistence for client selection
+const CLIENT_ID_STORAGE_KEY = 'selected_client_id';
+
+function getStoredClientId(): string | null {
+  try {
+    return localStorage.getItem(CLIENT_ID_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredClientId(clientId: string | null): void {
+  try {
+    if (clientId) {
+      localStorage.setItem(CLIENT_ID_STORAGE_KEY, clientId);
+    } else {
+      localStorage.removeItem(CLIENT_ID_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
 interface FilterContextType {
   // Hotmart filters
   billingType: string | null;
@@ -74,20 +97,39 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const [eduzzUtmMedium, setEduzzUtmMedium] = useState<string | null>(null);
   const [eduzzUtmCampaign, setEduzzUtmCampaign] = useState<string | null>(null);
   
-  // Common filters
-  const [clientId, setClientId] = useState<string | null>(null);
+  // Common filters - initialize clientId from localStorage
+  const [clientIdState, setClientIdState] = useState<string | null>(getStoredClientId);
   const [platform, setPlatform] = useState<PlatformType>('all');
   
   const { data: clients } = useClients();
   const { isMaster } = useUserRole();
 
-  // Auto-set clientId for non-master users
-  // If they have one or more clients and no clientId is set, select the first one
+  // Wrapper that persists clientId to localStorage
+  const setClientId = (value: string | null) => {
+    setClientIdState(value);
+    setStoredClientId(value);
+  };
+
+  // Validate and restore clientId when clients load
   useEffect(() => {
-    if (!isMaster && clients && clients.length > 0 && !clientId) {
-      setClientId(clients[0].id);
+    if (clients && clients.length > 0) {
+      const storedId = getStoredClientId();
+      
+      // Check if stored clientId is still valid (exists in user's client list)
+      const isValidStoredClient = storedId && clients.some(c => c.id === storedId);
+      
+      if (isValidStoredClient && !clientIdState) {
+        // Restore saved client
+        setClientIdState(storedId);
+      } else if (!isMaster && !clientIdState && !isValidStoredClient) {
+        // Non-master without valid client: select first available
+        setClientId(clients[0].id);
+      } else if (!isMaster && clientIdState && !clients.some(c => c.id === clientIdState)) {
+        // Non-master with invalid stored client: fallback to first
+        setClientId(clients[0].id);
+      }
     }
-  }, [isMaster, clients, clientId]);
+  }, [isMaster, clients, clientIdState]);
 
   const clearHotmartFilters = () => {
     setBillingType(null);
@@ -129,7 +171,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   // isReady indicates when client context is properly set for data fetching
   // For master users: always ready (they can see all data)
   // For non-master users: ready when clientId is set (they need a client context)
-  const isReady = isMaster || clientId !== null;
+  const isReady = isMaster || clientIdState !== null;
 
   return (
     <FilterContext.Provider
@@ -150,7 +192,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         eduzzUtmMedium,
         eduzzUtmCampaign,
         // Common filters
-        clientId,
+        clientId: clientIdState,
         platform,
         isReady,
         // Hotmart setters
