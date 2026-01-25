@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatDateTimeBR } from '@/lib/dateUtils';
 
 interface HotmartTransaction {
   transaction_code: string;
@@ -131,7 +132,7 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
       t.currency,
       t.country || '',
       t.computed_value,
-      t.purchase_date ? format(new Date(t.purchase_date), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '',
+      t.purchase_date ? formatDateTimeBR(t.purchase_date, 'dd/MM/yyyy HH:mm') : '',
       t.billing_type || '',
       t.payment_method || '',
     ]);
@@ -174,7 +175,7 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
       t.buyer_name || '',
       t.buyer_email || '',
       t.ticket_value,
-      t.effective_date ? format(new Date(t.effective_date), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '',
+      t.effective_date ? formatDateTimeBR(t.effective_date, 'dd/MM/yyyy HH:mm') : '',
       t.utm_source || '',
       t.utm_medium || '',
       t.utm_campaign || '',
@@ -242,7 +243,7 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
         const dateVal = row[7] as string;
         return [
           ...row.slice(0, 7),
-          dateVal ? format(new Date(dateVal), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '',
+          dateVal ? formatDateTimeBR(dateVal, 'dd/MM/yyyy HH:mm') : '',
         ];
       });
 

@@ -1,28 +1,58 @@
 import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// Offset de Brasília: -3 horas (GMT-3)
-const BRASILIA_OFFSET_HOURS = -3;
+/**
+ * Retorna os componentes da data/hora atual em Brasília usando Intl.DateTimeFormat
+ * Isso garante consistência independente do timezone do navegador
+ */
+function getBrasiliaComponents(date: Date = new Date()): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+} {
+  const formatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  
+  const parts = formatter.formatToParts(date);
+  const get = (type: string) => parseInt(parts.find(p => p.type === type)?.value || '0');
+  
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour'),
+    minute: get('minute'),
+    second: get('second')
+  };
+}
 
 /**
- * Retorna a data/hora atual em Brasília (GMT-3)
- * Usa UTC absoluto para garantir consistência independente do timezone do navegador
+ * Retorna a data/hora atual em Brasília (America/Sao_Paulo)
+ * Usa Intl.DateTimeFormat para garantir consistência independente do timezone do navegador
  */
 export function nowBrasilia(): Date {
-  const now = new Date();
-  // Date.getTime() retorna milissegundos desde epoch em UTC
-  // Aplicar offset de Brasília diretamente (-3 horas)
-  return new Date(now.getTime() + (BRASILIA_OFFSET_HOURS * 3600000));
+  const c = getBrasiliaComponents(new Date());
+  return new Date(c.year, c.month - 1, c.day, c.hour, c.minute, c.second);
 }
 
 /**
  * Converte uma data para o horário de Brasília
- * Usa UTC absoluto para garantir consistência independente do timezone do navegador
+ * Usa Intl.DateTimeFormat para garantir consistência independente do timezone do navegador
  */
 export function toBrasilia(date: Date): Date {
-  // Date.getTime() retorna milissegundos desde epoch em UTC
-  // Aplicar offset de Brasília diretamente (-3 horas)
-  return new Date(date.getTime() + (BRASILIA_OFFSET_HOURS * 3600000));
+  const c = getBrasiliaComponents(date);
+  return new Date(c.year, c.month - 1, c.day, c.hour, c.minute, c.second);
 }
 
 /**
@@ -30,15 +60,9 @@ export function toBrasilia(date: Date): Date {
  * Convertido para UTC para uso em queries de banco
  */
 export function startOfDayBrasiliaUTC(date?: Date): Date {
-  const d = date ? toBrasilia(date) : nowBrasilia();
+  const c = getBrasiliaComponents(date || new Date());
   // Início do dia em Brasília: 00:00 BRT = 03:00 UTC
-  return new Date(Date.UTC(
-    d.getFullYear(),
-    d.getMonth(),
-    d.getDate(),
-    -BRASILIA_OFFSET_HOURS, // +3 hours to convert BRT 00:00 to UTC
-    0, 0, 0
-  ));
+  return new Date(Date.UTC(c.year, c.month - 1, c.day, 3, 0, 0, 0));
 }
 
 /**
@@ -46,15 +70,9 @@ export function startOfDayBrasiliaUTC(date?: Date): Date {
  * Convertido para UTC para uso em queries de banco
  */
 export function endOfDayBrasiliaUTC(date?: Date): Date {
-  const d = date ? toBrasilia(date) : nowBrasilia();
+  const c = getBrasiliaComponents(date || new Date());
   // Fim do dia em Brasília: 23:59:59 BRT = 02:59:59 UTC do dia seguinte
-  return new Date(Date.UTC(
-    d.getFullYear(),
-    d.getMonth(),
-    d.getDate() + 1,
-    -BRASILIA_OFFSET_HOURS - 1, // +2 hours (03:00 - 1 hour) = 02:59
-    59, 59, 999
-  ));
+  return new Date(Date.UTC(c.year, c.month - 1, c.day + 1, 2, 59, 59, 999));
 }
 
 /**
@@ -62,25 +80,25 @@ export function endOfDayBrasiliaUTC(date?: Date): Date {
  * Útil para filtros de "Últimos X dias"
  */
 export function getDateRangeBrasiliaUTC(days: number): { startDate: Date; endDate: Date } {
-  const now = nowBrasilia();
+  const now = new Date();
+  const c = getBrasiliaComponents(now);
   
-  // Data de início: X dias atrás, às 00:00 BRT convertido para UTC
-  const startDateBrasilia = subDays(now, days);
+  // Criar data de Brasília "hoje" para subtrair dias corretamente
+  const todayBrasilia = new Date(c.year, c.month - 1, c.day);
+  const startDateBrasilia = subDays(todayBrasilia, days);
+  
+  // Data de início: X dias atrás, às 00:00 BRT convertido para UTC (03:00 UTC)
   const startDate = new Date(Date.UTC(
     startDateBrasilia.getFullYear(),
     startDateBrasilia.getMonth(),
     startDateBrasilia.getDate(),
-    -BRASILIA_OFFSET_HOURS, // 00:00 BRT = 03:00 UTC
-    0, 0, 0
+    3, 0, 0, 0
   ));
   
-  // Data de fim: hoje às 23:59:59 BRT convertido para UTC
+  // Data de fim: hoje às 23:59:59 BRT convertido para UTC (02:59:59 UTC do dia seguinte)
   const endDate = new Date(Date.UTC(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + 1,
-    -BRASILIA_OFFSET_HOURS - 1, // 23:59 BRT = 02:59 UTC do dia seguinte
-    59, 59, 999
+    c.year, c.month - 1, c.day + 1,
+    2, 59, 59, 999
   ));
   
   return { startDate, endDate };

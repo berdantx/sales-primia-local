@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatDateTimeBR } from '@/lib/dateUtils';
 
 interface HotmartTransaction {
   transaction_code: string;
@@ -48,13 +49,9 @@ function escapeCSV(value: string | number | null | undefined): string {
   return str;
 }
 
-function formatDate(dateStr: string | null): string {
+function formatDateForExport(dateStr: string | null): string {
   if (!dateStr) return '';
-  try {
-    return format(new Date(dateStr), 'dd/MM/yyyy HH:mm', { locale: ptBR });
-  } catch {
-    return dateStr;
-  }
+  return formatDateTimeBR(dateStr, 'dd/MM/yyyy HH:mm');
 }
 
 function generateHotmartCSV(transactions: HotmartTransaction[]): string {
@@ -79,7 +76,7 @@ function generateHotmartCSV(transactions: HotmartTransaction[]): string {
     escapeCSV(t.currency),
     escapeCSV(t.country),
     escapeCSV(t.computed_value),
-    escapeCSV(formatDate(t.purchase_date)),
+    escapeCSV(formatDateForExport(t.purchase_date)),
     escapeCSV(t.billing_type),
     escapeCSV(t.payment_method),
   ]);
@@ -106,7 +103,7 @@ function generateTmbCSV(transactions: TmbTransaction[]): string {
     escapeCSV(t.buyer_name),
     escapeCSV(t.buyer_email),
     escapeCSV(t.ticket_value),
-    escapeCSV(formatDate(t.effective_date)),
+    escapeCSV(formatDateForExport(t.effective_date)),
     escapeCSV(t.utm_source),
     escapeCSV(t.utm_medium),
     escapeCSV(t.utm_campaign),
@@ -157,7 +154,7 @@ function generateCombinedCSV(
     escapeCSV(r.email),
     escapeCSV(r.value),
     escapeCSV(r.currency),
-    escapeCSV(formatDate(r.date)),
+    escapeCSV(formatDateForExport(r.date)),
   ]);
 
   return [headers.join(','), ...csvRows.map((r) => r.join(','))].join('\n');
