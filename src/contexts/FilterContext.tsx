@@ -5,8 +5,9 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz';
 
-// localStorage persistence for client selection
+// localStorage persistence for client and platform selection
 const CLIENT_ID_STORAGE_KEY = 'selected_client_id';
+const PLATFORM_STORAGE_KEY = 'selected_platform';
 
 function getStoredClientId(): string | null {
   try {
@@ -23,6 +24,26 @@ function setStoredClientId(clientId: string | null): void {
     } else {
       localStorage.removeItem(CLIENT_ID_STORAGE_KEY);
     }
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+function getStoredPlatform(): PlatformType {
+  try {
+    const stored = localStorage.getItem(PLATFORM_STORAGE_KEY);
+    if (stored === 'hotmart' || stored === 'tmb' || stored === 'eduzz' || stored === 'all') {
+      return stored;
+    }
+    return 'all';
+  } catch {
+    return 'all';
+  }
+}
+
+function setStoredPlatform(platform: PlatformType): void {
+  try {
+    localStorage.setItem(PLATFORM_STORAGE_KEY, platform);
   } catch {
     // Ignore localStorage errors
   }
@@ -97,9 +118,9 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const [eduzzUtmMedium, setEduzzUtmMedium] = useState<string | null>(null);
   const [eduzzUtmCampaign, setEduzzUtmCampaign] = useState<string | null>(null);
   
-  // Common filters - initialize clientId from localStorage
+  // Common filters - initialize from localStorage
   const [clientIdState, setClientIdState] = useState<string | null>(getStoredClientId);
-  const [platform, setPlatform] = useState<PlatformType>('all');
+  const [platformState, setPlatformState] = useState<PlatformType>(getStoredPlatform);
   
   const { data: clients } = useClients();
   const { isMaster } = useUserRole();
@@ -108,6 +129,12 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const setClientId = (value: string | null) => {
     setClientIdState(value);
     setStoredClientId(value);
+  };
+
+  // Wrapper that persists platform to localStorage
+  const setPlatform = (value: PlatformType) => {
+    setPlatformState(value);
+    setStoredPlatform(value);
   };
 
   // Validate and restore clientId when clients load
@@ -193,7 +220,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         eduzzUtmCampaign,
         // Common filters
         clientId: clientIdState,
-        platform,
+        platform: platformState,
         isReady,
         // Hotmart setters
         setBillingType,
