@@ -29,6 +29,7 @@ import { LeadsFilters } from '@/components/leads/LeadsFilters';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { formatDateTimeBR } from '@/lib/dateUtils';
 import { DateRange } from 'react-day-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -240,7 +241,7 @@ function Leads() {
 
       const headers = ['Data', 'Nome', 'Email', 'Telefone', 'Fonte', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Tags', 'Página'];
       const rows = filteredExport.map(l => [
-        l.created_at ? format(new Date(l.created_at), 'dd/MM/yyyy HH:mm') : '',
+        l.created_at ? formatDateTimeBR(l.created_at, 'dd/MM/yyyy HH:mm') : '',
         `${l.first_name || ''} ${l.last_name || ''}`.trim(),
         l.email || '',
         l.phone || '',
