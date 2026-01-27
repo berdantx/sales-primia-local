@@ -650,10 +650,11 @@ serve(async (req) => {
     const requestIp = extractRealIpFromRequest(req);
     const payloadIp = leadData.ip_address;
     
-    // Use payload IP only if valid (not private/local), otherwise use request IP
+    // Só usa o IP do payload se for válido (não privado/local)
+    // NÃO fazer fallback para IP da requisição (pode ser servidor de integração como ActiveCampaign)
     const finalIpAddress = payloadIp && !isPrivateOrLocalIp(payloadIp)
       ? payloadIp
-      : requestIp;
+      : null;
     
     console.log('IP resolution:', {
       payloadIp,

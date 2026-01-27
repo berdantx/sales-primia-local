@@ -73,6 +73,16 @@ async function lookupIpBatch(ips: string[]): Promise<Map<string, GeolocationResu
   return results;
 }
 
+// IPs conhecidos de servidores de integração (ActiveCampaign/AWS Ohio)
+// Esses IPs são de servidores que enviam webhooks, não de leads reais
+const KNOWN_INTEGRATION_SERVER_IPS = [
+  '3.23.123.112',
+  '3.21.194.219',
+  '3.21.104.219',
+  '18.223.228.186',
+  '3.140.234.100',
+];
+
 // Check if IP is private/local (shouldn't be geolocated)
 function isPrivateOrLocalIp(ip: string): boolean {
   const privatePatterns = [
@@ -85,6 +95,11 @@ function isPrivateOrLocalIp(ip: string): boolean {
     /^0\.0\.0\.0$/,
   ];
   return privatePatterns.some(pattern => pattern.test(ip));
+}
+
+// Check if IP belongs to known integration servers (ActiveCampaign, AWS, etc.)
+function isIntegrationServerIp(ip: string): boolean {
+  return KNOWN_INTEGRATION_SERVER_IPS.includes(ip);
 }
 
 serve(async (req) => {
@@ -130,16 +145,20 @@ serve(async (req) => {
 
       console.log(`Processing batch ${batchCount + 1} with ${leads.length} leads`);
 
-      // Filter out private IPs and get unique IPs
-      const validLeads = leads.filter(l => l.ip_address && !isPrivateOrLocalIp(l.ip_address));
+      // Filter out private IPs and integration server IPs, get unique valid IPs
+      const validLeads = leads.filter(l => 
+        l.ip_address && 
+        !isPrivateOrLocalIp(l.ip_address) && 
+        !isIntegrationServerIp(l.ip_address)
+      );
       const uniqueIps = [...new Set(validLeads.map(l => l.ip_address as string))];
 
       if (uniqueIps.length === 0) {
-        // All IPs in this batch are private, mark them as processed with empty geolocation
+        // All IPs in this batch are private or from integration servers
         for (const lead of leads) {
           await supabase
             .from('leads')
-            .update({ country: 'Local/Private' })
+            .update({ country: 'Não identificado' })
             .eq('id', lead.id);
         }
         totalSkipped += leads.length;
@@ -170,18 +189,18 @@ serve(async (req) => {
           } else {
             totalUpdated++;
           }
-        } else if (isPrivateOrLocalIp(lead.ip_address || '')) {
-          // Mark private IPs so they're not processed again
+        } else if (isPrivateOrLocalIp(lead.ip_address || '') || isIntegrationServerIp(lead.ip_address || '')) {
+          // Mark private IPs or integration server IPs so they're not processed again
           await supabase
             .from('leads')
-            .update({ country: 'Local/Private' })
+            .update({ country: 'Não identificado' })
             .eq('id', lead.id);
           totalSkipped++;
         } else {
           // IP lookup failed, mark as unknown to avoid reprocessing
           await supabase
             .from('leads')
-            .update({ country: 'Desconhecido' })
+            .update({ country: 'Não identificado' })
             .eq('id', lead.id);
           totalSkipped++;
         }
