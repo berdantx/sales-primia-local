@@ -38,6 +38,7 @@ const SOURCE_COLORS: Record<string, string> = {
   hotmart: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
   eduzz: 'bg-green-500/10 text-green-600 border-green-500/30',
   primia: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+  primia_manychat: 'bg-pink-500/10 text-pink-600 border-pink-500/30',
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -45,6 +46,7 @@ const SOURCE_LABELS: Record<string, string> = {
   hotmart: 'Hotmart',
   eduzz: 'Eduzz',
   primia: 'Primia - Whatsapp',
+  primia_manychat: 'Primia - Manychat',
 };
 
 function parseTags(tags: string | null): string[] {

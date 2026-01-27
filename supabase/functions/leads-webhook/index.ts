@@ -26,7 +26,29 @@ interface LeadData {
   series_id: string | null;
 }
 
-type LeadSource = 'active_campaign' | 'hotmart' | 'eduzz' | 'primia' | 'unknown';
+type LeadSource = 'active_campaign' | 'hotmart' | 'eduzz' | 'primia' | 'primia_manychat' | 'unknown';
+
+// Check if lead should be classified as Primia Manychat based on tags or utm_source
+function isPrimiaManychat(tags: string | null, utmSource: string | null): boolean {
+  // Check tags for [Primia][Manychat] pattern (case-insensitive)
+  if (tags) {
+    const normalizedTags = tags.toLowerCase();
+    if (normalizedTags.includes('[primia]') && normalizedTags.includes('[manychat]')) {
+      return true;
+    }
+    // Also check for "primia manychat" or "primia-manychat" variations
+    if (normalizedTags.includes('primia') && normalizedTags.includes('manychat')) {
+      return true;
+    }
+  }
+  
+  // Check utm_source for manychat (case-insensitive)
+  if (utmSource && utmSource.toLowerCase() === 'manychat') {
+    return true;
+  }
+  
+  return false;
+}
 
 // Extract real IP from request headers (proxies, CDNs, load balancers)
 function extractRealIpFromRequest(req: Request): string | null {
@@ -730,6 +752,15 @@ serve(async (req) => {
       });
     }
 
+    // Determine final source - check for Primia Manychat classification
+    let finalSource = source === 'unknown' ? 'primia' : source;
+    
+    // Override source to primia_manychat if tags contain [Primia][Manychat] or utm_source is manychat
+    if (isPrimiaManychat(leadData.tags, leadData.utm_source)) {
+      finalSource = 'primia_manychat';
+      console.log('Lead classified as Primia Manychat based on tags or utm_source');
+    }
+
     // Prepare lead record
     const leadRecord = {
       client_id: resolvedClientId,
@@ -754,7 +785,7 @@ serve(async (req) => {
       utm_content: leadData.utm_content,
       page_url: leadData.page_url,
       series_id: leadData.series_id,
-      source: source === 'unknown' ? 'primia' : source,
+      source: finalSource,
       raw_payload: rawPayload,
     };
 
