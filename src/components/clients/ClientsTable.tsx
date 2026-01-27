@@ -9,10 +9,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Pencil, Power, PowerOff, Users, Webhook } from 'lucide-react';
+import { Copy, Pencil, Power, PowerOff, Users, Webhook } from 'lucide-react';
 import { Client } from '@/hooks/useClients';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from '@/hooks/use-toast';
+
+const copyToClipboard = (text: string) => {
+  navigator.clipboard.writeText(text);
+  toast({
+    title: 'ID copiado!',
+    description: 'O ID do cliente foi copiado para a área de transferência.',
+  });
+};
 
 interface ClientsTableProps {
   clients: Client[];
@@ -29,6 +38,7 @@ export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, o
       <TableHeader>
         <TableRow>
           <TableHead>Cliente</TableHead>
+          <TableHead>ID</TableHead>
           <TableHead>Slug</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Criado em</TableHead>
@@ -47,6 +57,22 @@ export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, o
                   </AvatarFallback>
                 </Avatar>
                 <span className="font-medium">{client.name}</span>
+              </div>
+            </TableCell>
+            <TableCell>
+              <div className="flex items-center gap-1">
+                <code className="text-xs bg-muted px-2 py-1 rounded font-mono max-w-[120px] truncate" title={client.id}>
+                  {client.id.slice(0, 8)}...
+                </code>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => copyToClipboard(client.id)}
+                  title="Copiar ID completo"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
               </div>
             </TableCell>
             <TableCell>
@@ -111,7 +137,7 @@ export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, o
         ))}
         {clients.length === 0 && (
           <TableRow>
-            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
               Nenhum cliente encontrado
             </TableCell>
           </TableRow>
