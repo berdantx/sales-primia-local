@@ -665,6 +665,36 @@ export type Database = {
           },
         ]
       }
+      lead_deletion_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          deleted_by: string
+          id: string
+          justification: string
+          lead_data: Json
+          lead_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          deleted_by: string
+          id?: string
+          justification: string
+          lead_data: Json
+          lead_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          deleted_by?: string
+          id?: string
+          justification?: string
+          lead_data?: Json
+          lead_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           city: string | null
