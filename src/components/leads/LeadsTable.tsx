@@ -17,11 +17,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { formatDateTimeBR } from '@/lib/dateUtils';
-import { FileSpreadsheet, Eye, FlaskConical, Building2, MapPin, CheckCircle2 } from 'lucide-react';
+import { FileSpreadsheet, Eye, FlaskConical, Building2, MapPin, CheckCircle2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LeadDetailDialog } from './LeadDetailDialog';
+import { DeleteLeadDialog } from './DeleteLeadDialog';
 import { useClients } from '@/hooks/useClients';
 import { TrafficTypeBadge } from './TrafficTypeBadge';
+import { useDeleteLead } from '@/hooks/useDeleteLead';
+import { useUserRole } from '@/hooks/useUserRole';
 
 // Check if lead is qualified (has all required UTM parameters)
 function isQualifiedLead(lead: Lead): boolean {
@@ -174,11 +177,30 @@ function LeadCard({ lead, onViewDetails }: { lead: Lead; onViewDetails: (lead: L
 export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const { data: clients } = useClients();
+  const { role } = useUserRole();
+  const deleteLead = useDeleteLead();
+
+  const canDelete = role === 'master' || role === 'admin';
 
   const handleViewDetails = (lead: Lead) => {
     setSelectedLead(lead);
     setDetailOpen(true);
+  };
+
+  const handleDeleteClick = (lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLeadToDelete(lead);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async (justification: string) => {
+    if (!leadToDelete) return;
+    await deleteLead.mutateAsync({ lead: leadToDelete, justification });
+    setDeleteDialogOpen(false);
+    setLeadToDelete(null);
   };
 
   const hasMultipleClients = clients && clients.length > 1;
@@ -230,7 +252,7 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                   <TableHead className="min-w-[140px]">Fonte</TableHead>
                   <TableHead>UTM Source</TableHead>
                   <TableHead className="min-w-[130px]">Tags</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -360,17 +382,31 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewDetails(lead);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDetails(lead);
+                            }}
+                            title="Ver detalhes"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {canDelete && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => handleDeleteClick(lead, e)}
+                              title="Excluir lead"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -386,6 +422,15 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
         lead={selectedLead} 
         open={detailOpen} 
         onOpenChange={setDetailOpen} 
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteLeadDialog
+        lead={leadToDelete}
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        isDeleting={deleteLead.isPending}
       />
     </>
   );
