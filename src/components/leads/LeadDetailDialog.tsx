@@ -54,6 +54,29 @@ function parseTags(tags: string | null): string[] {
   return tags.split(',').map(tag => tag.trim()).filter(Boolean);
 }
 
+// Determine the effective source for display (handles Primia Manychat classification)
+function getEffectiveSource(lead: Lead): string {
+  const rawSource = lead.source || 'unknown';
+  
+  // If already classified as primia_manychat, use it
+  if (rawSource === 'primia_manychat') return 'primia_manychat';
+  
+  // Check if should be Primia Manychat based on tags or utm_source
+  const tags = lead.tags?.toLowerCase() || '';
+  const utmSource = lead.utm_source?.toLowerCase() || '';
+  
+  // Check for [Primia][Manychat] pattern in tags or utm_source = manychat
+  if (
+    (tags.includes('primia') && tags.includes('manychat')) ||
+    utmSource === 'manychat' ||
+    utmSource.includes('manychat')
+  ) {
+    return 'primia_manychat';
+  }
+  
+  return rawSource;
+}
+
 function InfoItem({ 
   icon: Icon, 
   label, 
@@ -168,7 +191,7 @@ export function LeadDetailDialog({ lead, open, onOpenChange }: LeadDetailDialogP
   if (!lead) return null;
 
   const tags = parseTags(lead.tags);
-  const source = lead.source || 'unknown';
+  const source = getEffectiveSource(lead);
   const fullName = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
 
   // Check if UTM params exist

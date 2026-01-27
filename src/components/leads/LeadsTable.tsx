@@ -60,10 +60,33 @@ function isTestLead(tags: string | null): boolean {
   return tags.includes('[TESTE]') || tags.toLowerCase().includes('teste');
 }
 
+// Determine the effective source for display (handles Primia Manychat classification)
+function getEffectiveSource(lead: Lead): string {
+  const rawSource = lead.source || 'desconhecido';
+  
+  // If already classified as primia_manychat, use it
+  if (rawSource === 'primia_manychat') return 'primia_manychat';
+  
+  // Check if should be Primia Manychat based on tags or utm_source
+  const tags = lead.tags?.toLowerCase() || '';
+  const utmSource = lead.utm_source?.toLowerCase() || '';
+  
+  // Check for [Primia][Manychat] pattern in tags or utm_source = manychat
+  if (
+    (tags.includes('primia') && tags.includes('manychat')) ||
+    utmSource === 'manychat' ||
+    utmSource.includes('manychat')
+  ) {
+    return 'primia_manychat';
+  }
+  
+  return rawSource;
+}
+
 // Mobile lead card component
 function LeadCard({ lead, onViewDetails }: { lead: Lead; onViewDetails: (lead: Lead) => void }) {
   const tags = parseTags(lead.tags);
-  const source = lead.source || 'desconhecido';
+  const source = getEffectiveSource(lead);
   const isTest = isTestLead(lead.tags);
   const isQualified = isQualifiedLead(lead);
   
@@ -213,7 +236,7 @@ export function LeadsTable({ leads, hasActiveFilters }: LeadsTableProps) {
               <TableBody>
               {leads.map((lead) => {
                   const tags = parseTags(lead.tags);
-                  const source = lead.source || 'desconhecido';
+                  const source = getEffectiveSource(lead);
                   const isTest = isTestLead(lead.tags);
                   const isQualified = isQualifiedLead(lead);
                   const locationLabel = lead.city && lead.country 
