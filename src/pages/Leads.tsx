@@ -96,6 +96,7 @@ function Leads() {
   const [selectedTopItem, setSelectedTopItem] = useState<string | null>(null);
   const [qualifiedFilter, setQualifiedFilter] = useState<string>('all');
   const [showCharts, setShowCharts] = useState(false);
+  const [hideUnidentifiedGeo, setHideUnidentifiedGeo] = useState(false);
   
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
@@ -172,11 +173,19 @@ function Leads() {
 
   // Filter options from stats (already aggregated)
   const filterOptions = useMemo(() => {
+    // Filter out unidentified countries from the filter options if hideUnidentifiedGeo is true
+    const countries = Object.keys(stats?.byCountry || {})
+      .filter(c => {
+        if (hideUnidentifiedGeo && (c === 'Não identificado' || c === 'Desconhecido')) return false;
+        return true;
+      })
+      .sort((a, b) => 
+        (stats?.byCountry[b] || 0) - (stats?.byCountry[a] || 0)
+      );
+    
     return {
       sources: Object.keys(stats?.bySource || {}).sort(),
-      countries: Object.keys(stats?.byCountry || {}).sort((a, b) => 
-        (stats?.byCountry[b] || 0) - (stats?.byCountry[a] || 0)
-      ),
+      countries,
       utmSources: Object.keys(stats?.byUtmSource || {}).sort(),
       utmMediums: Object.keys(stats?.byUtmMedium || {}).sort(),
       utmCampaigns: Object.keys(stats?.byUtmCampaign || {}).sort(),
@@ -194,7 +203,7 @@ function Leads() {
       pageCounts: stats?.byPage || {},
       trafficTypeCounts: stats?.byTrafficType || {},
     };
-  }, [stats]);
+  }, [stats, hideUnidentifiedGeo]);
 
   // Check if lead is a test lead
   const isTestLead = (tags: string | null) => {
@@ -814,6 +823,8 @@ function Leads() {
               byCity={stats?.byCity || {}}
               isLoading={isLoadingStats}
               totalLeads={stats?.total || 0}
+              hideUnidentified={hideUnidentifiedGeo}
+              onToggleUnidentified={() => setHideUnidentifiedGeo(!hideUnidentifiedGeo)}
             />
           </motion.div>
         )}

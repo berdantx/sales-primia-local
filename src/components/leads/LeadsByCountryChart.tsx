@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Globe, MapPin, Flag } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Globe, MapPin, Flag, AlertCircle } from 'lucide-react';
 import {
   PieChart,
   Pie,
@@ -22,6 +23,8 @@ interface LeadsByCountryChartProps {
   byCity: Record<string, number>;
   isLoading?: boolean;
   totalLeads: number;
+  hideUnidentified?: boolean;
+  onToggleUnidentified?: () => void;
 }
 
 const COLORS = [
@@ -41,11 +44,23 @@ export function LeadsByCountryChart({
   byCountry, 
   byCity, 
   isLoading,
-  totalLeads 
+  totalLeads,
+  hideUnidentified = false,
+  onToggleUnidentified
 }: LeadsByCountryChartProps) {
   
+  // Count unidentified leads
+  const unidentifiedCount = useMemo(() => {
+    return (byCountry['Não identificado'] || 0) + (byCountry['Desconhecido'] || 0);
+  }, [byCountry]);
+
   const countryData = useMemo(() => {
     return Object.entries(byCountry)
+      .filter(([name]) => {
+        // Always filter out unidentified entries from the chart
+        if (name === 'Desconhecido' || name === 'Não identificado') return false;
+        return true;
+      })
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
@@ -58,9 +73,11 @@ export function LeadsByCountryChart({
       .slice(0, 10);
   }, [byCity]);
 
-  const uniqueCountries = Object.keys(byCountry).length;
+  const uniqueCountries = Object.keys(byCountry).filter(k => k !== 'Desconhecido' && k !== 'Não identificado').length;
   const uniqueCities = Object.keys(byCity).length;
-  const leadsWithLocation = Object.values(byCountry).reduce((a, b) => a + b, 0) - (byCountry['Desconhecido'] || 0);
+  const leadsWithLocation = Object.entries(byCountry)
+    .filter(([name]) => name !== 'Desconhecido' && name !== 'Não identificado')
+    .reduce((acc, [, value]) => acc + value, 0);
   const locationCoverage = totalLeads > 0 ? ((leadsWithLocation / totalLeads) * 100).toFixed(1) : '0';
 
   if (isLoading) {
@@ -76,7 +93,7 @@ export function LeadsByCountryChart({
     );
   }
 
-  const hasData = countryData.length > 0 && countryData.some(d => d.name !== 'Desconhecido');
+  const hasData = countryData.length > 0;
 
   if (!hasData) {
     return (
@@ -102,12 +119,12 @@ export function LeadsByCountryChart({
     <Card className="h-full flex flex-col">
       <Tabs defaultValue="countries" className="flex flex-col h-full">
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Globe className="h-5 w-5 text-primary" />
               Leads por Localização
             </CardTitle>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1">
                 <Flag className="h-3 w-3" />
                 {uniqueCountries} países
@@ -119,6 +136,39 @@ export function LeadsByCountryChart({
               <span>{locationCoverage}% com localização</span>
             </div>
           </div>
+          
+          {/* Unidentified leads indicator */}
+          {unidentifiedCount > 0 && (
+            <div 
+              className={`mt-2 flex items-center justify-between p-2 rounded-lg transition-colors cursor-pointer ${
+                hideUnidentified 
+                  ? 'bg-muted/50 border border-border' 
+                  : 'bg-amber-500/10 border border-amber-500/30'
+              }`}
+              onClick={onToggleUnidentified}
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle className={`h-4 w-4 ${hideUnidentified ? 'text-muted-foreground' : 'text-amber-500'}`} />
+                <span className={`text-xs font-medium ${hideUnidentified ? 'text-muted-foreground' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {unidentifiedCount.toLocaleString()} leads sem geolocalização
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  ({((unidentifiedCount / totalLeads) * 100).toFixed(1)}%)
+                </span>
+              </div>
+              <Badge 
+                variant={hideUnidentified ? "outline" : "secondary"}
+                className={`text-[10px] h-5 cursor-pointer ${
+                  hideUnidentified 
+                    ? 'bg-primary/10 text-primary border-primary/30' 
+                    : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                }`}
+              >
+                {hideUnidentified ? '✓ Excluídos das análises' : 'Clique para excluir'}
+              </Badge>
+            </div>
+          )}
+          
           <TabsList className="grid w-full grid-cols-2 mt-2">
             <TabsTrigger value="countries" className="flex items-center gap-2">
               <Flag className="h-3.5 w-3.5" />
@@ -140,7 +190,7 @@ export function LeadsByCountryChart({
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={countryData.filter(d => d.name !== 'Desconhecido')}
+                      data={countryData}
                       cx="50%"
                       cy="50%"
                       innerRadius={50}
@@ -149,7 +199,7 @@ export function LeadsByCountryChart({
                       dataKey="value"
                       nameKey="name"
                     >
-                      {countryData.filter(d => d.name !== 'Desconhecido').map((_, index) => (
+                      {countryData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -172,7 +222,7 @@ export function LeadsByCountryChart({
               </div>
               {/* Ranking List */}
               <div className="space-y-2 overflow-auto max-h-[280px] pr-2">
-                {countryData.filter(d => d.name !== 'Desconhecido').map((item, index) => {
+                {countryData.map((item, index) => {
                   const percentage = totalLeads > 0 ? ((item.value / totalLeads) * 100).toFixed(1) : '0';
                   return (
                     <div 
