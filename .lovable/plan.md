@@ -1,118 +1,31 @@
 
+# Exibir ID do Cliente na Tabela de Clientes
 
-## Plano: Corrigir Geolocalizacao de Leads
+## Objetivo
+Adicionar uma coluna na tabela de clientes para exibir o ID (UUID) de cada cliente, facilitando a identificação para configuração de webhooks e integrações.
 
-### Problema Identificado
+## Alterações
 
-O sistema esta apresentando dois problemas de geolocalizacao:
+### Arquivo: `src/components/clients/ClientsTable.tsx`
 
-1. **"Local/Private"** - 7.746 leads mostrando esse valor como pais
-2. **"Dublin, Ohio"** - ~11.937 leads incorretamente geolocalizados para servidores AWS
+1. **Adicionar coluna "ID" no cabeçalho da tabela**
+   - Nova coluna após "Cliente" com o título "ID"
 
-**Causa Raiz:**
-- O ActiveCampaign frequentemente envia `127.0.0.1` (localhost) como IP do lead
-- O codigo atual faz fallback para o IP da requisicao HTTP (servidor do ActiveCampaign)
-- Esses servidores ficam em Dublin/Columbus, Ohio (AWS)
-- O backfill marca IPs privados como "Local/Private"
+2. **Exibir o ID em cada linha**
+   - Mostrar o UUID do cliente em formato monospace (code)
+   - Incluir funcionalidade de copiar ao clicar (opcional, mas útil)
+   - Estilo compacto para não ocupar muito espaço
 
-| IP do Servidor AC | Leads Afetados |
-|-------------------|----------------|
-| 3.23.123.112 | 5.150 |
-| 3.21.194.219 | 4.518 |
-| 18.223.228.186 | 1.995 |
-| 3.140.234.100 | 274 |
+3. **Ajustar colspan** da mensagem de tabela vazia (de 5 para 6)
 
----
+## Resultado Visual
 
-### Solucao
+| Cliente | ID | Slug | Status | Criado em | Ações |
+|---------|-----|------|--------|-----------|-------|
+| Nome + Avatar | `uuid-do-cliente` | slug | Badge | Data | Botões |
 
-**Fase 1: Corrigir o webhook para novos leads**
+## Detalhes Técnicos
 
-Alterar `supabase/functions/leads-webhook/index.ts`:
-- Remover o fallback para IP da requisicao
-- Quando o payload contem IP invalido/privado, deixar ip_address como null
-- A geolocalizacao retornara campos vazios (nao tentar geolocalizar)
-
-**Antes (linhas 654-656):**
-```typescript
-const finalIpAddress = payloadIp && !isPrivateOrLocalIp(payloadIp)
-  ? payloadIp
-  : requestIp;  // PROBLEMA: usa IP do servidor AC
-```
-
-**Depois:**
-```typescript
-// So usa o IP do payload se for valido (nao privado/local)
-// NAO fazer fallback para IP da requisicao (pode ser servidor de integracao)
-const finalIpAddress = payloadIp && !isPrivateOrLocalIp(payloadIp)
-  ? payloadIp
-  : null;  // Deixar null quando IP nao identificado
-```
-
----
-
-**Fase 2: Corrigir o backfill para dados existentes**
-
-Alterar `supabase/functions/backfill-geolocation/index.ts`:
-- Mudar "Local/Private" para "Nao identificado"
-- Adicionar deteccao de IPs conhecidos do ActiveCampaign para marcar como "Nao identificado"
-
-**IPs conhecidos de servidores de integracao (ActiveCampaign/AWS Ohio):**
-```typescript
-const KNOWN_INTEGRATION_SERVER_IPS = [
-  '3.23.123.112',
-  '3.21.194.219', 
-  '18.223.228.186',
-  '3.140.234.100',
-];
-```
-
----
-
-**Fase 3: Limpeza dos dados existentes**
-
-Criar migration SQL para corrigir leads ja inseridos:
-
-```sql
--- Corrigir "Local/Private" para "Nao identificado"
-UPDATE leads 
-SET country = 'Nao identificado',
-    country_code = NULL,
-    city = NULL,
-    region = NULL
-WHERE country = 'Local/Private';
-
--- Corrigir leads com IPs de servidores ActiveCampaign
-UPDATE leads 
-SET country = 'Nao identificado',
-    country_code = NULL,
-    city = NULL,
-    region = NULL
-WHERE ip_address IN ('3.23.123.112', '3.21.194.219', '18.223.228.186', '3.140.234.100');
-
--- Corrigir leads com IP 127.0.0.1 que ainda nao foram tratados
-UPDATE leads 
-SET country = 'Nao identificado',
-    country_code = NULL,
-    city = NULL,
-    region = NULL,
-    ip_address = NULL
-WHERE ip_address = '127.0.0.1';
-```
-
----
-
-### Arquivos a Modificar
-
-1. `supabase/functions/leads-webhook/index.ts` - Remover fallback de IP
-2. `supabase/functions/backfill-geolocation/index.ts` - Usar "Nao identificado" e detectar IPs de integracao
-3. Migration SQL - Corrigir dados existentes (~19.683 leads afetados)
-
----
-
-### Resultado Esperado
-
-- Novos leads sem IP valido terao pais = null (nao serao exibidos incorretamente)
-- Leads existentes com "Local/Private" ou Dublin, Ohio serao corrigidos para "Nao identificado"
-- O dashboard mostrara dados de geolocalizacao mais precisos
-
+- O ID será exibido com estilo `code` similar ao slug para consistência visual
+- Adicionar botão de copiar com feedback visual (toast) para facilitar o uso em webhooks
+- Importar ícone `Copy` do lucide-react
