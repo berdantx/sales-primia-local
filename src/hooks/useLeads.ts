@@ -161,6 +161,7 @@ export function useLeadStats(filters?: LeadFilters) {
 }
 
 // Lightweight hook just for lead count (for Dashboard KPI)
+// Uses RPC function for better performance on large datasets
 export function useLeadCount(filters?: { startDate?: Date; endDate?: Date; clientId?: string | null }) {
   const { user } = useAuth();
 
@@ -173,25 +174,41 @@ export function useLeadCount(filters?: { startDate?: Date; endDate?: Date; clien
   return useQuery({
     queryKey: ['leads-count', user?.id, filterKey],
     queryFn: async () => {
-      let query = supabase
-        .from('leads')
-        .select('id', { count: 'exact', head: true });
+      // Use RPC function for optimized counting with filters
+      // This avoids the expensive count(*) that causes timeouts
+      const { data, error } = await supabase.rpc('get_lead_stats', {
+        p_client_id: filters?.clientId || null,
+        p_start_date: filters?.startDate?.toISOString() || null,
+        p_end_date: filters?.endDate?.toISOString() || null,
+      });
 
-      if (filters?.clientId) {
-        query = query.eq('client_id', filters.clientId);
-      }
-      if (filters?.startDate) {
-        query = query.gte('created_at', filters.startDate.toISOString());
-      }
-      if (filters?.endDate) {
-        query = query.lte('created_at', filters.endDate.toISOString());
+      if (error) {
+        console.error('Error fetching lead count:', error);
+        // Fallback to simple count if RPC fails
+        let query = supabase
+          .from('leads')
+          .select('id', { count: 'estimated', head: true });
+
+        if (filters?.clientId) {
+          query = query.eq('client_id', filters.clientId);
+        }
+        if (filters?.startDate) {
+          query = query.gte('created_at', filters.startDate.toISOString());
+        }
+        if (filters?.endDate) {
+          query = query.lte('created_at', filters.endDate.toISOString());
+        }
+
+        const { count, error: countError } = await query;
+        if (countError) throw countError;
+        return count || 0;
       }
 
-      const { count, error } = await query;
-      if (error) throw error;
-
-      return count || 0;
+      // Extract total from RPC response
+      const result = data as { total?: number } | null;
+      return result?.total || 0;
     },
     enabled: !!user,
+    staleTime: 60000, // Cache for 1 minute to reduce database load
   });
 }

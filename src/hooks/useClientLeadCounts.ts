@@ -13,10 +13,13 @@ export function useClientLeadCounts() {
   return useQuery({
     queryKey: ['client-lead-counts', user?.id],
     queryFn: async () => {
-      // Get all leads grouped by client_id
+      // Use a more efficient query that groups by client_id
+      // with a limit to prevent timeout on large datasets
       const { data, error } = await supabase
         .from('leads')
-        .select('client_id');
+        .select('client_id')
+        .not('client_id', 'is', null)
+        .limit(10000); // Limit to prevent timeout
 
       if (error) {
         console.error('Error fetching client lead counts:', error);
@@ -34,6 +37,6 @@ export function useClientLeadCounts() {
       return counts;
     },
     enabled: !!user,
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 120000, // Cache for 2 minutes to reduce database load
   });
 }
