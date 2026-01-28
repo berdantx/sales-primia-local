@@ -81,7 +81,10 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
 
     if (platform === 'eduzz') {
       return {
-        totalByCurrency: { BRL: eduzzStats?.totalBRL || 0 },
+        totalByCurrency: { 
+          BRL: eduzzStats?.totalBRL || 0,
+          ...(eduzzStats?.totalUSD ? { USD: eduzzStats.totalUSD } : {}),
+        },
         totalByCountry: {},
         totalByCountryCurrency: {},
         totalTransactions: eduzzStats?.totalTransactions || 0,
@@ -94,11 +97,14 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
     const hotmartUSD = hotmartStats?.totalByCurrency?.['USD'] || 0;
     const tmbBRL = tmbStats?.totalBRL || 0;
     const eduzzBRL = eduzzStats?.totalBRL || 0;
+    const eduzzUSD = eduzzStats?.totalUSD || 0;
+
+    const combinedUSD = hotmartUSD + eduzzUSD;
 
     return {
       totalByCurrency: {
         BRL: hotmartBRL + tmbBRL + eduzzBRL,
-        ...(hotmartUSD > 0 ? { USD: hotmartUSD } : {}),
+        ...(combinedUSD > 0 ? { USD: combinedUSD } : {}),
       },
       totalByCountry: hotmartStats?.totalByCountry || {},
       totalByCountryCurrency: hotmartStats?.totalByCountryCurrency || {},
@@ -162,12 +168,15 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
       combined[date].BRL = (combined[date].BRL || 0) + (currencies.BRL || 0);
     });
 
-    // Add Eduzz data (BRL only)
+    // Add Eduzz data (BRL and USD)
     Object.entries(eduzzSalesByDate || {}).forEach(([date, currencies]) => {
       if (!combined[date]) {
         combined[date] = {};
       }
       combined[date].BRL = (combined[date].BRL || 0) + (currencies.BRL || 0);
+      if (currencies.USD) {
+        combined[date].USD = (combined[date].USD || 0) + currencies.USD;
+      }
     });
 
     return combined;
