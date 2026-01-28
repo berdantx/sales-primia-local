@@ -28,7 +28,19 @@ export function useAdTrend({
   const trendData = useMemo(() => {
     if (!leads || leads.length === 0 || topItemNames.length === 0) return [];
 
-    const field = mode === 'ads' ? 'utm_content' : 'utm_campaign';
+    // Helper function to get the field value based on mode
+    const getFieldValue = (lead: Lead): string | null => {
+      if (mode === 'ads') return lead.utm_content;
+      if (mode === 'campaigns') return lead.utm_campaign;
+      if (mode === 'pages') {
+        // Normalize URL by removing protocol and query strings
+        if (!lead.page_url) return null;
+        return lead.page_url
+          .replace(/^https?:\/\//, '')
+          .replace(/\?.*$/, '');
+      }
+      return lead.utm_content;
+    };
 
     // Group leads by date and item
     const dateMap = new Map<string, Map<string, number>>();
@@ -36,7 +48,7 @@ export function useAdTrend({
     leads.forEach((lead) => {
       if (!lead.created_at) return;
       
-      const itemValue = lead[field];
+      const itemValue = getFieldValue(lead);
       if (!itemValue || !topItemNames.includes(itemValue)) return;
 
       let dateKey: string;
