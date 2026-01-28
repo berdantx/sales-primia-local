@@ -1622,27 +1622,16 @@ export type Database = {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id: string }
         Returns: Json
       }
-      get_top_ads:
-        | {
-            Args: {
-              p_client_id?: string
-              p_end_date?: string
-              p_limit?: number
-              p_mode?: string
-              p_start_date?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_client_id?: string
-              p_end_date?: string
-              p_limit?: number
-              p_mode?: string
-              p_start_date?: string
-            }
-            Returns: Json
-          }
+      get_top_ads: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_limit?: number
+          p_mode?: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
       get_top_customers: {
         Args: {
           p_billing_type?: string
