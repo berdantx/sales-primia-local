@@ -53,7 +53,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
+type PeriodFilter = '1d' | '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -107,7 +107,7 @@ export default function Dashboard() {
     if (period === 'custom') {
       return { startDate: undefined, endDate: undefined };
     }
-    const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
+    const days = period === '1d' ? 1 : period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
     return getDateRangeBrasiliaUTC(days);
   }, [period, customDateRange]);
 
@@ -248,6 +248,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Período" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="1d">Último dia</SelectItem>
                   <SelectItem value="7d">Últimos 7 dias</SelectItem>
                   <SelectItem value="30d">Últimos 30 dias</SelectItem>
                   <SelectItem value="90d">Últimos 90 dias</SelectItem>

@@ -27,6 +27,7 @@ interface LeadsPeriodFilterProps {
 }
 
 const periodOptions = [
+  { value: '1day', label: 'Último dia' },
   { value: '7days', label: 'Últimos 7 dias' },
   { value: '30days', label: 'Últimos 30 dias' },
   { value: '60days', label: 'Últimos 60 dias' },
@@ -57,6 +58,9 @@ export function LeadsPeriodFilter({
     const now = new Date();
     
     switch (value) {
+      case '1day':
+        onDateRangeChange({ from: subDays(now, 1), to: now });
+        break;
       case '7days':
         onDateRangeChange({ from: subDays(now, 7), to: now });
         break;
