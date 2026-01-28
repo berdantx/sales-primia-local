@@ -20,6 +20,7 @@ export interface EduzzTransaction {
   utm_content: string | null;
   source: string;
   created_at: string;
+  client_id: string | null;
 }
 
 export interface EduzzTransactionFilters {

@@ -142,6 +142,39 @@ export type Database = {
         }
         Relationships: []
       }
+      eduzz_transaction_deletion_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          deleted_by: string
+          id: string
+          justification: string
+          sale_id: string
+          transaction_data: Json
+          transaction_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          deleted_by: string
+          id?: string
+          justification: string
+          sale_id: string
+          transaction_data: Json
+          transaction_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          deleted_by?: string
+          id?: string
+          justification?: string
+          sale_id?: string
+          transaction_data?: Json
+          transaction_id?: string
+        }
+        Relationships: []
+      }
       eduzz_transactions: {
         Row: {
           buyer_email: string | null

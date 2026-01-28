@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { differenceInSeconds, differenceInMinutes, differenceInHours } from 'date-fns';
+import { useUserRole } from '@/hooks/useUserRole';
+import { DeleteEduzzTransactionDialog } from './DeleteEduzzTransactionDialog';
 import { 
   Receipt, 
   User, 
@@ -19,7 +23,8 @@ import {
   DollarSign,
   FileText,
   HelpCircle,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import type { EduzzTransaction } from '@/hooks/useEduzzTransactions';
 
@@ -66,17 +71,35 @@ export function EduzzTransactionDetailDialog({
   open, 
   onOpenChange 
 }: EduzzTransactionDetailDialogProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { role } = useUserRole();
+  const isMaster = role === 'master';
+
   if (!transaction) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
-            Detalhes da Transação
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg max-h-[90vh]">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                Detalhes da Transação
+              </DialogTitle>
+              {isMaster && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Excluir
+                </Button>
+              )}
+            </div>
+          </DialogHeader>
         
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-4">
@@ -101,9 +124,12 @@ export function EduzzTransactionDetailDialog({
                   <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground">Valor</p>
-                    <p className="text-lg font-bold text-green-600">
-                      {formatCurrency(Number(transaction.sale_value), 'BRL')}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-lg font-bold text-green-600">
+                        {formatCurrency(Number(transaction.sale_value), transaction.currency || 'BRL')}
+                      </p>
+                      <Badge variant="outline">{transaction.currency || 'BRL'}</Badge>
+                    </div>
                   </div>
                 </div>
                 <Separator className="my-1" />
@@ -285,5 +311,15 @@ export function EduzzTransactionDetailDialog({
         </ScrollArea>
       </DialogContent>
     </Dialog>
+
+    <DeleteEduzzTransactionDialog
+      transaction={transaction}
+      open={isDeleteDialogOpen}
+      onOpenChange={(open) => {
+        setIsDeleteDialogOpen(open);
+        if (!open) onOpenChange(false);
+      }}
+    />
+  </>
   );
 }
