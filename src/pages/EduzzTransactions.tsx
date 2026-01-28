@@ -69,7 +69,7 @@ import { SalesGroupBy } from '@/hooks/useSalesTrend';
 
 const ITEMS_PER_PAGE = 20;
 
-type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
+type PeriodFilter = '1d' | '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
 // Helper to classify traffic type based on UTM parameters
 function getTrafficType(t: EduzzTransaction): 'paid' | 'organic' | 'direct' {
@@ -143,7 +143,7 @@ function EduzzTransactions() {
     if (period === 'custom') {
       return { startDate: undefined, endDate: undefined };
     }
-    const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
+    const days = period === '1d' ? 1 : period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
     return getDateRangeBrasiliaUTC(days);
   }, [period, customDateRange]);
 
@@ -378,15 +378,24 @@ function EduzzTransactions() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3"
+            className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3"
           >
             <ColoredKPICard
-              title="Faturamento Total"
+              title="Faturamento BRL"
               value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
-              subtitle={`${stats?.totalTransactions || 0} transações`}
+              subtitle={`Transações em Reais`}
               icon={DollarSign}
               variant="green"
               delay={0}
+              className="text-sm sm:text-base"
+            />
+            <ColoredKPICard
+              title="Faturamento USD"
+              value={formatCurrency(stats?.totalUSD || 0, 'USD')}
+              subtitle={`Transações em Dólar`}
+              icon={DollarSign}
+              variant="purple"
+              delay={0.5}
               className="text-sm sm:text-base"
             />
             <ColoredKPICard
@@ -550,6 +559,7 @@ function EduzzTransactions() {
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="1d">Último dia</SelectItem>
                 <SelectItem value="7d">Últimos 7 dias</SelectItem>
                 <SelectItem value="30d">Últimos 30 dias</SelectItem>
                 <SelectItem value="90d">Últimos 90 dias</SelectItem>
@@ -722,7 +732,10 @@ function EduzzTransactions() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {formatCurrency(Number(transaction.sale_value), 'BRL')}
+                      <div className="flex flex-col items-end">
+                        <span>{formatCurrency(Number(transaction.sale_value), transaction.currency || 'BRL')}</span>
+                        <Badge variant="outline" className="text-[10px] px-1 mt-0.5">{transaction.currency || 'BRL'}</Badge>
+                      </div>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {transaction.utm_source ? (

@@ -10,6 +10,7 @@ export interface EduzzTransactionFilters {
 
 export interface EduzzStats {
   totalBRL: number;
+  totalUSD: number;
   totalTransactions: number;
   transactionsWithoutDate: number;
 }
@@ -47,6 +48,7 @@ export function useEduzzTransactionStatsOptimized(filters?: EduzzTransactionFilt
 
       return {
         totalBRL: result?.totalByCurrency?.BRL || 0,
+        totalUSD: result?.totalByCurrency?.USD || 0,
         totalTransactions: result?.totalTransactions || 0,
         transactionsWithoutDate: result?.transactionsWithoutDate || 0,
       } as EduzzStats;
