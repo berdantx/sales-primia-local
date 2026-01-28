@@ -8,7 +8,7 @@ import { SaveFilterViewDialog } from './SaveFilterViewDialog';
 import { ManageFilterViewsDialog } from './ManageFilterViewsDialog';
 import { parseISO } from 'date-fns';
 
-type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
+type PeriodFilter = '1d' | '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
 interface SavedFilterViewsProps {
   currentPeriod: PeriodFilter;
