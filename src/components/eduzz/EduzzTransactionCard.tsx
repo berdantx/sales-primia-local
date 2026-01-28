@@ -24,7 +24,7 @@ export function EduzzTransactionCard({ transaction, onClick }: EduzzTransactionC
             <p className="font-medium text-sm truncate">{transaction.product || 'Sem produto'}</p>
             <p className="text-xs text-muted-foreground truncate">{transaction.buyer_name || '-'}</p>
           </div>
-          <Badge variant="outline" className="ml-2 text-xs shrink-0">BRL</Badge>
+          <Badge variant="outline" className="ml-2 text-xs shrink-0">{transaction.currency || 'BRL'}</Badge>
         </div>
         {transaction.utm_source && (
           <div className="flex justify-between items-center mb-2">
@@ -53,7 +53,7 @@ export function EduzzTransactionCard({ transaction, onClick }: EduzzTransactionC
             </Tooltip>
           </TooltipProvider>
           <div className="text-sm font-semibold text-right">
-            {formatCurrency(Number(transaction.sale_value), 'BRL')}
+            {formatCurrency(Number(transaction.sale_value), transaction.currency || 'BRL')}
           </div>
         </div>
       </CardContent>
