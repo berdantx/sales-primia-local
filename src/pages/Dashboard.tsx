@@ -337,15 +337,17 @@ export default function Dashboard() {
               // Calcular valor pendente (a receber)
               const hotmartPendingBRL = hotmartProjectedBRL - hotmartRealBRL;
               
+              const eduzzUSD = eduzzStats?.totalUSD || 0;
+              const combinedUSD = hotmartUSD + eduzzUSD;
+              
               return (
                 <ColoredDashboardCards
-                  totalBRL={combinedRealBRL + usdConvertedToBRL}
+                  totalBRL={combinedRealBRL}
+                  totalUSD={combinedUSD}
                   projectedBRL={combinedProjectedBRL + usdConvertedToBRL}
-                  leadCount={leadCount || 0}
                   totalTransactions={stats?.totalTransactions || 0}
                   transactionCounts={transactionCounts}
                   hasProjection={hasProjection}
-                  onLeadsClick={() => navigate('/leads')}
                   salesByDate={salesByDate}
                   dollarRate={dollarRate?.rate}
                   projectionBreakdown={{
@@ -355,6 +357,8 @@ export default function Dashboard() {
                     hotmartUSDConverted: usdConvertedToBRL,
                     tmbBRL,
                     eduzzBRL,
+                    eduzzUSD,
+                    eduzzUSDConverted: dollarRate ? eduzzUSD * dollarRate.rate : 0,
                   }}
                 />
               );

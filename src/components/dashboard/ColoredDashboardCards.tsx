@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, TrendingUp, UserPlus, ShoppingCart, Flame, Package, Gem } from 'lucide-react';
+import { DollarSign, TrendingUp, ShoppingCart, Flame, Package, Gem } from 'lucide-react';
 import { LineChart, Line, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -15,12 +15,14 @@ interface ProjectionBreakdown {
   hotmartUSDConverted: number;
   tmbBRL: number;
   eduzzBRL: number;
+  eduzzUSD?: number;
+  eduzzUSDConverted?: number;
 }
 
 interface ColoredDashboardCardsProps {
   totalBRL: number;
+  totalUSD: number;
   projectedBRL: number;
-  leadCount: number;
   totalTransactions: number;
   transactionCounts: {
     hotmart: number;
@@ -28,7 +30,6 @@ interface ColoredDashboardCardsProps {
     eduzz: number;
   };
   hasProjection: boolean;
-  onLeadsClick: () => void;
   salesByDate?: Record<string, Record<string, number>>;
   dollarRate?: number;
   projectionBreakdown?: ProjectionBreakdown;
@@ -36,12 +37,11 @@ interface ColoredDashboardCardsProps {
 
 export function ColoredDashboardCards({
   totalBRL,
+  totalUSD,
   projectedBRL,
-  leadCount,
   totalTransactions,
   transactionCounts,
   hasProjection,
-  onLeadsClick,
   salesByDate,
   dollarRate,
   projectionBreakdown,
@@ -102,9 +102,13 @@ export function ColoredDashboardCards({
     </div>
   );
 
-  // Determine grid columns based on what's shown
+  // Calculate number of visible cards
+  const showUSD = totalUSD > 0;
   const showProjection = hasProjection;
-  const cardCount = showProjection ? 4 : 3;
+  
+  // Layout: sempre 3 ou 4 cards dependendo do que mostrar
+  let cardCount = 3; // Base: Faturamento BRL, Transações, (USD ou Projeção)
+  if (showUSD && showProjection) cardCount = 4;
 
   return (
     <div className="space-y-4">
@@ -113,9 +117,9 @@ export function ColoredDashboardCards({
         animate={{ opacity: 1, y: 0 }}
         className={`grid grid-cols-2 ${cardCount === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3 sm:gap-4`}
       >
-        {/* Faturamento Atual */}
+        {/* Faturamento Total (BRL) */}
         <ColoredKPICard
-          title="Faturamento Atual"
+          title="Faturamento Total"
           value={formatCurrency(totalBRL, 'BRL')}
           subtitle="Hotmart + TMB + Eduzz"
           icon={DollarSign}
@@ -123,6 +127,18 @@ export function ColoredDashboardCards({
           delay={0}
           customContent={transactionBadges}
         />
+
+        {/* Vendas em Dólar - só aparece se houver USD */}
+        {showUSD && (
+          <ColoredKPICard
+            title="Vendas em Dólar"
+            value={formatCurrency(totalUSD, 'USD')}
+            subtitle={dollarRate ? `≈ ${formatCurrency(totalUSD * dollarRate, 'BRL')}` : 'Hotmart + Eduzz'}
+            icon={DollarSign}
+            variant="blue"
+            delay={1}
+          />
+        )}
 
         {/* Projeção Faturamento - só aparece se houver projeção */}
         {showProjection && (
@@ -132,7 +148,7 @@ export function ColoredDashboardCards({
             subtitle="Inclui recorrências"
             icon={TrendingUp}
             variant="cyan"
-            delay={1}
+            delay={showUSD ? 2 : 1}
             tooltipContent={
               projectionBreakdown ? (
                 <div className="space-y-2 text-sm min-w-[220px]">
@@ -189,26 +205,14 @@ export function ColoredDashboardCards({
           />
         )}
 
-        {/* Total de Leads */}
-        <ColoredKPICard
-          title="Total de Leads"
-          value={formatNumber(leadCount)}
-          subtitle="no período"
-          icon={UserPlus}
-          variant="purple"
-          delay={showProjection ? 2 : 1}
-          onClick={onLeadsClick}
-          className="cursor-pointer"
-        />
-
         {/* Transações */}
         <ColoredKPICard
           title="Transações"
           value={formatNumber(totalTransactions)}
           subtitle="no período"
           icon={ShoppingCart}
-          variant="blue"
-          delay={showProjection ? 3 : 2}
+          variant="purple"
+          delay={showUSD && showProjection ? 3 : showUSD || showProjection ? 2 : 1}
         />
       </motion.div>
 
