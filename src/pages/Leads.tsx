@@ -9,7 +9,7 @@ import { useTopAdsOptimized } from '@/hooks/useTopAdsOptimized';
 import { useLandingPageStats } from '@/hooks/useLandingPageStats';
 import { useLandingPageConversion } from '@/hooks/useLandingPageConversion';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
-import { AdTrendChart } from '@/components/leads/AdTrendChart';
+import { AdTrendChartOptimized } from '@/components/leads/AdTrendChartOptimized';
 import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
 import { LeadsWorldMap } from '@/components/leads/LeadsWorldMap';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
@@ -721,14 +721,14 @@ function Leads() {
                       />
                     </TabsContent>
                     <TabsContent value="evolution" className="mt-0 h-full">
-                      <AdTrendChart
-                        leads={paginatedData?.leads}
+                      <AdTrendChartOptimized
+                        clientId={clientId}
+                        startDate={dateRange?.from}
+                        endDate={dateRange?.to}
                         topItemNames={topItemNames}
                         mode={topMode}
                         groupBy={trendGroupBy}
                         onGroupByChange={setTrendGroupBy}
-                        isLoading={isLoadingLeads}
-                        embedded
                       />
                     </TabsContent>
                   </CardContent>

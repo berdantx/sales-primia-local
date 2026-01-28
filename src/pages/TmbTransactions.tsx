@@ -471,6 +471,7 @@ function TmbTransactions() {
               onModeChange={(mode) => { setTopMode(mode); setSelectedTopItem(null); }}
               selectedItem={selectedTopItem}
               onItemClick={(name) => setSelectedTopItem(prev => prev === name ? null : name)}
+              showAds={true}
             />
           </div>
         </motion.div>
