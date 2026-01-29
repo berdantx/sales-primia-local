@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Bell, History, Target, Upload, MoreVertical } from 'lucide-react';
+import { History, Target, Upload, MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { HeaderFilters } from './HeaderFilters';
 import { ClientIndicator } from './ClientIndicator';
+import { NotificationsDropdown } from './NotificationsDropdown';
 import { useBrandingSettings } from '@/hooks/useBrandingSettings';
 import defaultLogo from '@/assets/default-logo.png';
 
@@ -117,9 +118,7 @@ export function Header() {
         <HeaderFilters />
 
         <div className="flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" size="icon" className="relative h-8 w-8 sm:h-10 sm:w-10">
-            <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-          </Button>
+          <NotificationsDropdown />
         </div>
       </div>
     </header>

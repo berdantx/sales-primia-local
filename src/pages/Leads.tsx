@@ -35,6 +35,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { normalizePageUrl } from '@/lib/urlUtils';
+import { useExportJobs } from '@/hooks/useExportJobs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,6 +101,7 @@ function Leads() {
   
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
+  const { startExport, pendingCount } = useExportJobs();
 
   // Lazy load charts after initial render
   useEffect(() => {
@@ -221,123 +223,21 @@ function Leads() {
   const totalCount = paginatedData?.totalCount || 0;
 
   const handleExportCSV = async (excludeTests: boolean = false) => {
-    // For export, we need to fetch ALL leads matching filters using pagination
-    const toastId = toast.loading('Preparando exportação... 0 leads carregados');
-    
     try {
-      // Use smaller batch size and select only needed fields to avoid timeouts
-      const PAGE_SIZE = 500;
-      let allLeads: any[] = [];
-      let page = 0;
-      let hasMore = true;
-      let retryCount = 0;
-      const MAX_RETRIES = 3;
-
-      // Select only the fields we need for export (reduces query time significantly)
-      const selectFields = 'created_at,first_name,last_name,email,phone,source,utm_source,utm_medium,utm_campaign,tags,page_url,country,city';
-
-      // Fetch all leads in batches to bypass Supabase 1000-row limit
-      while (hasMore) {
-        try {
-          let query = supabase
-            .from('leads')
-            .select(selectFields)
-            .order('created_at', { ascending: false })
-            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-          if (paginatedFilters.clientId) {
-            query = query.eq('client_id', paginatedFilters.clientId);
-          }
-          if (paginatedFilters.startDate) {
-            query = query.gte('created_at', paginatedFilters.startDate.toISOString());
-          }
-          if (paginatedFilters.endDate) {
-            query = query.lte('created_at', paginatedFilters.endDate.toISOString());
-          }
-
-          const { data, error } = await query;
-          
-          if (error) {
-            // If timeout, retry with smaller delay
-            if (error.code === '57014' && retryCount < MAX_RETRIES) {
-              retryCount++;
-              toast.loading(`Tentando novamente (${retryCount}/${MAX_RETRIES})... ${allLeads.length.toLocaleString('pt-BR')} leads carregados`, { id: toastId });
-              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-              continue;
-            }
-            throw error;
-          }
-
-          // Reset retry count on success
-          retryCount = 0;
-
-          if (data && data.length > 0) {
-            allLeads = [...allLeads, ...data];
-            page++;
-            hasMore = data.length === PAGE_SIZE;
-            
-            // Update progress toast
-            toast.loading(`Preparando exportação... ${allLeads.length.toLocaleString('pt-BR')} leads carregados`, { id: toastId });
-          } else {
-            hasMore = false;
-          }
-        } catch (batchError: any) {
-          // If a batch fails after retries, try to continue with what we have
-          if (allLeads.length > 0 && batchError.code === '57014') {
-            console.warn('Timeout occurred, proceeding with partial data:', allLeads.length);
-            toast.loading(`Finalizando com ${allLeads.length.toLocaleString('pt-BR')} leads (alguns podem ter sido ignorados)...`, { id: toastId });
-            hasMore = false;
-          } else {
-            throw batchError;
-          }
-        }
-      }
-
-      if (allLeads.length === 0) {
-        toast.error('Nenhum lead encontrado para exportar', { id: toastId });
-        return;
-      }
-
-      let filteredExport = allLeads;
-      if (excludeTests) {
-        filteredExport = filteredExport.filter(l => !isTestLead(l.tags));
-      }
-
-      const headers = ['Data', 'Nome', 'Email', 'Telefone', 'Fonte', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Tags', 'Página', 'País', 'Cidade'];
-      const rows = filteredExport.map(l => [
-        l.created_at ? formatDateTimeBR(l.created_at, 'dd/MM/yyyy HH:mm') : '',
-        `${l.first_name || ''} ${l.last_name || ''}`.trim(),
-        l.email || '',
-        l.phone || '',
-        l.source || '',
-        l.utm_source || '',
-        l.utm_medium || '',
-        l.utm_campaign || '',
-        l.tags || '',
-        l.page_url || '',
-        l.country || '',
-        l.city || '',
-      ]);
+      await startExport.mutateAsync({
+        clientId: paginatedFilters.clientId,
+        startDate: paginatedFilters.startDate,
+        endDate: paginatedFilters.endDate,
+        excludeTests,
+      });
       
-      // Generate CSV with BOM for Excel compatibility
-      const csv = '\uFEFF' + [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const suffix = excludeTests ? '-sem-testes' : '';
-      a.download = `leads${suffix}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      toast.success(`${filteredExport.length.toLocaleString('pt-BR')} leads exportados com sucesso!`, { id: toastId });
+      toast.success('Exportação iniciada! Você será notificado quando estiver pronta.', {
+        description: 'Acompanhe o progresso no ícone de notificações.',
+        duration: 5000,
+      });
     } catch (error: any) {
       console.error('Export error:', error);
-      if (error.code === '57014') {
-        toast.error('A exportação demorou muito. Tente filtrar por um período menor.', { id: toastId });
-      } else {
-        toast.error('Erro ao exportar leads', { id: toastId });
-      }
+      toast.error('Erro ao iniciar exportação');
     }
   };
 

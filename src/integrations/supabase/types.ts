@@ -259,6 +259,59 @@ export type Database = {
           },
         ]
       }
+      export_jobs: {
+        Row: {
+          client_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          export_type: string
+          file_name: string | null
+          file_path: string | null
+          filters: Json | null
+          id: string
+          status: string
+          total_records: number | null
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          export_type?: string
+          file_name?: string | null
+          file_path?: string | null
+          filters?: Json | null
+          id?: string
+          status?: string
+          total_records?: number | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          export_type?: string
+          file_name?: string | null
+          file_path?: string | null
+          filters?: Json | null
+          id?: string
+          status?: string
+          total_records?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "export_jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       external_webhooks: {
         Row: {
           client_id: string | null
