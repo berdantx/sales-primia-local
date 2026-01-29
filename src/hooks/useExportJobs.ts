@@ -74,6 +74,7 @@ export function useExportJobs() {
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: () => {
