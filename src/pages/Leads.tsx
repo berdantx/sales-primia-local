@@ -221,34 +221,54 @@ function Leads() {
   const totalCount = paginatedData?.totalCount || 0;
 
   const handleExportCSV = async (excludeTests: boolean = false) => {
-    // For export, we need to fetch all leads matching filters
-    toast.info('Preparando exportação...');
+    // For export, we need to fetch ALL leads matching filters using pagination
+    const toastId = toast.loading('Preparando exportação... 0 leads carregados');
     
     try {
-      let query = supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const PAGE_SIZE = 1000;
+      let allLeads: any[] = [];
+      let page = 0;
+      let hasMore = true;
 
-      if (paginatedFilters.clientId) {
-        query = query.eq('client_id', paginatedFilters.clientId);
-      }
-      if (paginatedFilters.startDate) {
-        query = query.gte('created_at', paginatedFilters.startDate.toISOString());
-      }
-      if (paginatedFilters.endDate) {
-        query = query.lte('created_at', paginatedFilters.endDate.toISOString());
+      // Fetch all leads in batches to bypass Supabase 1000-row limit
+      while (hasMore) {
+        let query = supabase
+          .from('leads')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (paginatedFilters.clientId) {
+          query = query.eq('client_id', paginatedFilters.clientId);
+        }
+        if (paginatedFilters.startDate) {
+          query = query.gte('created_at', paginatedFilters.startDate.toISOString());
+        }
+        if (paginatedFilters.endDate) {
+          query = query.lte('created_at', paginatedFilters.endDate.toISOString());
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allLeads = [...allLeads, ...data];
+          page++;
+          hasMore = data.length === PAGE_SIZE;
+          
+          // Update progress toast
+          toast.loading(`Preparando exportação... ${allLeads.length.toLocaleString('pt-BR')} leads carregados`, { id: toastId });
+        } else {
+          hasMore = false;
+        }
       }
 
-      const { data: leadsToExport, error } = await query;
-      if (error) throw error;
-
-      let filteredExport = leadsToExport || [];
+      let filteredExport = allLeads;
       if (excludeTests) {
         filteredExport = filteredExport.filter(l => !isTestLead(l.tags));
       }
 
-      const headers = ['Data', 'Nome', 'Email', 'Telefone', 'Fonte', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Tags', 'Página'];
+      const headers = ['Data', 'Nome', 'Email', 'Telefone', 'Fonte', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Tags', 'Página', 'País', 'Cidade'];
       const rows = filteredExport.map(l => [
         l.created_at ? formatDateTimeBR(l.created_at, 'dd/MM/yyyy HH:mm') : '',
         `${l.first_name || ''} ${l.last_name || ''}`.trim(),
@@ -260,9 +280,12 @@ function Leads() {
         l.utm_campaign || '',
         l.tags || '',
         l.page_url || '',
+        l.country || '',
+        l.city || '',
       ]);
       
-      const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+      // Generate CSV with BOM for Excel compatibility
+      const csv = '\uFEFF' + [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -271,10 +294,10 @@ function Leads() {
       a.download = `leads${suffix}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
       a.click();
       
-      toast.success(`${filteredExport.length} leads exportados!`);
+      toast.success(`${filteredExport.length.toLocaleString('pt-BR')} leads exportados com sucesso!`, { id: toastId });
     } catch (error) {
       console.error('Export error:', error);
-      toast.error('Erro ao exportar leads');
+      toast.error('Erro ao exportar leads', { id: toastId });
     }
   };
 
