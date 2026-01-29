@@ -225,42 +225,77 @@ function Leads() {
     const toastId = toast.loading('Preparando exportação... 0 leads carregados');
     
     try {
-      const PAGE_SIZE = 1000;
+      // Use smaller batch size and select only needed fields to avoid timeouts
+      const PAGE_SIZE = 500;
       let allLeads: any[] = [];
       let page = 0;
       let hasMore = true;
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
+
+      // Select only the fields we need for export (reduces query time significantly)
+      const selectFields = 'created_at,first_name,last_name,email,phone,source,utm_source,utm_medium,utm_campaign,tags,page_url,country,city';
 
       // Fetch all leads in batches to bypass Supabase 1000-row limit
       while (hasMore) {
-        let query = supabase
-          .from('leads')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        try {
+          let query = supabase
+            .from('leads')
+            .select(selectFields)
+            .order('created_at', { ascending: false })
+            .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-        if (paginatedFilters.clientId) {
-          query = query.eq('client_id', paginatedFilters.clientId);
-        }
-        if (paginatedFilters.startDate) {
-          query = query.gte('created_at', paginatedFilters.startDate.toISOString());
-        }
-        if (paginatedFilters.endDate) {
-          query = query.lte('created_at', paginatedFilters.endDate.toISOString());
-        }
+          if (paginatedFilters.clientId) {
+            query = query.eq('client_id', paginatedFilters.clientId);
+          }
+          if (paginatedFilters.startDate) {
+            query = query.gte('created_at', paginatedFilters.startDate.toISOString());
+          }
+          if (paginatedFilters.endDate) {
+            query = query.lte('created_at', paginatedFilters.endDate.toISOString());
+          }
 
-        const { data, error } = await query;
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          allLeads = [...allLeads, ...data];
-          page++;
-          hasMore = data.length === PAGE_SIZE;
+          const { data, error } = await query;
           
-          // Update progress toast
-          toast.loading(`Preparando exportação... ${allLeads.length.toLocaleString('pt-BR')} leads carregados`, { id: toastId });
-        } else {
-          hasMore = false;
+          if (error) {
+            // If timeout, retry with smaller delay
+            if (error.code === '57014' && retryCount < MAX_RETRIES) {
+              retryCount++;
+              toast.loading(`Tentando novamente (${retryCount}/${MAX_RETRIES})... ${allLeads.length.toLocaleString('pt-BR')} leads carregados`, { id: toastId });
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              continue;
+            }
+            throw error;
+          }
+
+          // Reset retry count on success
+          retryCount = 0;
+
+          if (data && data.length > 0) {
+            allLeads = [...allLeads, ...data];
+            page++;
+            hasMore = data.length === PAGE_SIZE;
+            
+            // Update progress toast
+            toast.loading(`Preparando exportação... ${allLeads.length.toLocaleString('pt-BR')} leads carregados`, { id: toastId });
+          } else {
+            hasMore = false;
+          }
+        } catch (batchError: any) {
+          // If a batch fails after retries, try to continue with what we have
+          if (allLeads.length > 0 && batchError.code === '57014') {
+            console.warn('Timeout occurred, proceeding with partial data:', allLeads.length);
+            toast.loading(`Finalizando com ${allLeads.length.toLocaleString('pt-BR')} leads (alguns podem ter sido ignorados)...`, { id: toastId });
+            hasMore = false;
+          } else {
+            throw batchError;
+          }
         }
+      }
+
+      if (allLeads.length === 0) {
+        toast.error('Nenhum lead encontrado para exportar', { id: toastId });
+        return;
       }
 
       let filteredExport = allLeads;
@@ -293,11 +328,16 @@ function Leads() {
       const suffix = excludeTests ? '-sem-testes' : '';
       a.download = `leads${suffix}-${format(new Date(), 'yyyy-MM-dd')}.csv`;
       a.click();
+      URL.revokeObjectURL(url);
       
       toast.success(`${filteredExport.length.toLocaleString('pt-BR')} leads exportados com sucesso!`, { id: toastId });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Export error:', error);
-      toast.error('Erro ao exportar leads', { id: toastId });
+      if (error.code === '57014') {
+        toast.error('A exportação demorou muito. Tente filtrar por um período menor.', { id: toastId });
+      } else {
+        toast.error('Erro ao exportar leads', { id: toastId });
+      }
     }
   };
 
