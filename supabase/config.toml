@@ -65,3 +65,6 @@ verify_jwt = true
 
 [functions.restore-backup]
 verify_jwt = true
+
+[functions.export-leads-background]
+verify_jwt = false
