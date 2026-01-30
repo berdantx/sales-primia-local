@@ -18,12 +18,7 @@ import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { ExportLeadsDialog } from '@/components/leads/ExportLeadsDialog';
 import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadsFilters } from '@/components/leads/LeadsFilters';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
@@ -35,7 +30,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { normalizePageUrl } from '@/lib/urlUtils';
-import { useExportJobs } from '@/hooks/useExportJobs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,7 +95,7 @@ function Leads() {
   
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
-  const { startExport, pendingCount } = useExportJobs();
+  
 
   // Lazy load charts after initial render
   useEffect(() => {
@@ -222,24 +216,6 @@ function Leads() {
   const totalPages = paginatedData?.totalPages || 1;
   const totalCount = paginatedData?.totalCount || 0;
 
-  const handleExportCSV = async (excludeTests: boolean = false) => {
-    try {
-      await startExport.mutateAsync({
-        clientId: paginatedFilters.clientId,
-        startDate: paginatedFilters.startDate,
-        endDate: paginatedFilters.endDate,
-        excludeTests,
-      });
-      
-      toast.success('Exportação iniciada! Você será notificado quando estiver pronta.', {
-        description: 'Acompanhe o progresso no ícone de notificações.',
-        duration: 5000,
-      });
-    } catch (error: any) {
-      console.error('Export error:', error);
-      toast.error('Erro ao iniciar exportação');
-    }
-  };
 
   const clearFilters = () => {
     setSearch('');
@@ -457,24 +433,7 @@ function Leads() {
                 </>
               )}
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar CSV
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExportCSV(false)}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar todos
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExportCSV(true)}>
-                  <FlaskConical className="h-4 w-4 mr-2" />
-                  Apenas reais (sem testes)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ExportLeadsDialog />
           </div>
         </motion.div>
 
