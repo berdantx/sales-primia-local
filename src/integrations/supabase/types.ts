@@ -270,6 +270,7 @@ export type Database = {
           file_path: string | null
           filters: Json | null
           id: string
+          progress: number | null
           status: string
           total_records: number | null
           user_id: string
@@ -284,6 +285,7 @@ export type Database = {
           file_path?: string | null
           filters?: Json | null
           id?: string
+          progress?: number | null
           status?: string
           total_records?: number | null
           user_id: string
@@ -298,6 +300,7 @@ export type Database = {
           file_path?: string | null
           filters?: Json | null
           id?: string
+          progress?: number | null
           status?: string
           total_records?: number | null
           user_id?: string

@@ -264,6 +264,17 @@ export function ExportLeadsDialog({ trigger }: ExportLeadsDialogProps) {
             </Label>
           </div>
 
+          {/* Large export warning */}
+          {period === 'all' && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50 p-3">
+              <span className="text-amber-600 dark:text-amber-400">⚠️</span>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                Exportações de grandes volumes podem demorar alguns minutos. 
+                Você receberá uma notificação quando o arquivo estiver pronto.
+              </p>
+            </div>
+          )}
+
           {/* Summary Section */}
           <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
             <p className="text-sm font-medium text-muted-foreground">📊 Resumo da exportação:</p>

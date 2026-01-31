@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from 'react';
 
 export interface ExportJob {
   id: string;
@@ -11,11 +12,15 @@ export interface ExportJob {
   file_path: string | null;
   file_name: string | null;
   total_records: number;
+  progress: number;
   filters: Record<string, any>;
   created_at: string;
   completed_at: string | null;
   error_message: string | null;
 }
+
+// Threshold for marking stuck jobs as error (5 minutes)
+const STUCK_JOB_THRESHOLD_MS = 5 * 60 * 1000;
 
 export function useExportJobs() {
   const { user } = useAuth();
@@ -39,14 +44,45 @@ export function useExportJobs() {
     },
     enabled: !!user?.id,
     refetchInterval: (query) => {
-      // Poll every 5 seconds if there are pending or processing jobs
+      // Poll every 3 seconds if there are pending or processing jobs
       const jobs = query.state.data as ExportJob[] | undefined;
       const hasPendingJobs = jobs?.some(j => 
         j.status === 'pending' || j.status === 'processing'
       );
-      return hasPendingJobs ? 5000 : 30000;
+      return hasPendingJobs ? 3000 : 30000;
     },
   });
+
+  // Auto-cleanup stuck jobs (processing for more than 5 minutes)
+  useEffect(() => {
+    const cleanupStuckJobs = async () => {
+      const stuckJobs = jobs.filter(j => {
+        if (j.status !== 'pending' && j.status !== 'processing') return false;
+        const createdAt = new Date(j.created_at).getTime();
+        return Date.now() - createdAt > STUCK_JOB_THRESHOLD_MS;
+      });
+
+      for (const job of stuckJobs) {
+        console.log(`[ExportJobs] Marking stuck job ${job.id} as error`);
+        await supabase
+          .from('export_jobs')
+          .update({
+            status: 'error',
+            error_message: 'Timeout: job cancelado automaticamente após 5 minutos',
+            completed_at: new Date().toISOString()
+          })
+          .eq('id', job.id);
+      }
+
+      if (stuckJobs.length > 0) {
+        queryClient.invalidateQueries({ queryKey: ['export-jobs'] });
+      }
+    };
+
+    if (jobs.length > 0) {
+      cleanupStuckJobs();
+    }
+  }, [jobs, queryClient]);
 
   // Count of ready jobs that haven't been downloaded
   const readyCount = jobs.filter(j => j.status === 'ready').length;
@@ -55,6 +91,9 @@ export function useExportJobs() {
   const pendingCount = jobs.filter(j => 
     j.status === 'pending' || j.status === 'processing'
   ).length;
+
+  // Get the currently processing job with its progress
+  const processingJob = jobs.find(j => j.status === 'processing');
 
   // Start a new export job
   const startExport = useMutation({
@@ -124,6 +163,7 @@ export function useExportJobs() {
     isLoading,
     readyCount,
     pendingCount,
+    processingJob,
     startExport,
     getDownloadUrl,
     deleteJob,
