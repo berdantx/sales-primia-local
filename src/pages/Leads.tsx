@@ -18,7 +18,7 @@ import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExportLeadsDialog } from '@/components/leads/ExportLeadsDialog';
+import { ClientSideExportDialog } from '@/components/leads/ClientSideExportDialog';
 import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadsFilters } from '@/components/leads/LeadsFilters';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
@@ -433,7 +433,7 @@ function Leads() {
                 </>
               )}
             </Button>
-            <ExportLeadsDialog />
+            <ClientSideExportDialog />
           </div>
         </motion.div>
 
