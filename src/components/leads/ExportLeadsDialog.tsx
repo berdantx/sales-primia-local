@@ -265,13 +265,16 @@ export function ExportLeadsDialog({ trigger }: ExportLeadsDialogProps) {
           </div>
 
           {/* Large export warning */}
-          {period === 'all' && (
+          {(period === 'all' || period === '90days' || period === '1year') && (
             <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50 p-3">
               <span className="text-amber-600 dark:text-amber-400">⚠️</span>
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                Exportações de grandes volumes podem demorar alguns minutos. 
-                Você receberá uma notificação quando o arquivo estiver pronto.
-              </p>
+              <div className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                <p className="font-medium">Aviso para grandes volumes</p>
+                <p>
+                  Para mais de 20.000 leads, recomendamos exportar períodos menores (ex: últimos 30 dias). 
+                  Exportações muito grandes podem não completar devido a limites de processamento.
+                </p>
+              </div>
             </div>
           )}
 
