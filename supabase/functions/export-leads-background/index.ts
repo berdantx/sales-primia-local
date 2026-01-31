@@ -131,9 +131,10 @@ async function processExport(
 
       let query = supabaseAdmin
         .from('leads')
-        .select(selectFields)
+        .select(selectFields, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(page * BATCH_SIZE, (page + 1) * BATCH_SIZE - 1)
+        .limit(BATCH_SIZE)
 
       if (filters.clientId) {
         query = query.eq('client_id', filters.clientId)
