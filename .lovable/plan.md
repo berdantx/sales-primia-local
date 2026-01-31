@@ -1,130 +1,144 @@
 
-# Plano: Dialog de Exportação com Filtro de Período
+# Plano: Otimização da Exportação de Leads para Grandes Volumes
 
-## O Que Será Implementado
+## Problema Identificado
 
-Criar um componente dialog que aparece quando o usuário clica em "Exportar CSV", permitindo selecionar o período antes de iniciar a exportação.
+A exportação de leads está travando em bases com mais de 50.000 registros porque:
+1. A Edge Function atinge o limite de CPU (2 segundos de CPU / ~150s wall-clock)
+2. Quando o timeout ocorre, o job fica preso em status "processing" para sempre
+3. Todo o processamento ocorre em memória antes do upload
 
-## Comportamento Atual vs Novo
+## Estratégia de Solução
 
-| Atual | Novo |
-|-------|------|
-| Clica em "Exportar CSV" → exporta com filtros da página | Clica em "Exportar CSV" → abre dialog → escolhe período → exporta |
-| Usa apenas o período já selecionado na página | Pode escolher período diferente só para exportação |
+Implementar **streaming progressivo** e **detecção de timeout** para garantir que:
+- Grandes volumes sejam processados em chunks menores
+- Jobs travados sejam automaticamente marcados como erro
+- O progresso seja atualizado durante o processamento
 
-## Interface do Dialog
+## Mudanças Propostas
 
-O dialog terá:
-- Seletor de período pré-definido (Últimos 7 dias, 30 dias, 90 dias, etc.)
-- Calendário para período personalizado
-- Opção de exportar todos ou sem testes
-- Resumo mostrando período selecionado
-- Botões Cancelar e Exportar
+### 1. Edge Function (export-leads-background)
+
+| Aspecto | Atual | Novo |
+|---------|-------|------|
+| Processamento | Carrega tudo em memória | Processa em batches de 5.000 |
+| Timeout | Silencioso | Detecta e marca como erro |
+| Progresso | Nenhum | Atualiza % no banco |
+| Upload | Um único arquivo | Stream incremental |
+| Limite | Sem limite | Aviso para >50k leads |
+
+**Otimizações:**
+- Usar batches menores (5.000 em vez de 1.000 para menos queries)
+- Gerar CSV em chunks e fazer upload incremental
+- Adicionar timeout safety (marcar erro se demorar >120s)
+- Atualizar progresso no banco a cada batch
+
+### 2. Tabela export_jobs
+
+Adicionar campo para rastrear progresso:
+
+```sql
+ALTER TABLE export_jobs
+ADD COLUMN progress integer DEFAULT 0;
+```
+
+### 3. Hook useExportJobs
+
+- Exibir progresso durante processamento
+- Mostrar % ao invés de apenas "processando"
+
+### 4. Interface (ExportLeadsDialog)
+
+- Mostrar estimativa de tempo para grandes exportações
+- Aviso quando período selecionado pode ter muitos leads
+
+## Detalhes Técnicos
+
+### Nova Lógica de Processamento (Edge Function)
+
+```text
+1. Iniciar job → status: "processing"
+2. Contar total de leads (query rápida)
+3. Se total > 100.000:
+   → Avisar que exportação pode demorar
+4. Loop de processamento:
+   a. Buscar batch de 5.000 leads
+   b. Gerar CSV do batch
+   c. Acumular em chunks
+   d. Atualizar progresso: (processados / total) * 100
+5. Upload do CSV completo
+6. status: "ready"
+```
+
+### Detecção de Timeout
+
+```typescript
+const TIMEOUT_MS = 110_000; // 110 segundos (margem de segurança)
+const startTime = Date.now();
+
+// A cada batch, verificar tempo
+if (Date.now() - startTime > TIMEOUT_MS) {
+  throw new Error('Timeout: exportação interrompida por limite de tempo');
+}
+```
+
+### Limpeza de Jobs Travados
+
+Adicionar verificação no hook para marcar jobs antigos (>5 min processando) como erro.
+
+## Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `supabase/functions/export-leads-background/index.ts` | Otimização de processamento e timeout |
+| `src/hooks/useExportJobs.ts` | Mostrar progresso e limpar jobs travados |
+| `src/components/leads/ExportLeadsDialog.tsx` | Aviso para grandes volumes |
+
+## Migração de Banco
+
+```sql
+-- Adicionar coluna de progresso
+ALTER TABLE export_jobs ADD COLUMN IF NOT EXISTS progress integer DEFAULT 0;
+
+-- Limpar jobs travados existentes
+UPDATE export_jobs 
+SET status = 'error', 
+    error_message = 'Timeout: job cancelado automaticamente',
+    completed_at = NOW()
+WHERE status IN ('pending', 'processing') 
+  AND created_at < NOW() - INTERVAL '5 minutes';
+```
+
+## Fluxo Visual do Usuário
 
 ```text
 ┌─────────────────────────────────────────────┐
 │  Exportar Leads                        [X]  │
 ├─────────────────────────────────────────────┤
 │                                             │
-│  📅 Período                                 │
-│  ┌─────────────────────────────────────┐   │
-│  │ Últimos 30 dias                  ▼  │   │
-│  └─────────────────────────────────────┘   │
+│  📅 Período: Todo o período             ▼   │
 │                                             │
-│  [Se "Personalizado" selecionado:]          │
-│  ┌─────────────────────────────────────┐   │
-│  │ 📅 01/01/2026 - 30/01/2026          │   │
-│  └─────────────────────────────────────┘   │
+│  ⚠️ Exportações grandes podem demorar       │
+│     alguns minutos                          │
 │                                             │
-│  ☐ Excluir leads de teste                   │
-│                                             │
-│  ─────────────────────────────────────────  │
-│  📊 Resumo:                                 │
-│  Período: 01/01/2026 - 30/01/2026           │
-│  Cliente: Paulo Vieira                       │
-│  ─────────────────────────────────────────  │
+│  ☑ Excluir leads de teste                   │
 │                                             │
 │            [Cancelar]  [Exportar Leads]     │
 └─────────────────────────────────────────────┘
+
+Após iniciar:
+┌─────────────────────────────────────────────┐
+│  🔔 Notificações                            │
+├─────────────────────────────────────────────┤
+│  📄 leads-2026-01-31.csv                    │
+│     ⏳ Processando... 45%                   │
+│     ░░░░░░░░░░████████░░░░░░                │
+└─────────────────────────────────────────────┘
 ```
 
-## Arquivos a Criar/Modificar
+## Resultado Esperado
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/components/leads/ExportLeadsDialog.tsx` | **Criar** | Dialog com filtros de exportação |
-| `src/pages/Leads.tsx` | Modificar | Substituir dropdown por dialog |
-
-## Detalhes Técnicos
-
-### Novo Componente: ExportLeadsDialog
-
-```typescript
-// Props do componente
-interface ExportLeadsDialogProps {
-  trigger?: React.ReactNode;
-  defaultClientId?: string | null;
-  defaultDateRange?: DateRange;
-}
-
-// Estados internos
-const [period, setPeriod] = useState<PeriodOption>('30days');
-const [customDateRange, setCustomDateRange] = useState<DateRange>();
-const [excludeTests, setExcludeTests] = useState(false);
-```
-
-### Opções de Período
-
-```typescript
-const PERIOD_OPTIONS = [
-  { value: 'all', label: 'Todo o período' },
-  { value: '1day', label: 'Último dia' },
-  { value: '7days', label: 'Últimos 7 dias' },
-  { value: '30days', label: 'Últimos 30 dias' },
-  { value: '90days', label: 'Últimos 90 dias' },
-  { value: '1year', label: 'Último ano' },
-  { value: 'custom', label: 'Personalizado' },
-];
-```
-
-### Modificação em Leads.tsx
-
-O botão atual:
-```tsx
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button>Exportar CSV</Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuItem>Exportar todos</DropdownMenuItem>
-    <DropdownMenuItem>Apenas reais</DropdownMenuItem>
-  </DropdownMenuContent>
-</DropdownMenu>
-```
-
-Será substituído por:
-```tsx
-<ExportLeadsDialog
-  defaultClientId={clientId}
-  defaultDateRange={dateRange}
-/>
-```
-
-## Fluxo do Usuário
-
-1. Clica no botão "Exportar CSV"
-2. Dialog abre com período padrão (últimos 30 dias)
-3. Pode alterar para outro período pré-definido ou personalizado
-4. Marca ou desmarca "Excluir leads de teste"
-5. Vê resumo do que será exportado
-6. Clica em "Exportar Leads"
-7. Dialog fecha, toast confirma início da exportação
-8. Notificação aparece quando pronto
-
-## Reaproveitamento de Código
-
-O componente usará:
-- `useExportJobs` - hook existente para iniciar exportação
-- `useFilter` - para obter cliente selecionado
-- Padrões do `ExportReportDialog` existente (para transações)
-- Componentes UI: Dialog, Select, Calendar, Checkbox, Button
+- Exportações de até 100k leads funcionarão sem travar
+- Usuário verá progresso em tempo real
+- Jobs travados serão automaticamente limpos
+- Interface avisará sobre exportações grandes
