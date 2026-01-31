@@ -14,7 +14,7 @@ interface ExportFilters {
 }
 
 // Configuration
-const BATCH_SIZE = 5000
+const BATCH_SIZE = 1000  // Supabase default limit per query
 const TIMEOUT_MS = 110_000 // 110 seconds safety margin (Edge Functions have ~150s limit)
 
 // CSV generation helpers
@@ -131,10 +131,9 @@ async function processExport(
 
       let query = supabaseAdmin
         .from('leads')
-        .select(selectFields, { count: 'exact' })
+        .select(selectFields)
         .order('created_at', { ascending: false })
         .range(page * BATCH_SIZE, (page + 1) * BATCH_SIZE - 1)
-        .limit(BATCH_SIZE)
 
       if (filters.clientId) {
         query = query.eq('client_id', filters.clientId)
@@ -152,6 +151,8 @@ async function processExport(
         throw new Error(`Database error: ${error.message}`)
       }
 
+      console.log(`[Export ${jobId}] Batch ${page + 1}: fetched ${data?.length || 0} leads`)
+
       if (data && data.length > 0) {
         // Filter and convert to CSV rows
         for (const lead of data) {
@@ -167,7 +168,10 @@ async function processExport(
 
         processedCount += data.length
         page++
-        hasMore = data.length === BATCH_SIZE
+        
+        // Continue if we still have more leads to fetch
+        // Use totalCount instead of batch size to determine if there's more data
+        hasMore = processedCount < totalCount
 
         // Update progress
         const progress = Math.round((processedCount / totalCount) * 100)
