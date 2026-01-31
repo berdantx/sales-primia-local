@@ -13,41 +13,127 @@ interface ExportFilters {
   excludeTests?: boolean
 }
 
+// Configuration
+const BATCH_SIZE = 5000
+const TIMEOUT_MS = 110_000 // 110 seconds safety margin (Edge Functions have ~150s limit)
+
+// CSV generation helpers
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return date.toLocaleString('pt-BR', { 
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo'
+  })
+}
+
+const escapeCSV = (val: any) => `"${String(val || '').replace(/"/g, '""')}"`
+
+const CSV_HEADERS = 'Data,Nome,Email,Telefone,Fonte,UTM Source,UTM Medium,UTM Campaign,UTM Content,Tags,Página,País,Cidade,Tipo Tráfego'
+
+function leadToCSVRow(l: any): string {
+  return [
+    formatDate(l.created_at),
+    `${l.first_name || ''} ${l.last_name || ''}`.trim(),
+    l.email || '',
+    l.phone || '',
+    l.source || '',
+    l.utm_source || '',
+    l.utm_medium || '',
+    l.utm_campaign || '',
+    l.utm_content || '',
+    l.tags || '',
+    l.page_url || '',
+    l.country || '',
+    l.city || '',
+    l.traffic_type || '',
+  ].map(escapeCSV).join(',')
+}
+
+async function updateProgress(supabaseAdmin: any, jobId: string, progress: number) {
+  await supabaseAdmin
+    .from('export_jobs')
+    .update({ progress: Math.min(progress, 100) })
+    .eq('id', jobId)
+}
+
 async function processExport(
   supabaseAdmin: any,
   jobId: string,
   userId: string,
   filters: ExportFilters
 ) {
+  const startTime = Date.now()
   console.log(`[Export ${jobId}] Starting background processing...`)
   
   try {
     // Update status to processing
     await supabaseAdmin
       .from('export_jobs')
-      .update({ status: 'processing' })
+      .update({ status: 'processing', progress: 0 })
       .eq('id', jobId)
-
-    // Use larger batch size for efficiency
-    const PAGE_SIZE = 1000
-    let allLeads: any[] = []
-    let page = 0
-    let hasMore = true
 
     // Select only needed fields for export - minimal set to reduce memory
     const selectFields = 'created_at,first_name,last_name,email,phone,source,utm_source,utm_medium,utm_campaign,utm_content,tags,page_url,country,city,traffic_type'
 
-    // Fetch all leads in batches
+    // First, count total leads (quick query)
+    let countQuery = supabaseAdmin
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+
+    if (filters.clientId) {
+      countQuery = countQuery.eq('client_id', filters.clientId)
+    }
+    if (filters.startDate) {
+      countQuery = countQuery.gte('created_at', filters.startDate)
+    }
+    if (filters.endDate) {
+      countQuery = countQuery.lte('created_at', filters.endDate)
+    }
+
+    const { count: totalCount, error: countError } = await countQuery
+
+    if (countError) {
+      throw new Error(`Count error: ${countError.message}`)
+    }
+
+    console.log(`[Export ${jobId}] Total leads to process: ${totalCount}`)
+
+    if (totalCount === 0) {
+      // No leads to export
+      await supabaseAdmin
+        .from('export_jobs')
+        .update({
+          status: 'error',
+          error_message: 'Nenhum lead encontrado para o período selecionado',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', jobId)
+      return
+    }
+
+    // Process in batches
+    const csvParts: string[] = ['\uFEFF' + CSV_HEADERS]
+    let processedCount = 0
+    let page = 0
+    let hasMore = true
+    let filteredCount = 0
+
     while (hasMore) {
-      if (page > 0 && page % 20 === 0) {
-        console.log(`[Export ${jobId}] Progress: ${allLeads.length} leads loaded...`)
+      // Check timeout
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        throw new Error('Timeout: exportação interrompida por limite de tempo. Tente exportar um período menor.')
       }
-      
+
       let query = supabaseAdmin
         .from('leads')
         .select(selectFields)
         .order('created_at', { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+        .range(page * BATCH_SIZE, (page + 1) * BATCH_SIZE - 1)
 
       if (filters.clientId) {
         query = query.eq('client_id', filters.clientId)
@@ -66,69 +152,45 @@ async function processExport(
       }
 
       if (data && data.length > 0) {
-        allLeads = allLeads.concat(data)
+        // Filter and convert to CSV rows
+        for (const lead of data) {
+          // Skip test leads if requested
+          if (filters.excludeTests && lead.tags) {
+            if (lead.tags.includes('[TESTE]') || lead.tags.toLowerCase().includes('teste')) {
+              continue
+            }
+          }
+          csvParts.push(leadToCSVRow(lead))
+          filteredCount++
+        }
+
+        processedCount += data.length
         page++
-        hasMore = data.length === PAGE_SIZE
+        hasMore = data.length === BATCH_SIZE
+
+        // Update progress
+        const progress = Math.round((processedCount / totalCount) * 100)
+        await updateProgress(supabaseAdmin, jobId, progress)
+
+        // Log progress every 20 pages
+        if (page % 20 === 0) {
+          console.log(`[Export ${jobId}] Progress: ${processedCount}/${totalCount} (${progress}%)`)
+        }
       } else {
         hasMore = false
       }
     }
 
-    console.log(`[Export ${jobId}] Total leads fetched: ${allLeads.length}`)
+    console.log(`[Export ${jobId}] Processing complete: ${filteredCount} leads after filtering`)
 
-    // Filter out test leads if requested
-    if (filters.excludeTests) {
-      allLeads = allLeads.filter(l => {
-        if (!l.tags) return true
-        return !l.tags.includes('[TESTE]') && !l.tags.toLowerCase().includes('teste')
-      })
-      console.log(`[Export ${jobId}] After filtering tests: ${allLeads.length} leads`)
-    }
-
-    // Generate CSV content efficiently using string concatenation
-    const headers = 'Data,Nome,Email,Telefone,Fonte,UTM Source,UTM Medium,UTM Campaign,UTM Content,Tags,Página,País,Cidade,Tipo Tráfego'
-    
-    const formatDate = (dateStr: string | null) => {
-      if (!dateStr) return ''
-      const date = new Date(dateStr)
-      return date.toLocaleString('pt-BR', { 
-        day: '2-digit',
-        month: '2-digit', 
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'America/Sao_Paulo'
-      })
-    }
-
-    const escapeCSV = (val: any) => `"${String(val || '').replace(/"/g, '""')}"`
-
-    // Build CSV incrementally
-    let csvParts: string[] = ['\uFEFF' + headers]
-    
-    for (const l of allLeads) {
-      const row = [
-        formatDate(l.created_at),
-        `${l.first_name || ''} ${l.last_name || ''}`.trim(),
-        l.email || '',
-        l.phone || '',
-        l.source || '',
-        l.utm_source || '',
-        l.utm_medium || '',
-        l.utm_campaign || '',
-        l.utm_content || '',
-        l.tags || '',
-        l.page_url || '',
-        l.country || '',
-        l.city || '',
-        l.traffic_type || '',
-      ].map(escapeCSV).join(',')
-      
-      csvParts.push(row)
-    }
-
+    // Generate final CSV
     const csv = csvParts.join('\n')
     console.log(`[Export ${jobId}] CSV generated, size: ${(csv.length / 1024 / 1024).toFixed(2)} MB`)
+
+    // Check timeout before upload
+    if (Date.now() - startTime > TIMEOUT_MS) {
+      throw new Error('Timeout: exportação interrompida antes do upload. Tente exportar um período menor.')
+    }
 
     // Generate file name
     const now = new Date()
@@ -140,7 +202,7 @@ async function processExport(
 
     console.log(`[Export ${jobId}] Uploading file: ${filePath}`)
 
-    // Upload to storage - use text/csv without charset (Supabase doesn't support charset in MIME type)
+    // Upload to storage
     const { error: uploadError } = await supabaseAdmin
       .storage
       .from('exports')
@@ -160,12 +222,14 @@ async function processExport(
         status: 'ready',
         file_path: filePath,
         file_name: fileName,
-        total_records: allLeads.length,
+        total_records: filteredCount,
+        progress: 100,
         completed_at: new Date().toISOString()
       })
       .eq('id', jobId)
 
-    console.log(`[Export ${jobId}] Completed successfully! ${allLeads.length} records exported.`)
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1)
+    console.log(`[Export ${jobId}] Completed successfully! ${filteredCount} records exported in ${duration}s.`)
 
   } catch (error: any) {
     console.error(`[Export ${jobId}] Error:`, error)
@@ -175,7 +239,7 @@ async function processExport(
       .from('export_jobs')
       .update({
         status: 'error',
-        error_message: error.message || 'Unknown error occurred',
+        error_message: error.message || 'Erro desconhecido durante a exportação',
         completed_at: new Date().toISOString()
       })
       .eq('id', jobId)
@@ -237,6 +301,7 @@ Deno.serve(async (req) => {
         client_id: filters.clientId || null,
         export_type: 'leads',
         status: 'pending',
+        progress: 0,
         filters: filters,
       })
       .select()
