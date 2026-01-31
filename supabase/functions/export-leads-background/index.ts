@@ -140,12 +140,12 @@ async function processExport(
 
     console.log(`[Export ${jobId}] Uploading file: ${filePath}`)
 
-    // Upload to storage
+    // Upload to storage - use text/csv without charset (Supabase doesn't support charset in MIME type)
     const { error: uploadError } = await supabaseAdmin
       .storage
       .from('exports')
       .upload(filePath, csv, {
-        contentType: 'text/csv;charset=utf-8',
+        contentType: 'text/csv',
         upsert: false
       })
 
