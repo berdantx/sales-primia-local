@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { FilterProvider } from "@/contexts/FilterContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ConditionalHome } from "@/components/auth/ConditionalHome";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Upload from "./pages/Upload";
@@ -37,7 +38,7 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<ConditionalHome />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/upload" element={
               <ProtectedRoute allowedRoles={['master', 'admin']}>
