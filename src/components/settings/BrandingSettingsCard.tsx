@@ -265,7 +265,7 @@ export function BrandingSettingsCard() {
                   id="appName"
                   value={localAppName}
                   onChange={(e) => setLocalAppName(e.target.value)}
-                  placeholder="Primia - Analytics"
+                  placeholder="Launch Pocket"
                 />
               </div>
 
@@ -276,7 +276,7 @@ export function BrandingSettingsCard() {
                   id="appSubtitle"
                   value={localAppSubtitle}
                   onChange={(e) => setLocalAppSubtitle(e.target.value)}
-                  placeholder="Gestão de Leads e Vendas"
+                  placeholder="Seu lançamento no bolso"
                 />
               </div>
 

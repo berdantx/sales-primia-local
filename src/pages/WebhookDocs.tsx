@@ -210,7 +210,7 @@ function WebhookDocs() {
                       <li>Clique em <strong>"Criar Webhook"</strong></li>
                       <li>Preencha os campos:
                         <ul className="list-disc list-inside ml-6 mt-2 space-y-1">
-                          <li>Nome: identifique o webhook (ex: "Leads AnalyzeFlow")</li>
+                          <li>Nome: identifique o webhook (ex: "Leads Launch Pocket")</li>
                           <li>URL: cole a URL do webhook do cliente</li>
                         </ul>
                       </li>
