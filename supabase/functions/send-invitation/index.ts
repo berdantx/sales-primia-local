@@ -24,7 +24,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       Authorization: `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: "Sales Analytics <noreply@sales.primia.ai>",
+      from: "Launch Pocket <noreply@sales.primia.ai>",
       to: [to],
       subject,
       html,
@@ -227,8 +227,8 @@ const handler = async (req: Request): Promise<Response> => {
         </h1>
         
         <p style="color: #6B7280; text-align: center; margin-bottom: 10px;">
-          Você recebeu um convite para acessar o <strong>Sales Analytics</strong>, 
-          uma plataforma de análise de vendas.
+          Você recebeu um convite para acessar o <strong>Launch Pocket</strong>, 
+          sua plataforma de lançamentos no bolso.
         </p>
         
         ${clientInfo}
@@ -255,7 +255,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     await sendEmail(
       email,
-      "Você foi convidado para o Sales Analytics!",
+      "Você foi convidado para o Launch Pocket!",
       emailHtml
     );
 

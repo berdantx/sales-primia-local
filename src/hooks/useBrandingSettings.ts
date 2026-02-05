@@ -14,8 +14,8 @@ export interface BrandingSettings {
 }
 
 const DEFAULT_SETTINGS: BrandingSettings = {
-  appName: 'Primia - Analytics',
-  appSubtitle: 'Gestão de Leads e Vendas',
+  appName: 'Launch Pocket',
+  appSubtitle: 'Seu lançamento no bolso',
   logoUrl: null,
   logoUrlDark: null,
   primaryColor: '160 100% 35%',
