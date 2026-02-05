@@ -612,6 +612,42 @@ export type Database = {
           },
         ]
       }
+      interest_leads: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          instagram: string
+          name: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          instagram: string
+          name: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          instagram?: string
+          name?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       invitation_history: {
         Row: {
           action: string
