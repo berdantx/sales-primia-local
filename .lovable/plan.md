@@ -1,144 +1,109 @@
 
-# Plano: Otimização da Exportação de Leads para Grandes Volumes
+# Plano de Rebranding: Primia -> Launch Pocket
 
-## Problema Identificado
+## Conceito
+O novo nome **Launch Pocket** transmite a ideia de que o cliente tem o controle total do seu lançamento no bolso - acessível a qualquer momento do smartphone.
 
-A exportação de leads está travando em bases com mais de 50.000 registros porque:
-1. A Edge Function atinge o limite de CPU (2 segundos de CPU / ~150s wall-clock)
-2. Quando o timeout ocorre, o job fica preso em status "processing" para sempre
-3. Todo o processamento ocorre em memória antes do upload
+---
 
-## Estratégia de Solução
+## Alterações Necessárias
 
-Implementar **streaming progressivo** e **detecção de timeout** para garantir que:
-- Grandes volumes sejam processados em chunks menores
-- Jobs travados sejam automaticamente marcados como erro
-- O progresso seja atualizado durante o processamento
+### 1. Configurações de Branding (Banco de Dados)
+Atualizar os valores na tabela `app_settings`:
+- `app_name`: De "Primia - Analytics" para "Launch Pocket"
+- `app_subtitle`: De "Gestão de Leads e Vendas" para "Seu lançamento no bolso"
 
-## Mudanças Propostas
+### 2. Metadados da Página (index.html)
+Atualizar:
+- Título: "Launch Pocket - Sales Analytics"
+- Meta description
+- Open Graph title/description
+- Twitter title/description
 
-### 1. Edge Function (export-leads-background)
+### 3. Valores Padrão do Sistema
 
-| Aspecto | Atual | Novo |
-|---------|-------|------|
-| Processamento | Carrega tudo em memória | Processa em batches de 5.000 |
-| Timeout | Silencioso | Detecta e marca como erro |
-| Progresso | Nenhum | Atualiza % no banco |
-| Upload | Um único arquivo | Stream incremental |
-| Limite | Sem limite | Aviso para >50k leads |
+**Arquivo: `src/hooks/useBrandingSettings.ts`**
+- Alterar `DEFAULT_SETTINGS.appName` para "Launch Pocket"
+- Alterar `DEFAULT_SETTINGS.appSubtitle` para "Seu lançamento no bolso"
 
-**Otimizações:**
-- Usar batches menores (5.000 em vez de 1.000 para menos queries)
-- Gerar CSV em chunks e fazer upload incremental
-- Adicionar timeout safety (marcar erro se demorar >120s)
-- Atualizar progresso no banco a cada batch
+**Arquivo: `src/components/settings/BrandingSettingsCard.tsx`**
+- Atualizar placeholder do campo de nome
 
-### 2. Tabela export_jobs
+### 4. Edge Function de Convites
 
-Adicionar campo para rastrear progresso:
+**Arquivo: `supabase/functions/send-invitation/index.ts`**
+- Email de origem: De `Sales Analytics <noreply@sales.primia.ai>` para `Launch Pocket <noreply@launchpocket.app>` (ou domínio disponível)
+- Texto do email: Atualizar referências a "Sales Analytics"
+- Subject: "Você foi convidado para o Launch Pocket!"
 
-```sql
-ALTER TABLE export_jobs
-ADD COLUMN progress integer DEFAULT 0;
-```
+### 5. Documentação de Webhook
 
-### 3. Hook useExportJobs
+**Arquivo: `src/pages/WebhookDocs.tsx`** (linha 215)
+- Atualizar exemplo de nome do webhook: De "Leads AnalyzeFlow" para "Leads Launch Pocket"
 
-- Exibir progresso durante processamento
-- Mostrar % ao invés de apenas "processando"
+---
 
-### 4. Interface (ExportLeadsDialog)
+## Arquivos que NÃO precisam ser alterados
 
-- Mostrar estimativa de tempo para grandes exportações
-- Aviso quando período selecionado pode ter muitos leads
+Os seguintes arquivos contêm referências a "Primia" relacionadas a integrações/sources de leads (não são o nome do produto):
+- `supabase/functions/leads-webhook/index.ts` - Define "primia" como fonte de leads
+- `src/components/leads/LeadsTable.tsx` - Labels de fonte "Primia - Whatsapp"
+- `src/components/leads/LeadsFilters.tsx` - Filtros por fonte
+
+Estas referências são para classificação de leads vindos da plataforma Primia como fonte de tráfego, não o nome do sistema.
+
+---
 
 ## Detalhes Técnicos
 
-### Nova Lógica de Processamento (Edge Function)
-
 ```text
-1. Iniciar job → status: "processing"
-2. Contar total de leads (query rápida)
-3. Se total > 100.000:
-   → Avisar que exportação pode demorar
-4. Loop de processamento:
-   a. Buscar batch de 5.000 leads
-   b. Gerar CSV do batch
-   c. Acumular em chunks
-   d. Atualizar progresso: (processados / total) * 100
-5. Upload do CSV completo
-6. status: "ready"
+┌─────────────────────────────────────────────────────────────┐
+│                    ALTERAÇÕES DE CÓDIGO                     │
+├─────────────────────────────────────────────────────────────┤
+│  index.html                                                 │
+│    └─ title, meta tags (og:title, twitter:title, etc.)     │
+├─────────────────────────────────────────────────────────────┤
+│  src/hooks/useBrandingSettings.ts                          │
+│    └─ DEFAULT_SETTINGS.appName                              │
+│    └─ DEFAULT_SETTINGS.appSubtitle                          │
+├─────────────────────────────────────────────────────────────┤
+│  src/components/settings/BrandingSettingsCard.tsx          │
+│    └─ placeholder do input                                  │
+├─────────────────────────────────────────────────────────────┤
+│  supabase/functions/send-invitation/index.ts               │
+│    └─ from: email                                           │
+│    └─ subject                                               │
+│    └─ html body                                             │
+├─────────────────────────────────────────────────────────────┤
+│  src/pages/WebhookDocs.tsx                                 │
+│    └─ exemplo de nome de webhook                            │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    ALTERAÇÃO NO BANCO                       │
+├─────────────────────────────────────────────────────────────┤
+│  app_settings                                               │
+│    UPDATE key='app_name' SET value='Launch Pocket'         │
+│    UPDATE key='app_subtitle' SET value='Seu lançamento...' │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Detecção de Timeout
+---
 
-```typescript
-const TIMEOUT_MS = 110_000; // 110 segundos (margem de segurança)
-const startTime = Date.now();
+## Sobre o Logo
 
-// A cada batch, verificar tempo
-if (Date.now() - startTime > TIMEOUT_MS) {
-  throw new Error('Timeout: exportação interrompida por limite de tempo');
-}
-```
+O sistema já possui a funcionalidade de upload de logo customizado nas configurações de branding. Após as alterações de código, você poderá:
+1. Acessar **Configurações > Branding & Tema**
+2. Fazer upload do novo logo do Launch Pocket (versões clara e escura)
+3. Salvar as alterações
 
-### Limpeza de Jobs Travados
+---
 
-Adicionar verificação no hook para marcar jobs antigos (>5 min processando) como erro.
+## Nota sobre Domínio de Email
 
-## Arquivos a Modificar
+Para o email de convites, será necessário:
+- Ter um domínio configurado (ex: `launchpocket.app` ou similar)
+- Configurar o domínio no Resend para envio de emails
+- Atualizar a edge function com o novo endereço de email
 
-| Arquivo | Mudança |
-|---------|---------|
-| `supabase/functions/export-leads-background/index.ts` | Otimização de processamento e timeout |
-| `src/hooks/useExportJobs.ts` | Mostrar progresso e limpar jobs travados |
-| `src/components/leads/ExportLeadsDialog.tsx` | Aviso para grandes volumes |
-
-## Migração de Banco
-
-```sql
--- Adicionar coluna de progresso
-ALTER TABLE export_jobs ADD COLUMN IF NOT EXISTS progress integer DEFAULT 0;
-
--- Limpar jobs travados existentes
-UPDATE export_jobs 
-SET status = 'error', 
-    error_message = 'Timeout: job cancelado automaticamente',
-    completed_at = NOW()
-WHERE status IN ('pending', 'processing') 
-  AND created_at < NOW() - INTERVAL '5 minutes';
-```
-
-## Fluxo Visual do Usuário
-
-```text
-┌─────────────────────────────────────────────┐
-│  Exportar Leads                        [X]  │
-├─────────────────────────────────────────────┤
-│                                             │
-│  📅 Período: Todo o período             ▼   │
-│                                             │
-│  ⚠️ Exportações grandes podem demorar       │
-│     alguns minutos                          │
-│                                             │
-│  ☑ Excluir leads de teste                   │
-│                                             │
-│            [Cancelar]  [Exportar Leads]     │
-└─────────────────────────────────────────────┘
-
-Após iniciar:
-┌─────────────────────────────────────────────┐
-│  🔔 Notificações                            │
-├─────────────────────────────────────────────┤
-│  📄 leads-2026-01-31.csv                    │
-│     ⏳ Processando... 45%                   │
-│     ░░░░░░░░░░████████░░░░░░                │
-└─────────────────────────────────────────────┘
-```
-
-## Resultado Esperado
-
-- Exportações de até 100k leads funcionarão sem travar
-- Usuário verá progresso em tempo real
-- Jobs travados serão automaticamente limpos
-- Interface avisará sobre exportações grandes
+Se ainda não houver domínio, podemos manter um email genérico temporariamente.
