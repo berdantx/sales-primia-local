@@ -73,30 +73,21 @@ export function useClientSideExport() {
     cancelledRef.current = false;
     
     try {
-      // Step 1: Count total leads
+      // Step 1: Count total leads using optimized RPC
       setProgress({ status: 'counting', processed: 0, total: 0, percentage: 0 });
       
-      let countQuery = supabase
-        .from('leads')
-        .select('id', { count: 'exact', head: true });
-
-      if (filters.clientId) {
-        countQuery = countQuery.eq('client_id', filters.clientId);
-      }
-      if (filters.startDate) {
-        countQuery = countQuery.gte('created_at', filters.startDate.toISOString());
-      }
-      if (filters.endDate) {
-        countQuery = countQuery.lte('created_at', filters.endDate.toISOString());
-      }
-
-      const { count, error: countError } = await countQuery;
+      const { data: countData, error: countError } = await supabase
+        .rpc('count_leads_for_export', {
+          p_client_id: filters.clientId || null,
+          p_start_date: filters.startDate?.toISOString() || null,
+          p_end_date: filters.endDate?.toISOString() || null,
+        });
 
       if (countError) {
         throw new Error(`Erro ao contar leads: ${countError.message}`);
       }
 
-      const totalCount = count || 0;
+      const totalCount = Number(countData) || 0;
 
       if (totalCount === 0) {
         setProgress({ 
@@ -122,23 +113,15 @@ export function useClientSideExport() {
           return null;
         }
 
-        let query = supabase
-          .from('leads')
-          .select('created_at,first_name,last_name,email,phone,source,utm_source,utm_medium,utm_campaign,utm_content,tags,page_url,country,city,traffic_type')
-          .order('created_at', { ascending: false })
-          .range(page * BATCH_SIZE, (page + 1) * BATCH_SIZE - 1);
-
-        if (filters.clientId) {
-          query = query.eq('client_id', filters.clientId);
-        }
-        if (filters.startDate) {
-          query = query.gte('created_at', filters.startDate.toISOString());
-        }
-        if (filters.endDate) {
-          query = query.lte('created_at', filters.endDate.toISOString());
-        }
-
-        const { data, error } = await query;
+        // Use optimized RPC for batch fetching
+        const { data, error } = await supabase
+          .rpc('export_leads_batch', {
+            p_client_id: filters.clientId || null,
+            p_start_date: filters.startDate?.toISOString() || null,
+            p_end_date: filters.endDate?.toISOString() || null,
+            p_offset: page * BATCH_SIZE,
+            p_limit: BATCH_SIZE,
+          });
 
         if (error) {
           throw new Error(`Erro ao buscar leads: ${error.message}`);

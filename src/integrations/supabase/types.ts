@@ -1656,6 +1656,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      count_leads_for_export: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: number
+      }
+      export_leads_batch: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_limit?: number
+          p_offset?: number
+          p_start_date?: string
+        }
+        Returns: {
+          city: string
+          country: string
+          created_at: string
+          email: string
+          first_name: string
+          last_name: string
+          page_url: string
+          phone: string
+          source: string
+          tags: string
+          traffic_type: string
+          utm_campaign: string
+          utm_content: string
+          utm_medium: string
+          utm_source: string
+        }[]
+      }
       get_ad_trend_data: {
         Args: {
           p_client_id?: string
