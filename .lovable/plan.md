@@ -1,109 +1,154 @@
 
-# Plano de Rebranding: Primia -> Launch Pocket
+# Plano: Landing Page Pública do Launch Pocket
 
-## Conceito
-O novo nome **Launch Pocket** transmite a ideia de que o cliente tem o controle total do seu lançamento no bolso - acessível a qualquer momento do smartphone.
+## Visão Geral
 
----
-
-## Alterações Necessárias
-
-### 1. Configurações de Branding (Banco de Dados)
-Atualizar os valores na tabela `app_settings`:
-- `app_name`: De "Primia - Analytics" para "Launch Pocket"
-- `app_subtitle`: De "Gestão de Leads e Vendas" para "Seu lançamento no bolso"
-
-### 2. Metadados da Página (index.html)
-Atualizar:
-- Título: "Launch Pocket - Sales Analytics"
-- Meta description
-- Open Graph title/description
-- Twitter title/description
-
-### 3. Valores Padrão do Sistema
-
-**Arquivo: `src/hooks/useBrandingSettings.ts`**
-- Alterar `DEFAULT_SETTINGS.appName` para "Launch Pocket"
-- Alterar `DEFAULT_SETTINGS.appSubtitle` para "Seu lançamento no bolso"
-
-**Arquivo: `src/components/settings/BrandingSettingsCard.tsx`**
-- Atualizar placeholder do campo de nome
-
-### 4. Edge Function de Convites
-
-**Arquivo: `supabase/functions/send-invitation/index.ts`**
-- Email de origem: De `Sales Analytics <noreply@sales.primia.ai>` para `Launch Pocket <noreply@launchpocket.app>` (ou domínio disponível)
-- Texto do email: Atualizar referências a "Sales Analytics"
-- Subject: "Você foi convidado para o Launch Pocket!"
-
-### 5. Documentação de Webhook
-
-**Arquivo: `src/pages/WebhookDocs.tsx`** (linha 215)
-- Atualizar exemplo de nome do webhook: De "Leads AnalyzeFlow" para "Leads Launch Pocket"
+Criar uma landing page pública na rota principal (`/`) para divulgação do Launch Pocket, exibida apenas para visitantes não logados. Usuários autenticados serão redirecionados automaticamente para o Dashboard.
 
 ---
 
-## Arquivos que NÃO precisam ser alterados
+## Arquitetura da Solução
 
-Os seguintes arquivos contêm referências a "Primia" relacionadas a integrações/sources de leads (não são o nome do produto):
-- `supabase/functions/leads-webhook/index.ts` - Define "primia" como fonte de leads
-- `src/components/leads/LeadsTable.tsx` - Labels de fonte "Primia - Whatsapp"
-- `src/components/leads/LeadsFilters.tsx` - Filtros por fonte
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                         FLUXO DE ACESSO                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Visitante (não logado) ──> /  ──> LandingPage                 │
+│                                      │                           │
+│                                      ├── Hero Section            │
+│                                      ├── Funcionalidades         │
+│                                      ├── Screenshots/Demo        │
+│                                      ├── Depoimentos             │
+│                                      └── Formulário de Interesse │
+│                                                                  │
+│   Usuário (logado) ────────> /  ──> Dashboard (atual)           │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-Estas referências são para classificação de leads vindos da plataforma Primia como fonte de tráfego, não o nome do sistema.
+---
+
+## Seções da Landing Page
+
+### 1. Hero Section
+- Logo do Launch Pocket (usando branding settings)
+- Título principal: "Tenha o controle do seu lançamento no bolso"
+- Subtítulo explicativo sobre a proposta de valor
+- Botão CTA: "Tenho Interesse" (scroll para formulário)
+- Imagem/mockup ilustrativo
+
+### 2. Funcionalidades/Benefícios
+Cards com ícones destacando:
+- Dashboard Multi-Plataforma (Hotmart, TMB, Eduzz)
+- Gestão de Metas Inteligente
+- Gestão de Leads Completa
+- Automações e Webhooks
+- Acesso Mobile (smartphone)
+
+### 3. Screenshots/Demonstração
+- Carrossel com capturas de tela do aplicativo
+- Ou mockups ilustrativos das principais telas
+- Animações suaves com Framer Motion
+
+### 4. Depoimentos/Cases
+- Cards com feedback de clientes (placeholders editáveis)
+- Foto, nome, cargo e empresa do depoente
+- Citação do feedback
+
+### 5. Formulário de Interesse (CTA Final)
+Campos obrigatórios:
+- Nome completo
+- E-mail
+- WhatsApp (com máscara de telefone brasileiro)
+- Instagram (@usuário)
+- Botão: "Quero conhecer o Launch Pocket"
 
 ---
 
 ## Detalhes Técnicos
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    ALTERAÇÕES DE CÓDIGO                     │
-├─────────────────────────────────────────────────────────────┤
-│  index.html                                                 │
-│    └─ title, meta tags (og:title, twitter:title, etc.)     │
-├─────────────────────────────────────────────────────────────┤
-│  src/hooks/useBrandingSettings.ts                          │
-│    └─ DEFAULT_SETTINGS.appName                              │
-│    └─ DEFAULT_SETTINGS.appSubtitle                          │
-├─────────────────────────────────────────────────────────────┤
-│  src/components/settings/BrandingSettingsCard.tsx          │
-│    └─ placeholder do input                                  │
-├─────────────────────────────────────────────────────────────┤
-│  supabase/functions/send-invitation/index.ts               │
-│    └─ from: email                                           │
-│    └─ subject                                               │
-│    └─ html body                                             │
-├─────────────────────────────────────────────────────────────┤
-│  src/pages/WebhookDocs.tsx                                 │
-│    └─ exemplo de nome de webhook                            │
-└─────────────────────────────────────────────────────────────┘
+### Banco de Dados
+Nova tabela `interest_leads` para armazenar os cadastros:
 
-┌─────────────────────────────────────────────────────────────┐
-│                    ALTERAÇÃO NO BANCO                       │
-├─────────────────────────────────────────────────────────────┤
-│  app_settings                                               │
-│    UPDATE key='app_name' SET value='Launch Pocket'         │
-│    UPDATE key='app_subtitle' SET value='Seu lançamento...' │
-└─────────────────────────────────────────────────────────────┘
+| Coluna       | Tipo         | Descrição                    |
+|--------------|--------------|------------------------------|
+| id           | uuid         | Chave primária               |
+| name         | text         | Nome completo                |
+| email        | text         | E-mail (único)               |
+| whatsapp     | text         | Telefone WhatsApp            |
+| instagram    | text         | @usuário do Instagram        |
+| created_at   | timestamptz  | Data do cadastro             |
+| utm_source   | text         | Origem do tráfego (opcional) |
+| utm_medium   | text         | Meio (opcional)              |
+| utm_campaign | text         | Campanha (opcional)          |
+
+Políticas RLS:
+- INSERT: Permitido para anônimos (visitantes)
+- SELECT/UPDATE/DELETE: Apenas para usuários master
+
+### Arquivos a Criar/Modificar
+
+**Novos arquivos:**
+- `src/pages/LandingPage.tsx` - Página principal da landing
+- `src/components/landing/HeroSection.tsx` - Seção hero
+- `src/components/landing/FeaturesSection.tsx` - Funcionalidades
+- `src/components/landing/ScreenshotsSection.tsx` - Screenshots/Demo
+- `src/components/landing/TestimonialsSection.tsx` - Depoimentos
+- `src/components/landing/InterestForm.tsx` - Formulário de interesse
+- `src/hooks/useInterestForm.ts` - Hook para submissão do formulário
+
+**Arquivos a modificar:**
+- `src/App.tsx` - Alterar rota `/` para nova lógica condicional
+- `src/components/layout/MainLayout.tsx` - Manter lógica de redirect para Dashboard
+
+### Lógica de Roteamento
+
+```typescript
+// src/App.tsx - Nova lógica da rota /
+<Route 
+  path="/" 
+  element={
+    <ConditionalHome />
+  } 
+/>
+
+// ConditionalHome verifica autenticação:
+// - Se logado: renderiza <Dashboard />
+// - Se não logado: renderiza <LandingPage />
 ```
 
+### Validação do Formulário
+Usando Zod para validação:
+- Nome: obrigatório, mínimo 3 caracteres
+- E-mail: formato válido
+- WhatsApp: formato brasileiro (11 dígitos)
+- Instagram: inicia com @ (opcional) ou apenas username
+
+### Responsividade
+- Mobile-first design
+- Breakpoints: sm (640px), md (768px), lg (1024px)
+- Navegação sticky com logo e CTA
+- Seções empilhadas verticalmente no mobile
+
+### Animações
+- Fade-in suave ao scroll (Framer Motion)
+- Transições nos cards de funcionalidades
+- Carrossel de screenshots (Embla Carousel)
+
 ---
 
-## Sobre o Logo
+## Captação de UTMs
 
-O sistema já possui a funcionalidade de upload de logo customizado nas configurações de branding. Após as alterações de código, você poderá:
-1. Acessar **Configurações > Branding & Tema**
-2. Fazer upload do novo logo do Launch Pocket (versões clara e escura)
-3. Salvar as alterações
+A landing page capturará automaticamente parâmetros UTM da URL:
+- `?utm_source=instagram&utm_medium=stories&utm_campaign=lancamento`
+- Esses valores serão salvos junto com o cadastro de interesse
 
 ---
 
-## Nota sobre Domínio de Email
+## Próximos Passos Após Implementação
 
-Para o email de convites, será necessário:
-- Ter um domínio configurado (ex: `launchpocket.app` ou similar)
-- Configurar o domínio no Resend para envio de emails
-- Atualizar a edge function com o novo endereço de email
-
-Se ainda não houver domínio, podemos manter um email genérico temporariamente.
+1. **Upload de Screenshots**: Adicionar imagens reais do app
+2. **Depoimentos Reais**: Substituir placeholders por feedbacks reais
+3. **Integração com CRM**: Opcional - enviar leads para ferramenta externa
+4. **Notificação por Email**: Opcional - alertar admin sobre novos interessados
