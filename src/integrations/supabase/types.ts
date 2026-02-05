@@ -1656,6 +1656,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_ad_trend_data: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_group_by?: string
+          p_mode?: string
+          p_start_date?: string
+          p_top_item_names?: string[]
+        }
+        Returns: Json
+      }
       get_eduzz_filter_options: {
         Args: { p_client_id?: string }
         Returns: Json
