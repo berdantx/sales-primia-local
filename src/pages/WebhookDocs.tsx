@@ -4,6 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { useClients } from '@/hooks/useClients';
+import { toast } from '@/hooks/use-toast';
 import { 
   BookOpen, 
   Webhook, 
@@ -14,13 +17,27 @@ import {
   Code,
   Users,
   Zap,
-  Settings
+  Settings,
+  Copy,
+  Building2,
+  Loader2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
+const copyToClipboard = (text: string) => {
+  navigator.clipboard.writeText(text);
+  toast({
+    title: 'URL copiada!',
+    description: 'A URL do webhook foi copiada para a área de transferência.',
+  });
+};
+
 function WebhookDocs() {
+  const { data: clients, isLoading: isLoadingClients } = useClients();
+  const activeClients = clients?.filter(c => c.is_active) || [];
+
   return (
     <MainLayout>
       <div className="space-y-6 max-w-4xl mx-auto">
@@ -118,6 +135,74 @@ function WebhookDocs() {
                 Você pode ver a URL completa na página de <strong>Clientes</strong> clicando no ícone de webhook.
               </AlertDescription>
             </Alert>
+          </CardContent>
+        </Card>
+
+        {/* Client Webhook URLs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              URLs de Webhook por Cliente
+            </CardTitle>
+            <CardDescription>
+              Copie a URL de webhook específica de cada cliente para configurar nas plataformas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingClients ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : activeClients.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                Nenhum cliente ativo encontrado.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {activeClients.map((client) => {
+                  const leadsUrl = `${SUPABASE_URL}/functions/v1/leads-webhook/${client.slug}`;
+                  const hotmartUrl = `${SUPABASE_URL}/functions/v1/hotmart-webhook?client_id=${client.id}`;
+                  const eduzzUrl = `${SUPABASE_URL}/functions/v1/eduzz-webhook?client_id=${client.id}`;
+                  const tmbUrl = `${SUPABASE_URL}/functions/v1/tmb-webhook?client_id=${client.id}`;
+
+                  return (
+                    <div key={client.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{client.name}</span>
+                        <Badge variant="outline">{client.slug}</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        {[
+                          { label: 'Leads (Active Campaign)', url: leadsUrl },
+                          { label: 'Hotmart', url: hotmartUrl },
+                          { label: 'Eduzz', url: eduzzUrl },
+                          { label: 'TMB', url: tmbUrl },
+                        ].map(({ label, url }) => (
+                          <div key={label} className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs whitespace-nowrap w-40 justify-center shrink-0">
+                              {label}
+                            </Badge>
+                            <code className="text-xs bg-muted px-2 py-1.5 rounded flex-1 truncate" title={url}>
+                              {url}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0"
+                              onClick={() => copyToClipboard(url)}
+                              title="Copiar URL"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
