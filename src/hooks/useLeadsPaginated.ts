@@ -45,72 +45,33 @@ export function useLeadsPaginated({
   return useQuery({
     queryKey: ['leads-paginated', user?.id, filterKey],
     queryFn: async () => {
-      let query = supabase
-        .from('leads')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false });
+      // Use optimized RPC that handles permissions efficiently
+      const { data, error } = await supabase.rpc('get_leads_paginated', {
+        p_client_id: filters?.clientId || null,
+        p_start_date: filters?.startDate?.toISOString() || null,
+        p_end_date: filters?.endDate?.toISOString() || null,
+        p_source: filters?.source || null,
+        p_utm_source: filters?.utmSource || null,
+        p_utm_medium: filters?.utmMedium || null,
+        p_utm_campaign: filters?.utmCampaign || null,
+        p_utm_content: filters?.utmContent || null,
+        p_utm_term: filters?.utmTerm || null,
+        p_country: filters?.country || null,
+        p_page_url: filters?.pageUrl || null,
+        p_search: filters?.search || null,
+        p_show_test_leads: filters?.showTestLeads !== false,
+        p_traffic_type: filters?.trafficType || null,
+        p_offset: page * pageSize,
+        p_limit: pageSize,
+      });
 
-      // Apply filters
-      if (filters?.clientId) {
-        query = query.eq('client_id', filters.clientId);
-      }
-      if (filters?.startDate) {
-        query = query.gte('created_at', filters.startDate.toISOString());
-      }
-      if (filters?.endDate) {
-        query = query.lte('created_at', filters.endDate.toISOString());
-      }
-      if (filters?.source && filters.source !== 'all') {
-        query = query.eq('source', filters.source);
-      }
-      if (filters?.utmSource && filters.utmSource !== 'all') {
-        query = query.eq('utm_source', filters.utmSource);
-      }
-      if (filters?.utmMedium && filters.utmMedium !== 'all') {
-        query = query.eq('utm_medium', filters.utmMedium);
-      }
-      if (filters?.utmCampaign && filters.utmCampaign !== 'all') {
-        query = query.eq('utm_campaign', filters.utmCampaign);
-      }
-      if (filters?.utmContent && filters.utmContent !== 'all') {
-        query = query.eq('utm_content', filters.utmContent);
-      }
-      if (filters?.utmTerm && filters.utmTerm !== 'all') {
-        query = query.eq('utm_term', filters.utmTerm);
-      }
-      if (filters?.country && filters.country !== 'all') {
-        query = query.eq('country', filters.country);
-      }
-      if (filters?.pageUrl && filters.pageUrl !== 'all') {
-        query = query.ilike('page_url', `%${filters.pageUrl}%`);
-      }
-      if (filters?.search) {
-        query = query.or(
-          `email.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`
-        );
-      }
-
-      // Filter test leads (containing 'teste' or 'test' in tags)
-      if (filters?.showTestLeads === false) {
-        query = query.or('tags.is.null,tags.not.ilike.%test%');
-      }
-
-      // Filter by traffic type (using filter since column is generated and may not be in types)
-      if (filters?.trafficType) {
-        query = query.filter('traffic_type', 'eq', filters.trafficType);
-      }
-
-      // Apply pagination
-      const from = page * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
-
-      const { data, count, error } = await query;
       if (error) throw error;
 
-      // Post-filter for qualified leads (needs to be done client-side)
-      let filteredData = data as Lead[];
+      const result = data as unknown as { leads: Lead[]; totalCount: number };
+      let filteredData = result.leads || [];
+      const totalCount = result.totalCount || 0;
       
+      // Post-filter for qualified leads (needs to be done client-side)
       if (filters?.showQualified === 'qualified') {
         filteredData = filteredData.filter(lead => 
           lead.utm_source && lead.utm_medium && lead.utm_campaign
@@ -123,10 +84,10 @@ export function useLeadsPaginated({
 
       return {
         leads: filteredData,
-        totalCount: count || 0,
+        totalCount,
         page,
         pageSize,
-        totalPages: Math.ceil((count || 0) / pageSize),
+        totalPages: Math.ceil(totalCount / pageSize),
       };
     },
     enabled: !!user,
