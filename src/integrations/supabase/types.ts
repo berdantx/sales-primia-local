@@ -1742,6 +1742,27 @@ export type Database = {
         }
         Returns: Json
       }
+      get_leads_paginated: {
+        Args: {
+          p_client_id?: string
+          p_country?: string
+          p_end_date?: string
+          p_limit?: number
+          p_offset?: number
+          p_page_url?: string
+          p_search?: string
+          p_show_test_leads?: boolean
+          p_source?: string
+          p_start_date?: string
+          p_traffic_type?: string
+          p_utm_campaign?: string
+          p_utm_content?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_utm_term?: string
+        }
+        Returns: Json
+      }
       get_sales_breakdown_by_type: {
         Args: {
           p_client_id?: string
