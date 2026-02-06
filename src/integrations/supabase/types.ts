@@ -1656,40 +1656,95 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      count_leads_for_export: {
-        Args: {
-          p_client_id?: string
-          p_end_date?: string
-          p_start_date?: string
-        }
-        Returns: number
-      }
-      export_leads_batch: {
-        Args: {
-          p_client_id?: string
-          p_end_date?: string
-          p_limit?: number
-          p_offset?: number
-          p_start_date?: string
-        }
-        Returns: {
-          city: string
-          country: string
-          created_at: string
-          email: string
-          first_name: string
-          last_name: string
-          page_url: string
-          phone: string
-          source: string
-          tags: string
-          traffic_type: string
-          utm_campaign: string
-          utm_content: string
-          utm_medium: string
-          utm_source: string
-        }[]
-      }
+      count_leads_for_export:
+        | {
+            Args: {
+              p_client_id?: string
+              p_end_date?: string
+              p_start_date?: string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_client_id?: string
+              p_end_date?: string
+              p_start_date?: string
+            }
+            Returns: number
+          }
+      export_leads_batch:
+        | {
+            Args: {
+              p_client_id?: string
+              p_end_date?: string
+              p_limit?: number
+              p_offset?: number
+              p_start_date?: string
+            }
+            Returns: {
+              city: string | null
+              client_id: string | null
+              country: string | null
+              country_code: string | null
+              created_at: string | null
+              customer_account: string | null
+              email: string | null
+              external_id: string | null
+              first_name: string | null
+              id: string
+              ip_address: string | null
+              last_name: string | null
+              organization: string | null
+              page_url: string | null
+              phone: string | null
+              raw_payload: Json | null
+              region: string | null
+              series_id: string | null
+              source: string | null
+              tags: string | null
+              traffic_type: string | null
+              updated_at: string | null
+              utm_campaign: string | null
+              utm_content: string | null
+              utm_id: string | null
+              utm_medium: string | null
+              utm_source: string | null
+              utm_term: string | null
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "leads"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+        | {
+            Args: {
+              p_client_id?: string
+              p_end_date?: string
+              p_limit?: number
+              p_offset?: number
+              p_start_date?: string
+            }
+            Returns: {
+              city: string
+              country: string
+              created_at: string
+              email: string
+              first_name: string
+              last_name: string
+              page_url: string
+              phone: string
+              source: string
+              tags: string
+              traffic_type: string
+              utm_campaign: string
+              utm_content: string
+              utm_medium: string
+              utm_source: string
+            }[]
+          }
       get_ad_trend_data: {
         Args: {
           p_client_id?: string
