@@ -51,6 +51,11 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+  // Producer-to-client routing rules
+  const PRODUCER_CLIENT_MAP: Record<string, string> = {
+    "Camila Vieira 2": "b48b649d-1b1b-451d-8eb5-1d8cd38f422c", // Camila Vieira - 2026
+  };
+
   // Validate client_id if provided
   if (webhookClientId) {
     const { data: clientExists } = await supabase
@@ -102,7 +107,15 @@ Deno.serve(async (req) => {
   const statusPedido = body.status_pedido || "";
   const eventType = "TMB_ORDER_" + (statusPedido.toUpperCase().replace(/\s+/g, "_") || "UNKNOWN");
 
-  console.log(`Processing TMB order ${orderId} with status: ${statusPedido}`);
+  // Override client_id based on producer name (lancamento field)
+  const producerName = body.lancamento || "";
+  let finalClientId = webhookClientId;
+  if (producerName && PRODUCER_CLIENT_MAP[producerName]) {
+    finalClientId = PRODUCER_CLIENT_MAP[producerName];
+    console.log(`Routing producer "${producerName}" to client ${finalClientId}`);
+  }
+
+  console.log(`Processing TMB order ${orderId} with status: ${statusPedido}, client: ${finalClientId}`);
 
   // Only process "Efetivado" orders
   if (statusPedido !== "Efetivado") {
@@ -111,7 +124,7 @@ Deno.serve(async (req) => {
     // Log skipped event
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
-      client_id: webhookClientId || null,
+      client_id: finalClientId || null,
       event_type: eventType,
       transaction_code: orderId,
       status: "skipped",
@@ -136,7 +149,7 @@ Deno.serve(async (req) => {
     // Map TMB fields to tmb_transactions table
     const transactionData = {
       user_id: webhookUserId,
-      client_id: webhookClientId || null,
+      client_id: finalClientId || null,
       order_id: orderId,
       product: body.lancamento || null,
       buyer_name: body.cliente || null,
@@ -176,7 +189,7 @@ Deno.serve(async (req) => {
         // Log as duplicate (not error)
         await supabase.from("webhook_logs").insert({
           user_id: webhookUserId,
-          client_id: webhookClientId || null,
+           client_id: finalClientId || null,
           event_type: eventType,
           transaction_code: orderId,
           status: "duplicate",
@@ -202,7 +215,7 @@ Deno.serve(async (req) => {
       // Log real error
       await supabase.from("webhook_logs").insert({
         user_id: webhookUserId,
-        client_id: webhookClientId || null,
+        client_id: finalClientId || null,
         event_type: eventType,
         transaction_code: orderId,
         status: "error",
@@ -227,7 +240,7 @@ Deno.serve(async (req) => {
     // Log success
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
-      client_id: webhookClientId || null,
+      client_id: finalClientId || null,
       event_type: eventType,
       transaction_code: orderId,
       status: "processed",
@@ -251,7 +264,7 @@ Deno.serve(async (req) => {
     // Log error
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
-      client_id: webhookClientId || null,
+      client_id: finalClientId || null,
       event_type: eventType,
       transaction_code: orderId,
       status: "error",
