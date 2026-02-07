@@ -239,7 +239,7 @@ function TmbTransactions() {
     setCurrentPage(1);
   };
   
-  const SortIcon = ({ column }: { column: 'date' | 'value' | 'product' }) => {
+  const renderSortIcon = (column: 'date' | 'value' | 'product') => {
     if (sortColumn !== column) return <ArrowUpDown className="h-3 w-3 opacity-50" />;
     return sortOrder === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />;
   };
@@ -533,7 +533,7 @@ function TmbTransactions() {
                   >
                     <div className="flex items-center gap-1">
                       Registro (BRT)
-                      <SortIcon column="date" />
+                      {renderSortIcon('date')}
                     </div>
                   </TableHead>
                   <TableHead className="min-w-[100px]">ID Pedido</TableHead>
@@ -543,7 +543,7 @@ function TmbTransactions() {
                   >
                     <div className="flex items-center gap-1">
                       Produto
-                      <SortIcon column="product" />
+                      {renderSortIcon('product')}
                     </div>
                   </TableHead>
                   <TableHead className="min-w-[150px]">Cliente</TableHead>
@@ -553,7 +553,7 @@ function TmbTransactions() {
                   >
                     <div className="flex items-center gap-1 justify-end">
                       Valor
-                      <SortIcon column="value" />
+                      {renderSortIcon('value')}
                     </div>
                   </TableHead>
                   <TableHead className="hidden lg:table-cell">UTM Source</TableHead>
