@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useFilter } from '@/contexts/FilterContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useImportTransactions } from '@/hooks/useImportTransactions';
 import { supabase } from '@/integrations/supabase/client';
 import { parseFile, HotmartTransaction, ParseError } from '@/lib/parsers/hotmartParser';
 import { parseTmbFile, TmbTransaction, TmbParseError } from '@/lib/parsers/tmbParser';
@@ -29,8 +30,9 @@ export default function UploadPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { clientId, setClientId } = useFilter();
+  const { clientId } = useFilter();
   const { isMaster } = useUserRole();
+  const { progress: importProgress, importHotmart, importTmb, importEduzz } = useImportTransactions();
 
   const [step, setStep] = useState<UploadStep>('platform');
   const [platform, setPlatform] = useState<UploadPlatform>(null);
@@ -51,8 +53,7 @@ export default function UploadPage() {
   // Shared state
   const [duplicates, setDuplicates] = useState<string[]>([]);
   const [totalRows, setTotalRows] = useState(0);
-  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
-  const [importId, setImportId] = useState<string | null>(null);
+  const [importedCount, setImportedCount] = useState(0);
 
   const handlePlatformSelect = (selectedPlatform: UploadPlatform) => {
     setPlatform(selectedPlatform);
@@ -123,7 +124,6 @@ export default function UploadPage() {
     if (transactionCount === 0) return;
 
     setStep('importing');
-    setImportProgress({ current: 0, total: transactionCount });
 
     try {
       // Create import record
@@ -142,57 +142,12 @@ export default function UploadPage() {
         .single();
 
       if (importError) throw importError;
-      setImportId(importRecord.id);
 
-      const batchSize = 50;
-      let importedCount = 0;
-      let duplicateCount = 0;
-      let errorCount = 0;
+      let result = { importedCount: 0, duplicateCount: 0, errorCount: 0 };
 
       if (platform === 'hotmart') {
-        // Import Hotmart transactions
-        for (let i = 0; i < hotmartTransactions.length; i += batchSize) {
-          const batch = hotmartTransactions.slice(i, i + batchSize);
-          
-          const transactionRecords = batch.map(t => ({
-            user_id: user.id,
-            import_id: importRecord.id,
-            transaction_code: t.transaction_code,
-            product: t.product,
-            currency: t.currency,
-            country: t.country,
-            gross_value_with_taxes: t.gross_value_with_taxes,
-            sck_code: t.sck_code,
-            payment_method: t.payment_method,
-            total_installments: t.total_installments,
-            billing_type: t.billing_type,
-            computed_value: t.computed_value,
-            projected_value: t.projected_value,
-            buyer_name: t.buyer_name,
-            buyer_email: t.buyer_email,
-            purchase_date: t.purchase_date?.toISOString() || null,
-            source: 'hotmart',
-            client_id: clientId,
-          }));
-
-          const { error: insertError } = await supabase
-            .from('transactions')
-            .upsert(transactionRecords, { 
-              onConflict: 'user_id,transaction_code',
-              ignoreDuplicates: true 
-            });
-
-          if (insertError) {
-            console.error('Batch insert error:', insertError);
-            errorCount += batch.length;
-          } else {
-            importedCount += batch.length;
-          }
-
-          setImportProgress({ current: Math.min(i + batchSize, hotmartTransactions.length), total: hotmartTransactions.length });
-        }
-
-        // Log errors
+        result = await importHotmart(hotmartTransactions, user.id, importRecord.id, clientId);
+        // Log parse errors
         if (hotmartErrors.length > 0) {
           const errorRecords = hotmartErrors.slice(0, 100).map(e => ({
             import_id: importRecord.id,
@@ -202,49 +157,10 @@ export default function UploadPage() {
             raw_data: e.rawData ? JSON.parse(JSON.stringify(e.rawData)) : null,
           }));
           await supabase.from('import_errors').insert(errorRecords);
-          errorCount += hotmartErrors.length;
+          result.errorCount += hotmartErrors.length;
         }
       } else if (platform === 'tmb') {
-        // Import TMB transactions
-        for (let i = 0; i < tmbTransactions.length; i += batchSize) {
-          const batch = tmbTransactions.slice(i, i + batchSize);
-          
-          const transactionRecords = batch.map(t => ({
-            user_id: user.id,
-            import_id: importRecord.id,
-            order_id: t.order_id,
-            product: t.product,
-            buyer_name: t.buyer_name,
-            buyer_email: t.buyer_email,
-            ticket_value: t.ticket_value,
-            currency: 'BRL',
-            effective_date: t.effective_date?.toISOString() || null,
-            utm_source: t.utm_source || null,
-            utm_medium: t.utm_medium || null,
-            utm_campaign: t.utm_campaign || null,
-            utm_content: t.utm_content || null,
-            source: 'tmb',
-            client_id: clientId,
-          }));
-
-          const { error: insertError } = await supabase
-            .from('tmb_transactions')
-            .upsert(transactionRecords, { 
-              onConflict: 'user_id,order_id',
-              ignoreDuplicates: true 
-            });
-
-          if (insertError) {
-            console.error('Batch insert error:', insertError);
-            errorCount += batch.length;
-          } else {
-            importedCount += batch.length;
-          }
-
-          setImportProgress({ current: Math.min(i + batchSize, tmbTransactions.length), total: tmbTransactions.length });
-        }
-
-        // Log errors
+        result = await importTmb(tmbTransactions, user.id, importRecord.id, clientId);
         if (tmbErrors.length > 0) {
           const errorRecords = tmbErrors.slice(0, 100).map(e => ({
             import_id: importRecord.id,
@@ -254,52 +170,10 @@ export default function UploadPage() {
             raw_data: e.rawData ? JSON.parse(JSON.stringify(e.rawData)) : null,
           }));
           await supabase.from('import_errors').insert(errorRecords);
-          errorCount += tmbErrors.length;
+          result.errorCount += tmbErrors.length;
         }
       } else if (platform === 'eduzz') {
-        // Import Eduzz transactions
-        for (let i = 0; i < eduzzTransactions.length; i += batchSize) {
-          const batch = eduzzTransactions.slice(i, i + batchSize);
-          
-          const transactionRecords = batch.map(t => ({
-            user_id: user.id,
-            import_id: importRecord.id,
-            sale_id: t.sale_id,
-            invoice_code: t.invoice_code || null,
-            product: t.product || null,
-            product_id: t.product_id || null,
-            buyer_name: t.buyer_name || null,
-            buyer_email: t.buyer_email || null,
-            buyer_phone: t.buyer_phone || null,
-            sale_value: t.sale_value || 0,
-            currency: 'BRL',
-            sale_date: t.sale_date?.toISOString() || null,
-            utm_source: t.utm_source || null,
-            utm_medium: t.utm_medium || null,
-            utm_campaign: t.utm_campaign || null,
-            utm_content: t.utm_content || null,
-            source: 'eduzz',
-            client_id: clientId,
-          }));
-
-          const { error: insertError } = await supabase
-            .from('eduzz_transactions')
-            .upsert(transactionRecords, { 
-              onConflict: 'user_id,sale_id',
-              ignoreDuplicates: true 
-            });
-
-          if (insertError) {
-            console.error('Batch insert error:', insertError);
-            errorCount += batch.length;
-          } else {
-            importedCount += batch.length;
-          }
-
-          setImportProgress({ current: Math.min(i + batchSize, eduzzTransactions.length), total: eduzzTransactions.length });
-        }
-
-        // Log errors
+        result = await importEduzz(eduzzTransactions, user.id, importRecord.id, clientId);
         if (eduzzErrors.length > 0) {
           const errorRecords = eduzzErrors.slice(0, 100).map(e => ({
             import_id: importRecord.id,
@@ -309,7 +183,7 @@ export default function UploadPage() {
             raw_data: e.rawData ? JSON.parse(JSON.stringify(e.rawData)) : null,
           }));
           await supabase.from('import_errors').insert(errorRecords);
-          errorCount += eduzzErrors.length;
+          result.errorCount += eduzzErrors.length;
         }
       }
 
@@ -318,17 +192,18 @@ export default function UploadPage() {
         .from('imports')
         .update({
           status: 'completed',
-          imported_rows: importedCount,
-          duplicate_rows: duplicates.length,
-          error_rows: errorCount,
+          imported_rows: result.importedCount,
+          duplicate_rows: result.duplicateCount,
+          error_rows: result.errorCount,
           completed_at: new Date().toISOString(),
         })
         .eq('id', importRecord.id);
 
+      setImportedCount(result.importedCount);
       setStep('complete');
       toast({
         title: 'Importação concluída!',
-        description: `${importedCount} transações importadas com sucesso.`,
+        description: `${result.importedCount} transações importadas com sucesso.${result.duplicateCount > 0 ? ` ${result.duplicateCount} duplicatas ignoradas.` : ''}${result.errorCount > 0 ? ` ${result.errorCount} erros.` : ''}`,
       });
     } catch (error) {
       toast({
@@ -339,12 +214,6 @@ export default function UploadPage() {
       setStep('preview');
     }
   };
-
-  const transactionCount = platform === 'hotmart' 
-    ? hotmartTransactions.length 
-    : platform === 'tmb'
-    ? tmbTransactions.length
-    : eduzzTransactions.length;
 
   const getPlatformIcon = () => {
     if (platform === 'hotmart') return <FileSpreadsheet className="h-4 w-4" />;
@@ -551,7 +420,7 @@ export default function UploadPage() {
                     <CheckCircle2 className="h-16 w-16 text-success" />
                   </motion.div>
                   <h3 className="text-xl font-semibold mb-2">
-                    {transactionCount} transações importadas!
+                    {importedCount} transações importadas!
                   </h3>
                   <p className="text-muted-foreground mb-6">
                     Você pode ver os dados no Dashboard ou na página de Transações.
