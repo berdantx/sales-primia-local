@@ -32,6 +32,7 @@ import {
   UserPlus,
   BookOpen,
   Filter,
+  Globe,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -86,6 +87,7 @@ const menuGroups: MenuGroup[] = [
       { title: 'Clientes', url: '/clients', icon: Building2, roles: ['master'] },
       { title: 'Usuários', url: '/users', icon: Users, roles: ['master'] },
       { title: 'Configurações', url: '/settings', icon: Settings, roles: ['master', 'admin'] },
+      { title: 'Landing Page', url: '/landing', icon: Globe, roles: ['master', 'admin'] },
     ]
   },
 ];
@@ -124,6 +126,21 @@ export function AppSidebar() {
                         isActive={isActive(item.url)}
                         tooltip={item.title}
                       >
+                      {item.url === '/landing' ? (
+                        <a
+                          href="/landing"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.open('/landing', '_blank');
+                          }}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          <span>{item.title}</span>
+                        </a>
+                      ) : (
                         <NavLink
                           to={item.url}
                           className="flex items-center gap-3"
@@ -132,6 +149,7 @@ export function AppSidebar() {
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
                         </NavLink>
+                      )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
