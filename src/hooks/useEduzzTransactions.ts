@@ -13,6 +13,8 @@ export interface EduzzTransaction {
   buyer_phone: string | null;
   sale_value: number;
   currency: string;
+  original_currency: string | null;
+  original_value: number | null;
   sale_date: string | null;
   utm_source: string | null;
   utm_medium: string | null;
