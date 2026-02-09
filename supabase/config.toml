@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.export-leads-background]
 verify_jwt = false
+
+[functions.pwa-manifest]
+verify_jwt = false

@@ -19,33 +19,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
-      manifest: {
-        name: "Launch Pocket",
-        short_name: "Launch Pocket",
-        description: "Seu lançamento no bolso",
-        theme_color: "#00B37E",
-        background_color: "#0A0A0A",
-        display: "standalone",
-        start_url: "/",
-        icons: [
-          {
-            src: "/pwa-192x192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "/pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-          {
-            src: "/pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "any maskable",
-          },
-        ],
-      },
+      manifest: false, // Using dynamic manifest from edge function
     }),
   ].filter(Boolean),
   resolve: {
