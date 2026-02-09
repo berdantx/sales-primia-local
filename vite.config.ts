@@ -54,4 +54,7 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ["react", "react-dom"],
   },
+  build: {
+    chunkSizeWarningLimit: 4000,
+  },
 }));
