@@ -1713,23 +1713,10 @@ export type Database = {
         }
         Returns: Json
       }
-      get_conversion_summary:
-        | {
-            Args: {
-              p_client_id: string
-              p_end_date: string
-              p_start_date: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_client_id?: string
-              p_end_date?: string
-              p_start_date?: string
-            }
-            Returns: Json
-          }
+      get_conversion_summary: {
+        Args: { p_client_id: string; p_end_date: string; p_start_date: string }
+        Returns: Json
+      }
       get_eduzz_filter_options: {
         Args: { p_client_id?: string }
         Returns: Json
@@ -1772,27 +1759,16 @@ export type Database = {
         }
         Returns: Json
       }
-      get_landing_page_stats:
-        | {
-            Args: {
-              p_client_id: string
-              p_end_date: string
-              p_limit?: number
-              p_min_leads?: number
-              p_start_date: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_client_id?: string
-              p_end_date?: string
-              p_limit?: number
-              p_min_leads?: number
-              p_start_date?: string
-            }
-            Returns: Json
-          }
+      get_landing_page_stats: {
+        Args: {
+          p_client_id: string
+          p_end_date: string
+          p_limit?: number
+          p_min_leads?: number
+          p_start_date: string
+        }
+        Returns: Json
+      }
       get_lead_stats: {
         Args: {
           p_client_id: string
