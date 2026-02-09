@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
-import { useLandingPageConversion } from '@/hooks/useLandingPageConversion';
-import { useLeadsLight } from '@/hooks/useLeadsLight';
+import { useConversionSummaryRpc } from '@/hooks/useConversionSummaryRpc';
 import { useFunnelEvolutionRpc } from '@/hooks/useFunnelEvolutionRpc';
 import { ConversionFunnelCard } from '@/components/leads/ConversionFunnelCard';
 import { FunnelEvolutionChart } from '@/components/leads/FunnelEvolutionChart';
@@ -56,39 +55,31 @@ function LeadsFunnel() {
     return clients.find(c => c.id === clientId);
   }, [clientId, clients]);
 
-  // Lightweight leads fetch (only fields needed for conversion matching)
-  const { data: lightLeads, isLoading: isLoadingLeads } = useLeadsLight(isReady ? {
-    clientId,
-    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
-    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
-  } : undefined);
+  const startDate = dateRange?.from ? startOfDay(dateRange.from) : undefined;
+  const endDate = dateRange?.to ? endOfDay(dateRange.to) : undefined;
 
-  // Conversion tracking using lightweight leads
-  const { conversionStats, totalConversion, isLoading: isLoadingConversion } = useLandingPageConversion({
-    clientId,
-    leads: (lightLeads || []) as any,
-    startDate: dateRange?.from,
-    endDate: dateRange?.to,
+  // All data via RPCs - no client-side processing
+  const { data: conversionData, isLoading: isLoadingConversion } = useConversionSummaryRpc({
+    clientId: isReady ? clientId : undefined,
+    startDate,
+    endDate,
   });
 
-  // Funnel evolution via RPC (no client-side processing)
   const { data: funnelEvolutionData = [], isLoading: isLoadingFunnel } = useFunnelEvolutionRpc({
     clientId,
-    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
-    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
+    startDate,
+    endDate,
     groupBy: funnelGroupBy,
   });
 
-  // Landing page stats via RPC
   const { data: landingPageData, isLoading: isLoadingPages } = useLandingPageStatsRpc({
     clientId,
-    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
-    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
+    startDate,
+    endDate,
     minLeads: showAllPages ? 0 : 5,
     limit: 20,
   });
 
-  // Top ads by conversion via RPC
   const { data: conversionAds, isLoading: isLoadingConversionAds } = useTopAdsByConversion({
     clientId,
     startDate: dateRange?.from,
@@ -101,9 +92,13 @@ function LeadsFunnel() {
     return `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`;
   }, [dateRange]);
 
-  const isInitialLoading = !isReady || (isLoadingLeads && !lightLeads);
+  const tc = conversionData || {
+    totalLeads: 0, qualifiedLeads: 0, convertedLeads: 0,
+    totalRevenue: 0, conversionRate: 0, qualificationRate: 0,
+    qualifiedConversionRate: 0, averageTicket: 0, pageConversions: [],
+  };
 
-  if (isInitialLoading) {
+  if (!isReady) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-[60vh]">
@@ -170,7 +165,7 @@ function LeadsFunnel() {
         >
           <ColoredKPICard
             title="Total de Leads"
-            value={totalConversion.totalLeads.toString()}
+            value={tc.totalLeads.toString()}
             subtitle="leads únicos"
             icon={Users}
             variant="blue"
@@ -178,8 +173,8 @@ function LeadsFunnel() {
           />
           <ColoredKPICard
             title="Leads Qualificados"
-            value={totalConversion.qualifiedLeads.toString()}
-            subtitle={`${totalConversion.qualificationRate.toFixed(1)}% do total`}
+            value={tc.qualifiedLeads.toString()}
+            subtitle={`${Number(tc.qualificationRate).toFixed(1)}% do total`}
             icon={Target}
             variant="purple"
             delay={1}
@@ -192,28 +187,28 @@ function LeadsFunnel() {
           />
           <ColoredKPICard
             title="Taxa de Conversão"
-            value={`${totalConversion.conversionRate.toFixed(2)}%`}
+            value={`${Number(tc.conversionRate).toFixed(2)}%`}
             subtitle="leads convertidos"
             icon={TrendingUp}
             variant="green"
             delay={2}
             tooltipContent={
               <div className="text-xs space-y-1">
-                <p><strong>{totalConversion.totalConverted}</strong> de {totalConversion.totalLeads} leads únicos</p>
+                <p><strong>{tc.convertedLeads}</strong> de {tc.totalLeads} leads únicos</p>
                 <p className="text-muted-foreground">Matching por email ou telefone</p>
               </div>
             }
           />
           <ColoredKPICard
             title="Conversão Qualificados"
-            value={`${totalConversion.qualifiedConversionRate.toFixed(2)}%`}
+            value={`${Number(tc.qualifiedConversionRate).toFixed(2)}%`}
             subtitle="entre qualificados"
             icon={Percent}
             variant="cyan"
             delay={3}
             tooltipContent={
               <div className="text-xs space-y-1">
-                <p><strong>{totalConversion.totalConverted}</strong> convertidos de {totalConversion.qualifiedLeads} qualificados</p>
+                <p><strong>{tc.convertedLeads}</strong> convertidos de {tc.qualifiedLeads} qualificados</p>
               </div>
             }
           />
@@ -228,7 +223,7 @@ function LeadsFunnel() {
         >
           <ColoredKPICard
             title="Leads Convertidos"
-            value={totalConversion.totalConverted.toString()}
+            value={tc.convertedLeads.toString()}
             subtitle="com compra confirmada"
             icon={ShoppingCart}
             variant="cyan"
@@ -236,7 +231,7 @@ function LeadsFunnel() {
           />
           <ColoredKPICard
             title="Receita Atribuída"
-            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(totalConversion.totalRevenue)}
+            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(tc.totalRevenue)}
             subtitle="vendas de leads"
             icon={DollarSign}
             variant="yellow"
@@ -244,7 +239,7 @@ function LeadsFunnel() {
           />
           <ColoredKPICard
             title="Ticket Médio"
-            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(totalConversion.averageTicket)}
+            value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(tc.averageTicket)}
             subtitle="por lead convertido"
             icon={BarChart3}
             variant="orange"
@@ -261,11 +256,21 @@ function LeadsFunnel() {
             transition={{ delay: 0.2 }}
           >
             <ConversionFunnelCard
-              totalLeads={totalConversion.totalLeads}
-              qualifiedLeads={totalConversion.qualifiedLeads}
-              convertedLeads={totalConversion.totalConverted}
-              totalRevenue={totalConversion.totalRevenue}
-              topConvertingPages={conversionStats}
+              totalLeads={tc.totalLeads}
+              qualifiedLeads={tc.qualifiedLeads}
+              convertedLeads={tc.convertedLeads}
+              totalRevenue={tc.totalRevenue}
+              topConvertingPages={tc.pageConversions?.map(p => ({
+                normalizedUrl: p.normalizedUrl,
+                displayName: p.displayName,
+                totalLeads: p.totalLeads,
+                uniqueEmails: p.totalLeads,
+                convertedLeads: p.convertedLeads,
+                conversionRate: p.conversionRate,
+                totalRevenue: p.totalRevenue,
+                averageTicket: p.averageTicket,
+                currency: 'BRL',
+              })) || []}
               isLoading={isLoadingConversion}
               clientName={selectedClient?.name}
               dateRange={dateRangeLabel}
@@ -320,7 +325,17 @@ function LeadsFunnel() {
               trendPercentage: 0,
               leadsByDay: {},
             })) || []}
-            conversionStats={conversionStats}
+            conversionStats={tc.pageConversions?.map(p => ({
+              normalizedUrl: p.normalizedUrl,
+              displayName: p.displayName,
+              totalLeads: p.totalLeads,
+              uniqueEmails: p.totalLeads,
+              convertedLeads: p.convertedLeads,
+              conversionRate: p.conversionRate,
+              totalRevenue: p.totalRevenue,
+              averageTicket: p.averageTicket,
+              currency: 'BRL',
+            })) || []}
             isLoading={isLoadingConversion || isLoadingPages}
             showAllPages={showAllPages}
             hiddenPagesCount={landingPageData?.hiddenPages || 0}
