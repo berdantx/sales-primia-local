@@ -1,46 +1,83 @@
 
 
-## Configuracao do Icone PWA nas Settings
+## Ranking de Anuncios por Conversao (Leads que Compraram)
 
 ### O que sera feito
-Adicionar uma secao na pagina de Branding (Settings) para que usuarios master possam fazer upload de um icone personalizado para o PWA. O icone enviado sera salvo no storage e registrado no `app_settings`, e o manifest PWA sera atualizado dinamicamente.
+Criar um novo ranking que mostra **quais anuncios/campanhas trouxeram mais leads que efetivamente compraram**. Diferente do Top 5 atual (que conta apenas leads), este novo ranking cruza os emails/telefones dos leads com as transacoes (Hotmart, Eduzz, TMB) para identificar conversoes reais.
 
-### Como funciona
+### Onde aparece
+- Nova aba/secao na pagina **Funil de Conversao** (`/leads/funnel`), abaixo do funil existente
+- Um card chamado **"Top Criativos por Conversao"** com toggle para alternar entre Anuncios (utm_content) e Campanhas (utm_campaign)
 
-1. **Nova secao no BrandingSettingsCard**: Um campo de upload de imagem para o "Icone do App (PWA)" seguindo o mesmo padrao visual dos uploads de logo existentes.
+### O que o ranking mostra (para cada anuncio/campanha)
+- Nome do anuncio ou campanha
+- Quantidade de leads totais trazidos
+- Quantidade de leads que compraram (convertidos)
+- Taxa de conversao (%)
+- Receita total gerada
+- Ticket medio
 
-2. **Upload e armazenamento**: A imagem sera enviada para o bucket `branding` no storage (mesmo bucket ja usado para logos), com o nome `pwa-icon-{timestamp}.png`.
+### Como funciona tecnicamente
 
-3. **Nova chave em `app_settings`**: `pwa_icon_url` armazenara a URL publica do icone enviado.
+**Nova funcao RPC no banco de dados**: `get_top_ads_by_conversion`
+- Recebe: `p_client_id`, `p_start_date`, `p_end_date`, `p_mode` (ads/campaigns), `p_limit`
+- Agrupa leads por utm_content ou utm_campaign
+- Cruza emails dos leads com emails de compradores nas 3 tabelas de transacoes (transactions, eduzz_transactions, tmb_transactions)
+- Retorna ranking ordenado por numero de conversoes (ou receita)
+- Usa SECURITY DEFINER com verificacao de acesso unica (mesmo padrao das RPCs existentes)
 
-4. **Manifest dinamico**: Em vez do manifest estatico no `vite.config.ts`, sera criado um arquivo `public/manifest.json` gerado/atualizado em runtime. Um hook ou script no `index.html` buscara a URL do icone das settings e atualizara as referencias.
+**Novo hook**: `src/hooks/useTopAdsByConversion.ts`
+- Chama a RPC `get_top_ads_by_conversion`
+- Retorna dados formatados para o componente
 
-5. **Abordagem simplificada**: Como o manifest PWA e definido em build time no Vite, a solucao mais pratica sera:
-   - Permitir o upload do icone nas settings
-   - Salvar a URL no `app_settings`
-   - Atualizar os meta tags `apple-touch-icon` e `link[rel=icon]` dinamicamente via React (para o icone do iPhone/favicon)
-   - Para o manifest completo do PWA, gerar um `/manifest.json` via edge function que le as settings do banco
+**Novo componente**: `src/components/leads/TopAdsByConversionCard.tsx`
+- Card visual com ranking dos top 10 anuncios/campanhas
+- Toggle para alternar entre Anuncios e Campanhas
+- Cada item mostra: nome, leads totais, convertidos, taxa %, receita
+- Barras de progresso proporcionais
+- Icones de ranking (ouro, prata, bronze)
 
-### Detalhes tecnicos
+**Integracao na pagina LeadsFunnel.tsx**:
+- Adicionar o novo card apos a secao do funil, em destaque
 
-**Arquivos modificados:**
-- `src/components/settings/BrandingSettingsCard.tsx` -- Adicionar secao de upload do icone PWA
-- `src/hooks/useBrandingSettings.ts` -- Adicionar campo `pwaIconUrl` e chave `pwa_icon_url`
-- `src/App.tsx` ou `src/main.tsx` -- Aplicar meta tags dinamicas (apple-touch-icon, favicon) baseadas nas settings
-- `vite.config.ts` -- Remover icones do manifest estatico (serao servidos dinamicamente)
-- `index.html` -- Apontar manifest para a edge function
+### Fluxo de dados
 
-**Arquivos criados:**
-- `supabase/functions/pwa-manifest/index.ts` -- Edge function que gera o `manifest.json` dinamicamente com os icones do banco
+```text
+leads (filtrados por cliente + periodo)
+    |
+    +-- Agrupados por utm_content ou utm_campaign
+    |
+    +-- Emails de cada grupo cruzados com:
+    |       transactions.buyer_email
+    |       eduzz_transactions.buyer_email
+    |       tmb_transactions.buyer_email
+    |
+    +-- Para cada match: soma computed_value / sale_value / ticket_value
+    |
+    +-- Ranking final ordenado por conversoes (desc)
+```
 
-**Migracoes:**
-- Inserir chave `pwa_icon_url` na tabela `app_settings` (ou apenas permitir upsert, ja que a tabela ja existe)
+### Arquivos criados
+- `src/hooks/useTopAdsByConversion.ts` -- hook para buscar dados da RPC
+- `src/components/leads/TopAdsByConversionCard.tsx` -- componente visual do ranking
 
-**Fluxo:**
-1. Admin faz upload da imagem nas settings
-2. Imagem e salva no storage bucket `branding`
-3. URL e salva em `app_settings` com chave `pwa_icon_url`
-4. O `apple-touch-icon` e favicon sao atualizados via React em tempo real
-5. A edge function `/pwa-manifest` le a URL do banco e retorna um `manifest.json` com os icones corretos
-6. Quando o usuario instala o PWA no iPhone, o icone personalizado aparece
+### Arquivos modificados
+- `src/pages/LeadsFunnel.tsx` -- adicionar o novo card de ranking
+- Migracao SQL -- criar funcao RPC `get_top_ads_by_conversion`
+
+### Exemplo visual do resultado
+
+```text
+Top Criativos por Conversao
+[Anuncios] [Campanhas]
+
+#1  criativo-video-depoimento-maria    
+    142 leads | 23 convertidos | 16.2% | R$ 45.800
+
+#2  criativo-carrossel-resultados
+    98 leads | 15 convertidos | 15.3% | R$ 31.200
+
+#3  criativo-stories-urgencia
+    201 leads | 18 convertidos | 9.0% | R$ 28.400
+```
 
