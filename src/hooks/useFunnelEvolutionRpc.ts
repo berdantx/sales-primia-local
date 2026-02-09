@@ -38,7 +38,10 @@ export function useFunnelEvolutionRpc({
       });
 
       if (error) throw error;
-      return (data as unknown as FunnelDataPoint[]) || [];
+      // RPC returns json (could be array or wrapped)
+      const result = data as unknown;
+      if (Array.isArray(result)) return result as FunnelDataPoint[];
+      return [];
     },
     enabled: !!user,
     staleTime: 30000,
