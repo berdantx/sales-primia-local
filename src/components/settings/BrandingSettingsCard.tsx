@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Palette, Upload, X, Loader2, Sun, Moon, Info, RefreshCw, Trash2 } from 'lucide-react';
+import { Palette, Upload, X, Loader2, Sun, Moon, Info, RefreshCw, Trash2, Smartphone } from 'lucide-react';
 import { useBrandingSettings, COLOR_PRESETS, applyThemeColors, clearBrandingCache } from '@/hooks/useBrandingSettings';
 import { ColorPicker } from './ColorPicker';
 import { SidebarPreview } from './SidebarPreview';
@@ -29,6 +29,8 @@ export function BrandingSettingsCard() {
   const [customHex, setCustomHex] = useState('');
   const [isUploadingLight, setIsUploadingLight] = useState(false);
   const [isUploadingDark, setIsUploadingDark] = useState(false);
+  const [isUploadingPwaIcon, setIsUploadingPwaIcon] = useState(false);
+  const [localPwaIconUrl, setLocalPwaIconUrl] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] = useState<'light' | 'dark'>('light');
 
   // Sync local state with fetched settings
@@ -40,6 +42,7 @@ export function BrandingSettingsCard() {
       setLocalLogoUrlDark(settings.logoUrlDark);
       setLocalPrimaryColor(settings.primaryColor);
       setLocalPrimaryColorDark(settings.primaryColorDark);
+      setLocalPwaIconUrl(settings.pwaIconUrl);
       
       // Set custom hex if not a preset
       const matchingPreset = COLOR_PRESETS.find(p => p.hsl === settings.primaryColor);
@@ -150,15 +153,59 @@ export function BrandingSettingsCard() {
       logoUrlDark: localLogoUrlDark,
       primaryColor: localPrimaryColor,
       primaryColorDark: localPrimaryColorDark,
+      pwaIconUrl: localPwaIconUrl,
     });
   };
+
+  const uploadPwaIcon = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, envie apenas imagens');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('A imagem deve ter no máximo 2MB');
+      return;
+    }
+    setIsUploadingPwaIcon(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `pwa-icon-${Date.now()}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from('branding')
+        .upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage
+        .from('branding')
+        .getPublicUrl(fileName);
+      setLocalPwaIconUrl(publicUrl);
+      toast.success('Ícone PWA enviado com sucesso!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Erro ao enviar ícone');
+    } finally {
+      setIsUploadingPwaIcon(false);
+    }
+  }, []);
+
+  const onDropPwaIcon = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (file) uploadPwaIcon(file);
+  }, [uploadPwaIcon]);
+
+  const dropzonePwaIcon = useDropzone({
+    onDrop: onDropPwaIcon,
+    accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
+    maxFiles: 1,
+    disabled: isUploadingPwaIcon,
+  });
 
   const hasChanges = 
     localAppName !== settings.appName ||
     localAppSubtitle !== settings.appSubtitle ||
     localLogoUrl !== settings.logoUrl ||
     localLogoUrlDark !== settings.logoUrlDark ||
-    localPrimaryColor !== settings.primaryColor;
+    localPrimaryColor !== settings.primaryColor ||
+    localPwaIconUrl !== settings.pwaIconUrl;
 
   // Get current preview logo based on theme
   const currentPreviewLogo = previewTheme === 'dark' 
@@ -304,7 +351,64 @@ export function BrandingSettingsCard() {
                 </p>
               </div>
 
-              {/* Color Picker */}
+              {/* PWA Icon Upload */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label>Ícone do App (PWA)</Label>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[250px]">
+                      <p>Ícone exibido ao instalar o app no celular (Add to Home Screen). Recomendamos 512x512px, PNG quadrado.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                
+                {localPwaIconUrl ? (
+                  <div className="relative">
+                    <div className="relative h-24 w-24 rounded-lg border overflow-hidden flex items-center justify-center bg-muted">
+                      <img 
+                        src={localPwaIconUrl} 
+                        alt="Ícone PWA"
+                        className="max-h-20 max-w-full object-contain p-1"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setLocalPwaIconUrl(null)}
+                        className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full shadow hover:bg-destructive/90 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    {...dropzonePwaIcon.getRootProps()}
+                    className={`
+                      border-2 border-dashed rounded-lg p-4 text-center cursor-pointer h-24 w-48
+                      transition-colors flex flex-col items-center justify-center
+                      ${dropzonePwaIcon.isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'}
+                      ${isUploadingPwaIcon ? 'opacity-50 cursor-not-allowed' : ''}
+                    `}
+                  >
+                    <input {...dropzonePwaIcon.getInputProps()} />
+                    {isUploadingPwaIcon ? (
+                      <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+                    ) : (
+                      <Smartphone className="w-6 h-6 text-muted-foreground mb-1" />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {dropzonePwaIcon.isDragActive ? 'Solte aqui...' : 'Arraste ou clique'}
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-xs text-muted-foreground">
+                  PNG ou JPG, quadrado, mín. 192x192px (máx. 2MB)
+                </p>
+              </div>
+
               <ColorPicker
                 value={localPrimaryColor}
                 onChange={handleColorChange}

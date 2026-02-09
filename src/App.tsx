@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { FilterProvider } from "@/contexts/FilterContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ConditionalHome } from "@/components/auth/ConditionalHome";
+import { DynamicPwaIconProvider } from "@/components/pwa/DynamicPwaIconProvider";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Upload from "./pages/Upload";
@@ -37,6 +38,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <DynamicPwaIconProvider />
           <BrowserRouter>
           <Routes>
             <Route path="/" element={<ConditionalHome />} />

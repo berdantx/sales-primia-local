@@ -11,6 +11,7 @@ export interface BrandingSettings {
   primaryColor: string; // HSL format e.g., "217 100% 50%"
   primaryColorDark: string;
   signupEnabled: boolean;
+  pwaIconUrl: string | null;
 }
 
 const DEFAULT_SETTINGS: BrandingSettings = {
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS: BrandingSettings = {
   primaryColor: '160 100% 35%',
   primaryColorDark: '160 100% 40%',
   signupEnabled: false,
+  pwaIconUrl: null,
 };
 
 const SETTINGS_KEYS = [
@@ -31,6 +33,7 @@ const SETTINGS_KEYS = [
   'primary_color',
   'primary_color_dark',
   'signup_enabled',
+  'pwa_icon_url',
 ] as const;
 
 const CACHE_KEY = 'branding-settings-cache';
@@ -48,6 +51,7 @@ function mapKeyToProperty(key: SettingKey): keyof BrandingSettings {
     primary_color: 'primaryColor',
     primary_color_dark: 'primaryColorDark',
     signup_enabled: 'signupEnabled',
+    pwa_icon_url: 'pwaIconUrl',
   };
   return map[key];
 }
@@ -61,6 +65,7 @@ function mapPropertyToKey(property: keyof BrandingSettings): SettingKey {
     primaryColor: 'primary_color',
     primaryColorDark: 'primary_color_dark',
     signupEnabled: 'signup_enabled',
+    pwaIconUrl: 'pwa_icon_url',
   };
   return map[property];
 }
@@ -140,7 +145,7 @@ export function useBrandingSettings() {
 
       data?.forEach((row) => {
         const property = mapKeyToProperty(row.key as SettingKey);
-        if (property === 'logoUrl' || property === 'logoUrlDark') {
+        if (property === 'logoUrl' || property === 'logoUrlDark' || property === 'pwaIconUrl') {
           result[property] = row.value || null;
         } else if (property === 'signupEnabled') {
           result[property] = row.value === 'true';
