@@ -2,21 +2,20 @@ import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
-import { useLeads } from '@/hooks/useLeads';
 import { useLandingPageConversion } from '@/hooks/useLandingPageConversion';
-import { useFunnelEvolution } from '@/hooks/useFunnelEvolution';
+import { useLeadsLight } from '@/hooks/useLeadsLight';
+import { useFunnelEvolutionRpc } from '@/hooks/useFunnelEvolutionRpc';
 import { ConversionFunnelCard } from '@/components/leads/ConversionFunnelCard';
 import { FunnelEvolutionChart } from '@/components/leads/FunnelEvolutionChart';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { LeadsPeriodFilter } from '@/components/leads/LeadsPeriodFilter';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
 import { TopAdsByConversionCard } from '@/components/leads/TopAdsByConversionCard';
-import { useLandingPageStats } from '@/hooks/useLandingPageStats';
+import { useLandingPageStatsRpc } from '@/hooks/useLandingPageStatsRpc';
 import { useTopAdsByConversion } from '@/hooks/useTopAdsByConversion';
 import { useFilter } from '@/contexts/FilterContext';
 import { useClients } from '@/hooks/useClients';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { subDays, startOfDay, endOfDay, format } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { Link } from 'react-router-dom';
@@ -57,55 +56,54 @@ function LeadsFunnel() {
     return clients.find(c => c.id === clientId);
   }, [clientId, clients]);
 
-  const filters = useMemo(() => {
-    return {
-      startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
-      endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
-      clientId,
-    };
-  }, [clientId, dateRange]);
+  // Lightweight leads fetch (only fields needed for conversion matching)
+  const { data: lightLeads, isLoading: isLoadingLeads } = useLeadsLight(isReady ? {
+    clientId,
+    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
+    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
+  } : undefined);
 
-  const { data: leads, isLoading } = useLeads(isReady ? filters : undefined);
-
-  // Landing page stats
-  const { stats: landingPageStats, totalPagesCount, pageOptions, hiddenPagesCount } = useLandingPageStats({
-    leads,
-    limit: 20,
-    minLeads: 5,
-    showAll: showAllPages,
-  });
-
-  // Conversion tracking
+  // Conversion tracking using lightweight leads
   const { conversionStats, totalConversion, isLoading: isLoadingConversion } = useLandingPageConversion({
     clientId,
-    leads: leads || [],
+    leads: (lightLeads || []) as any,
     startDate: dateRange?.from,
     endDate: dateRange?.to,
   });
 
-  // Funnel evolution
-  const convertedEmails = useMemo(() => new Set<string>(), []);
-  const funnelEvolutionData = useFunnelEvolution({
-    leads: leads || [],
-    convertedEmails,
+  // Funnel evolution via RPC (no client-side processing)
+  const { data: funnelEvolutionData = [], isLoading: isLoadingFunnel } = useFunnelEvolutionRpc({
+    clientId,
+    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
+    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
     groupBy: funnelGroupBy,
   });
 
-  // Top ads by conversion
+  // Landing page stats via RPC
+  const { data: landingPageData, isLoading: isLoadingPages } = useLandingPageStatsRpc({
+    clientId,
+    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
+    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
+    minLeads: showAllPages ? 0 : 5,
+    limit: 20,
+  });
+
+  // Top ads by conversion via RPC
   const { data: conversionAds, isLoading: isLoadingConversionAds } = useTopAdsByConversion({
-    clientId: clientId,
+    clientId,
     startDate: dateRange?.from,
     endDate: dateRange?.to,
     mode: conversionMode,
   });
 
-  // Date range label for PDF export
   const dateRangeLabel = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return undefined;
     return `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`;
   }, [dateRange]);
 
-  if (!isReady || isLoading) {
+  const isInitialLoading = !isReady || (isLoadingLeads && !lightLeads);
+
+  if (isInitialLoading) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-[60vh]">
@@ -280,7 +278,7 @@ function LeadsFunnel() {
           >
             <FunnelEvolutionChart
               data={funnelEvolutionData}
-              isLoading={isLoadingConversion}
+              isLoading={isLoadingFunnel}
               groupBy={funnelGroupBy}
               onGroupByChange={setFunnelGroupBy}
             />
@@ -308,11 +306,24 @@ function LeadsFunnel() {
           transition={{ delay: 0.35 }}
         >
           <LandingPageComparisonCard
-            stats={landingPageStats}
+            stats={landingPageData?.stats?.map(s => ({
+              normalizedUrl: s.normalizedUrl,
+              displayName: s.displayName,
+              leadCount: s.leadCount,
+              percentage: 0,
+              firstLeadDate: s.firstLeadDate ? new Date(s.firstLeadDate) : null,
+              lastLeadDate: s.lastLeadDate ? new Date(s.lastLeadDate) : null,
+              dailyAverage: 0,
+              activeDays: 0,
+              isNew: false,
+              trend: 'stable' as const,
+              trendPercentage: 0,
+              leadsByDay: {},
+            })) || []}
             conversionStats={conversionStats}
-            isLoading={isLoadingConversion}
+            isLoading={isLoadingConversion || isLoadingPages}
             showAllPages={showAllPages}
-            hiddenPagesCount={hiddenPagesCount}
+            hiddenPagesCount={landingPageData?.hiddenPages || 0}
             onToggleShowAll={() => setShowAllPages(prev => !prev)}
           />
         </motion.div>
