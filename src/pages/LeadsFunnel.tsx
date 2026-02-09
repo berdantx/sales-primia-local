@@ -10,7 +10,9 @@ import { FunnelEvolutionChart } from '@/components/leads/FunnelEvolutionChart';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { LeadsPeriodFilter } from '@/components/leads/LeadsPeriodFilter';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
+import { TopAdsByConversionCard } from '@/components/leads/TopAdsByConversionCard';
 import { useLandingPageStats } from '@/hooks/useLandingPageStats';
+import { useTopAdsByConversion } from '@/hooks/useTopAdsByConversion';
 import { useFilter } from '@/contexts/FilterContext';
 import { useClients } from '@/hooks/useClients';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +47,7 @@ function LeadsFunnel() {
   });
   const [funnelGroupBy, setFunnelGroupBy] = useState<'day' | 'week'>('day');
   const [showAllPages, setShowAllPages] = useState(false);
+  const [conversionMode, setConversionMode] = useState<'ads' | 'campaigns'>('ads');
 
   const { clientId, isReady } = useFilter();
   const { data: clients } = useClients();
@@ -86,6 +89,14 @@ function LeadsFunnel() {
     leads: leads || [],
     convertedEmails,
     groupBy: funnelGroupBy,
+  });
+
+  // Top ads by conversion
+  const { data: conversionAds, isLoading: isLoadingConversionAds } = useTopAdsByConversion({
+    clientId: clientId,
+    startDate: dateRange?.from,
+    endDate: dateRange?.to,
+    mode: conversionMode,
   });
 
   // Date range label for PDF export
@@ -276,11 +287,25 @@ function LeadsFunnel() {
           </motion.div>
         </div>
 
-        {/* Landing Pages Conversion Table */}
+        {/* Top Ads by Conversion */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
+        >
+          <TopAdsByConversionCard
+            items={conversionAds || []}
+            isLoading={isLoadingConversionAds}
+            mode={conversionMode}
+            onModeChange={setConversionMode}
+          />
+        </motion.div>
+
+        {/* Landing Pages Conversion Table */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
         >
           <LandingPageComparisonCard
             stats={landingPageStats}
