@@ -1,19 +1,45 @@
 
-## Adicionar botao "Landing Page" no menu lateral
+
+## Botao de Login visivel no mobile + PWA com icone para iPhone
+
+### Problema atual
+1. O botao "Entrar" na landing page esta escondido no mobile (`hidden sm:flex`) -- usuarios no iPhone nao conseguem ver o botao de login.
+2. O app nao esta configurado como PWA, entao nao pode ser "instalado" na tela inicial do iPhone com um icone proprio.
 
 ### O que sera feito
-Adicionar um item de menu no sidebar que permite ao usuario logado visualizar a landing page publica. O botao abrira a rota `/landing` em uma nova aba do navegador, ja que a landing page tem layout proprio (sem sidebar/header do dashboard).
+
+#### 1. Tornar o botao de login visivel no mobile
+- Remover a classe `hidden sm:flex` do botao "Entrar" na landing page
+- Ajustar o layout do header para que tanto "Entrar" quanto "Tenho Interesse" fiquem visiveis em telas pequenas (com tamanhos reduzidos no mobile)
+
+#### 2. Configurar PWA (Progressive Web App)
+Isso permitira que voce "instale" o app no iPhone como se fosse um aplicativo nativo, com icone na tela inicial.
+
+- Instalar o plugin `vite-plugin-pwa`
+- Configurar o `vite.config.ts` com manifest PWA (nome, icones, cores, etc.)
+- Adicionar meta tags no `index.html` para compatibilidade com iOS (apple-touch-icon, apple-mobile-web-app-capable, etc.)
+- Criar icones PWA (192x192 e 512x512) no diretorio `public/` usando o favicon atual como base
+- Criar um service worker para funcionalidade offline basica
 
 ### Detalhes tecnicos
 
-1. **Criar rota `/landing`** no `App.tsx` que renderiza o componente `LandingPage` diretamente (sem `ProtectedRoute` ou `MainLayout`), acessivel para qualquer usuario.
+**Arquivos modificados:**
+- `src/pages/LandingPage.tsx` -- tornar botao "Entrar" visivel no mobile
+- `vite.config.ts` -- adicionar plugin PWA com configuracao de manifest
+- `index.html` -- adicionar meta tags para iOS (apple-touch-icon, apple-mobile-web-app-capable, viewport, status-bar)
+- `package.json` -- adicionar dependencia `vite-plugin-pwa`
 
-2. **Adicionar item no sidebar** (`AppSidebar.tsx`):
-   - Novo item no grupo "Sistema" com icone `Globe` (lucide-react)
-   - Titulo: "Landing Page"
-   - Restrito a roles `master` e `admin`
-   - Ao clicar, abre a rota `/landing` em uma nova aba (`window.open`)
+**Arquivos criados:**
+- `public/pwa-192x192.png` -- icone 192x192 para PWA
+- `public/pwa-512x512.png` -- icone 512x512 para PWA
+- `public/apple-touch-icon.png` -- icone 180x180 para iPhone
 
-3. **Arquivos modificados**:
-   - `src/App.tsx` - Adicionar rota `/landing`
-   - `src/components/layout/AppSidebar.tsx` - Adicionar item de menu com comportamento de abrir em nova aba
+**Manifest PWA:**
+- Nome: "Launch Pocket"
+- Nome curto: "Launch Pocket"
+- Cor do tema: cor primaria do app
+- Display: standalone (sem barra de navegacao do browser)
+- Start URL: "/"
+
+**Para instalar no iPhone:**
+Apos a implementacao, basta abrir o site no Safari, tocar em "Compartilhar" e depois "Adicionar a Tela de Inicio". O app aparecera com o icone configurado.
