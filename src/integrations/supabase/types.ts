@@ -1762,10 +1762,10 @@ export type Database = {
       get_landing_page_stats: {
         Args: {
           p_client_id: string
-          p_end_date: string
+          p_end_date?: string
           p_limit?: number
           p_min_leads?: number
-          p_start_date: string
+          p_start_date?: string
         }
         Returns: Json
       }
