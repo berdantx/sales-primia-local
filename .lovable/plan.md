@@ -1,45 +1,46 @@
 
 
-## Botao de Login visivel no mobile + PWA com icone para iPhone
-
-### Problema atual
-1. O botao "Entrar" na landing page esta escondido no mobile (`hidden sm:flex`) -- usuarios no iPhone nao conseguem ver o botao de login.
-2. O app nao esta configurado como PWA, entao nao pode ser "instalado" na tela inicial do iPhone com um icone proprio.
+## Configuracao do Icone PWA nas Settings
 
 ### O que sera feito
+Adicionar uma secao na pagina de Branding (Settings) para que usuarios master possam fazer upload de um icone personalizado para o PWA. O icone enviado sera salvo no storage e registrado no `app_settings`, e o manifest PWA sera atualizado dinamicamente.
 
-#### 1. Tornar o botao de login visivel no mobile
-- Remover a classe `hidden sm:flex` do botao "Entrar" na landing page
-- Ajustar o layout do header para que tanto "Entrar" quanto "Tenho Interesse" fiquem visiveis em telas pequenas (com tamanhos reduzidos no mobile)
+### Como funciona
 
-#### 2. Configurar PWA (Progressive Web App)
-Isso permitira que voce "instale" o app no iPhone como se fosse um aplicativo nativo, com icone na tela inicial.
+1. **Nova secao no BrandingSettingsCard**: Um campo de upload de imagem para o "Icone do App (PWA)" seguindo o mesmo padrao visual dos uploads de logo existentes.
 
-- Instalar o plugin `vite-plugin-pwa`
-- Configurar o `vite.config.ts` com manifest PWA (nome, icones, cores, etc.)
-- Adicionar meta tags no `index.html` para compatibilidade com iOS (apple-touch-icon, apple-mobile-web-app-capable, etc.)
-- Criar icones PWA (192x192 e 512x512) no diretorio `public/` usando o favicon atual como base
-- Criar um service worker para funcionalidade offline basica
+2. **Upload e armazenamento**: A imagem sera enviada para o bucket `branding` no storage (mesmo bucket ja usado para logos), com o nome `pwa-icon-{timestamp}.png`.
+
+3. **Nova chave em `app_settings`**: `pwa_icon_url` armazenara a URL publica do icone enviado.
+
+4. **Manifest dinamico**: Em vez do manifest estatico no `vite.config.ts`, sera criado um arquivo `public/manifest.json` gerado/atualizado em runtime. Um hook ou script no `index.html` buscara a URL do icone das settings e atualizara as referencias.
+
+5. **Abordagem simplificada**: Como o manifest PWA e definido em build time no Vite, a solucao mais pratica sera:
+   - Permitir o upload do icone nas settings
+   - Salvar a URL no `app_settings`
+   - Atualizar os meta tags `apple-touch-icon` e `link[rel=icon]` dinamicamente via React (para o icone do iPhone/favicon)
+   - Para o manifest completo do PWA, gerar um `/manifest.json` via edge function que le as settings do banco
 
 ### Detalhes tecnicos
 
 **Arquivos modificados:**
-- `src/pages/LandingPage.tsx` -- tornar botao "Entrar" visivel no mobile
-- `vite.config.ts` -- adicionar plugin PWA com configuracao de manifest
-- `index.html` -- adicionar meta tags para iOS (apple-touch-icon, apple-mobile-web-app-capable, viewport, status-bar)
-- `package.json` -- adicionar dependencia `vite-plugin-pwa`
+- `src/components/settings/BrandingSettingsCard.tsx` -- Adicionar secao de upload do icone PWA
+- `src/hooks/useBrandingSettings.ts` -- Adicionar campo `pwaIconUrl` e chave `pwa_icon_url`
+- `src/App.tsx` ou `src/main.tsx` -- Aplicar meta tags dinamicas (apple-touch-icon, favicon) baseadas nas settings
+- `vite.config.ts` -- Remover icones do manifest estatico (serao servidos dinamicamente)
+- `index.html` -- Apontar manifest para a edge function
 
 **Arquivos criados:**
-- `public/pwa-192x192.png` -- icone 192x192 para PWA
-- `public/pwa-512x512.png` -- icone 512x512 para PWA
-- `public/apple-touch-icon.png` -- icone 180x180 para iPhone
+- `supabase/functions/pwa-manifest/index.ts` -- Edge function que gera o `manifest.json` dinamicamente com os icones do banco
 
-**Manifest PWA:**
-- Nome: "Launch Pocket"
-- Nome curto: "Launch Pocket"
-- Cor do tema: cor primaria do app
-- Display: standalone (sem barra de navegacao do browser)
-- Start URL: "/"
+**Migracoes:**
+- Inserir chave `pwa_icon_url` na tabela `app_settings` (ou apenas permitir upsert, ja que a tabela ja existe)
 
-**Para instalar no iPhone:**
-Apos a implementacao, basta abrir o site no Safari, tocar em "Compartilhar" e depois "Adicionar a Tela de Inicio". O app aparecera com o icone configurado.
+**Fluxo:**
+1. Admin faz upload da imagem nas settings
+2. Imagem e salva no storage bucket `branding`
+3. URL e salva em `app_settings` com chave `pwa_icon_url`
+4. O `apple-touch-icon` e favicon sao atualizados via React em tempo real
+5. A edge function `/pwa-manifest` le a URL do banco e retorna um `manifest.json` com os icones corretos
+6. Quando o usuario instala o PWA no iPhone, o icone personalizado aparece
+
