@@ -186,6 +186,8 @@ export type Database = {
           id: string
           import_id: string | null
           invoice_code: string | null
+          original_currency: string | null
+          original_value: number | null
           product: string | null
           product_id: string | null
           sale_date: string | null
@@ -208,6 +210,8 @@ export type Database = {
           id?: string
           import_id?: string | null
           invoice_code?: string | null
+          original_currency?: string | null
+          original_value?: number | null
           product?: string | null
           product_id?: string | null
           sale_date?: string | null
@@ -230,6 +234,8 @@ export type Database = {
           id?: string
           import_id?: string | null
           invoice_code?: string | null
+          original_currency?: string | null
+          original_value?: number | null
           product?: string | null
           product_id?: string | null
           sale_date?: string | null
@@ -1136,6 +1142,8 @@ export type Database = {
           import_id: string | null
           marketplace_commission: number | null
           offer_code: string | null
+          original_currency: string | null
+          original_value: number | null
           payment_method: string | null
           producer_commission: number | null
           product: string | null
@@ -1169,6 +1177,8 @@ export type Database = {
           import_id?: string | null
           marketplace_commission?: number | null
           offer_code?: string | null
+          original_currency?: string | null
+          original_value?: number | null
           payment_method?: string | null
           producer_commission?: number | null
           product?: string | null
@@ -1202,6 +1212,8 @@ export type Database = {
           import_id?: string | null
           marketplace_commission?: number | null
           offer_code?: string | null
+          original_currency?: string | null
+          original_value?: number | null
           payment_method?: string | null
           producer_commission?: number | null
           product?: string | null

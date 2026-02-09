@@ -24,7 +24,22 @@ export function EduzzTransactionCard({ transaction, onClick }: EduzzTransactionC
             <p className="font-medium text-sm truncate">{transaction.product || 'Sem produto'}</p>
             <p className="text-xs text-muted-foreground truncate">{transaction.buyer_name || '-'}</p>
           </div>
-          <Badge variant="outline" className="ml-2 text-xs shrink-0">{transaction.currency || 'BRL'}</Badge>
+          {transaction.original_currency ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="ml-2 text-xs shrink-0 border-amber-500/50 text-amber-600">
+                    {transaction.currency || 'BRL'} ⇐ {transaction.original_currency}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Convertido de {formatCurrency(Number(transaction.original_value), transaction.original_currency)} para USD</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Badge variant="outline" className="ml-2 text-xs shrink-0">{transaction.currency || 'BRL'}</Badge>
+          )}
         </div>
         {transaction.utm_source && (
           <div className="flex justify-between items-center mb-2">

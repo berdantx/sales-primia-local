@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { convertToUSD, needsConversion } from "../_shared/currency-converter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -244,6 +245,22 @@ Deno.serve(async (req) => {
     // Get sale date
     const saleDate = body.data?.createdAt || body.data?.created_at || body.sale_date || body.created_at || new Date().toISOString();
 
+    // Currency conversion: convert exotic currencies to USD
+    let finalValue = saleValue;
+    let finalCurrency = currency;
+    let originalCurrency: string | null = null;
+    let originalValue: number | null = null;
+
+    if (needsConversion(currency)) {
+      console.log(`Converting ${saleValue} ${currency} to USD...`);
+      const conversion = await convertToUSD(saleValue, currency);
+      originalCurrency = currency;
+      originalValue = saleValue;
+      finalValue = conversion.convertedValue;
+      finalCurrency = 'USD';
+      console.log(`Converted: ${saleValue} ${currency} -> ${finalValue} USD (rate: ${conversion.rate}, source: ${conversion.source})`);
+    }
+
     // Map Eduzz fields to eduzz_transactions table - support both formats
     const transactionData = {
       user_id: webhookUserId,
@@ -255,8 +272,10 @@ Deno.serve(async (req) => {
       buyer_name: buyer.name || body.client_name || body.buyer_name || null,
       buyer_email: buyer.email || body.client_email || body.buyer_email || null,
       buyer_phone: buyer.cellphone || buyer.phone || body.client_phone || body.buyer_phone || null,
-      sale_value: saleValue,
-      currency: currency,
+      sale_value: finalValue,
+      currency: finalCurrency,
+      original_currency: originalCurrency,
+      original_value: originalValue,
       sale_date: saleDate,
       utm_source: utmSource,
       utm_medium: utmMedium,

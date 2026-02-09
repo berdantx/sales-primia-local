@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { convertToUSD, needsConversion } from "../_shared/currency-converter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -510,6 +511,30 @@ serve(async (req) => {
           projectedValue = netValue;
         }
 
+        // Currency conversion: convert exotic currencies to USD
+        const rawCurrency = purchase.price?.currency_value || 'BRL';
+        let finalCurrency = rawCurrency;
+        let finalComputedValue = computedValue;
+        let finalGrossValue = grossValue;
+        let finalProjectedValue = projectedValue;
+        let originalCurrency: string | null = null;
+        let originalValue: number | null = null;
+
+        if (needsConversion(rawCurrency)) {
+          console.log(`Converting ${computedValue} ${rawCurrency} to USD...`);
+          const conversion = await convertToUSD(computedValue, rawCurrency);
+          originalCurrency = rawCurrency;
+          originalValue = computedValue;
+          finalComputedValue = conversion.convertedValue;
+          finalCurrency = 'USD';
+          // Also convert gross and projected using same rate
+          if (conversion.rate !== 1) {
+            finalGrossValue = Number((grossValue * (conversion.convertedValue / computedValue)).toFixed(2));
+            finalProjectedValue = Number((projectedValue * (conversion.convertedValue / computedValue)).toFixed(2));
+          }
+          console.log(`Converted: ${computedValue} ${rawCurrency} -> ${finalComputedValue} USD (source: ${conversion.source})`);
+        }
+
         // Prepare transaction record with CORRECTED field mapping
         const transactionData = {
           user_id: webhookUserId,
@@ -519,13 +544,15 @@ serve(async (req) => {
           buyer_email: buyer?.email || null,
           buyer_name: buyer?.name || null,
           buyer_phone: buyer?.checkout_phone || null,
-          currency: purchase.price?.currency_value || 'BRL',
+          currency: finalCurrency,
+          original_currency: originalCurrency,
+          original_value: originalValue,
           // gross_value_with_taxes = full_price (valor bruto com taxas / valor da parcela)
-          gross_value_with_taxes: grossValue,
+          gross_value_with_taxes: finalGrossValue,
           // computed_value = valor REALMENTE recebido agora
-          computed_value: computedValue,
+          computed_value: finalComputedValue,
           // projected_value = valor TOTAL projetado (para recorrências)
-          projected_value: projectedValue,
+          projected_value: finalProjectedValue,
           total_installments: installmentsNumber,
           payment_method: paymentMethod,
           country: purchase.checkout_country?.name || null,

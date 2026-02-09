@@ -130,6 +130,19 @@ export function EduzzTransactionDetailDialog({
                       </p>
                       <Badge variant="outline">{transaction.currency || 'BRL'}</Badge>
                     </div>
+                    {transaction.original_currency && transaction.original_value && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-muted-foreground">
+                          Convertido de{' '}
+                          <span className="font-medium text-amber-600">
+                            {formatCurrency(Number(transaction.original_value), transaction.original_currency)}
+                          </span>
+                        </p>
+                        <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                          {transaction.original_currency}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Separator className="my-1" />
