@@ -1823,6 +1823,16 @@ export type Database = {
         }
         Returns: Json
       }
+      get_top_ads_by_conversion: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_limit?: number
+          p_mode?: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
       get_top_customers: {
         Args: {
           p_billing_type?: string
