@@ -27,12 +27,12 @@
              <span className="font-bold text-lg text-foreground">Launch Pocket</span>
            </div>
            <div className="flex items-center gap-4">
-             <Button variant="ghost" asChild className="hidden sm:flex">
-               <Link to="/auth">Entrar</Link>
-             </Button>
-             <Button onClick={scrollToForm}>
-               Tenho Interesse
-             </Button>
+              <Button variant="ghost" asChild size="sm" className="text-sm">
+                <Link to="/auth">Entrar</Link>
+              </Button>
+              <Button onClick={scrollToForm} size="sm" className="text-sm">
+                Tenho Interesse
+              </Button>
            </div>
          </div>
        </header>
