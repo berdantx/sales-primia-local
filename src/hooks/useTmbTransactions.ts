@@ -17,6 +17,8 @@ export interface TmbTransaction {
   utm_content: string | null;
   source: string;
   created_at: string;
+  status: string;
+  cancelled_at: string | null;
 }
 
 export interface TmbTransactionFilters {

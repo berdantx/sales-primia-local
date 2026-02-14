@@ -12,6 +12,8 @@ export interface TmbStats {
   totalBRL: number;
   totalTransactions: number;
   transactionsWithoutDate: number;
+  cancelledTotal: number;
+  cancelledCount: number;
 }
 
 export interface TmbTopCustomer {
@@ -43,12 +45,16 @@ export function useTmbTransactionStatsOptimized(filters?: TmbTransactionFilters)
         total_brl: number;
         total_transactions: number;
         transactions_without_date: number;
+        cancelled_total: number;
+        cancelled_count: number;
       };
 
       return {
         totalBRL: result?.total_brl || 0,
         totalTransactions: result?.total_transactions || 0,
         transactionsWithoutDate: result?.transactions_without_date || 0,
+        cancelledTotal: result?.cancelled_total || 0,
+        cancelledCount: result?.cancelled_count || 0,
       } as TmbStats;
     },
     enabled: !!user,
