@@ -1,67 +1,72 @@
 
+# Plano: Vendas Canceladas TMB
 
-## Conversao Automatica de Moedas Exoticas para USD
+## Resumo
+Atualmente, o webhook TMB ignora todos os eventos com status diferente de "Efetivado" (incluindo 52 cancelamentos registrados nos logs). Este plano implementa o processamento de cancelamentos e cria um relatorio dedicado.
 
-### Problema atual
-O sistema salva a moeda original corretamente (CVE, EUR, CHF, etc.), mas nas agregacoes e KPIs, apenas BRL e USD sao considerados. Existem 27 transacoes em 7 moedas diferentes (AED, BOB, CHF, CVE, EUR, GBP, SEK) que estao sendo ignoradas nos totais.
+## O que muda
 
-### Solucao proposta
-Converter todas as moedas que nao sao BRL para USD no momento do recebimento do webhook. A moeda original sera preservada em um campo separado para auditoria, mas o valor convertido em USD sera usado nos calculos.
+### 1. Banco de dados
+- Adicionar coluna `status` na tabela `tmb_transactions` (valores: `efetivado`, `cancelado`; default: `efetivado`)
+- Adicionar coluna `cancelled_at` (timestamp de quando foi cancelado)
+- Atualizar os registros existentes que ja possuem cancelamento nos webhook_logs (os 52 pedidos ja registrados)
+- Atualizar a RPC `get_tmb_transaction_stats` para separar faturamento efetivado vs cancelado
+- Criar indice em `tmb_transactions(status)` para filtros rapidos
 
-### Como funciona
+### 2. Webhook TMB (edge function)
+- Aceitar status "Cancelado" alem de "Efetivado"
+- Quando receber "Cancelado": buscar a transacao existente pelo `order_id` e atualizar `status = 'cancelado'` e `cancelled_at = now()`
+- Se a transacao cancelada nao existir no banco, inserir com `status = 'cancelado'` e `ticket_value` do payload
 
-1. **Edge function utilitaria de conversao**: Criar uma funcao reutilizavel que converte qualquer moeda para USD usando a API gratuita do Frankfurter (ou fallback manual para moedas exoticas como CVE).
+### 3. Frontend - Pagina de Transacoes TMB
+- Adicionar badge visual de status (verde para efetivado, vermelho para cancelado) em cada linha da tabela
+- Adicionar filtro de status (Todos / Efetivado / Cancelado)
+- KPI cards atualizados para mostrar tambem o valor cancelado
+- Novo KPI card "Cancelamentos" mostrando quantidade e valor total cancelado
 
-2. **Webhook da Eduzz**: Quando a moeda recebida nao for BRL nem USD, converter o valor para USD automaticamente. Salvar:
-   - `currency` = `USD` (para os calculos funcionarem)
-   - `original_currency` = moeda original (ex: `CVE`)
-   - `original_value` = valor original (ex: `18183.48`)
+### 4. Frontend - Nova pagina de Relatorio de Cancelamentos
+- Criar pagina `/tmb-cancellations` com listagem dedicada de vendas canceladas
+- Mostrar KPIs: total cancelado, quantidade, taxa de cancelamento (cancelados / total)
+- Tabela com: pedido, produto, cliente, valor, data da venda, data do cancelamento
+- Filtros de periodo e produto
+- Exportacao CSV
+- Adicionar link no menu lateral (sidebar) dentro do grupo "Vendas"
 
-3. **Webhook da Hotmart**: Mesma logica -- moedas que nao sao BRL nem USD sao convertidas para USD.
+## Detalhes Tecnicos
 
-4. **Migracao dos dados existentes**: Atualizar as 27 transacoes ja salvas com moedas exoticas, convertendo para USD e preservando os valores originais.
+### Migracao SQL
+```sql
+-- Adicionar colunas
+ALTER TABLE tmb_transactions 
+  ADD COLUMN status text NOT NULL DEFAULT 'efetivado',
+  ADD COLUMN cancelled_at timestamptz;
 
-### Fluxo de conversao
+-- Indice
+CREATE INDEX idx_tmb_status ON tmb_transactions(status);
 
-```text
-Webhook recebe transacao
-    |
-    +-- Moeda = BRL? --> Salva como BRL (sem conversao)
-    |
-    +-- Moeda = USD? --> Salva como USD (sem conversao)
-    |
-    +-- Outra moeda (CVE, EUR, etc.)?
-            |
-            +-- Busca taxa de cambio (moeda -> USD)
-            |       via Frankfurter API (gratuita, sem chave)
-            |
-            +-- Converte valor para USD
-            |
-            +-- Salva:
-                    currency = 'USD'
-                    original_currency = 'CVE'
-                    original_value = 18183.48
-                    sale_value = valor em USD
+-- Backfill: marcar como canceladas as transacoes que tem TMB_ORDER_CANCELADO no webhook_logs
+UPDATE tmb_transactions t
+SET status = 'cancelado', cancelled_at = wl.created_at
+FROM (
+  SELECT DISTINCT ON (transaction_code) transaction_code, created_at
+  FROM webhook_logs
+  WHERE event_type = 'TMB_ORDER_CANCELADO'
+  ORDER BY transaction_code, created_at DESC
+) wl
+WHERE t.order_id = wl.transaction_code;
 ```
 
-### Detalhes tecnicos
+### Webhook (tmb-webhook/index.ts)
+- Mudar a condicao de `statusPedido !== "Efetivado"` para aceitar tambem `"Cancelado"`
+- Para cancelamentos: fazer UPDATE na transacao existente, ou INSERT com status cancelado se nao existir
 
-**Migracoes SQL:**
-- Adicionar colunas `original_currency` e `original_value` nas tabelas `eduzz_transactions` e `transactions` (Hotmart)
-- Script de correcao para as 27 transacoes existentes com moedas exoticas
+### Arquivos a criar
+- `src/pages/TmbCancellations.tsx` - pagina do relatorio de cancelamentos
 
-**Arquivos modificados:**
-- `supabase/functions/eduzz-webhook/index.ts` -- adicionar logica de conversao antes de salvar
-- `supabase/functions/hotmart-webhook/index.ts` -- mesma logica de conversao
-- `src/components/eduzz/EduzzTransactionCard.tsx` -- exibir moeda original quando houver conversao (tooltip)
-- `src/components/eduzz/EduzzTransactionDetailDialog.tsx` -- mostrar detalhes da conversao
-
-**API de cambio utilizada:**
-- Frankfurter API (`https://api.frankfurter.app/latest?from=CVE&to=USD`) -- gratuita, sem necessidade de chave API
-- Fallback com taxas fixas aproximadas para moedas nao suportadas
-
-### Impacto
-- Todas as transacoes passam a ser contabilizadas nos KPIs (BRL ou USD)
-- A moeda e valor original ficam preservados para auditoria
-- Nenhuma mudanca necessaria nos hooks de estatisticas -- eles ja leem BRL e USD corretamente
-
+### Arquivos a editar
+- `supabase/functions/tmb-webhook/index.ts` - aceitar cancelamentos
+- `src/hooks/useTmbTransactions.ts` - adicionar campo `status` e `cancelled_at` na interface
+- `src/hooks/useTmbTransactionStatsOptimized.ts` - incluir stats de cancelamento
+- `src/pages/TmbTransactions.tsx` - badge de status, filtro, KPI de cancelamentos
+- `src/components/layout/AppSidebar.tsx` - link para nova pagina
+- `src/App.tsx` - rota `/tmb-cancellations`
