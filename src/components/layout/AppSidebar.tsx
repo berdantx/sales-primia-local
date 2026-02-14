@@ -33,6 +33,7 @@ import {
   BookOpen,
   Filter,
   Globe,
+  Ban,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -61,6 +62,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: 'Hotmart', url: '/transactions', icon: FileText, roles: ['master', 'admin', 'user'] },
       { title: 'TMB', url: '/tmb-transactions', icon: Wallet, roles: ['master', 'admin', 'user'] },
+      { title: 'Cancelamentos TMB', url: '/tmb-cancellations', icon: Ban, roles: ['master', 'admin', 'user'] },
       { title: 'Eduzz', url: '/eduzz-transactions', icon: CreditCard, roles: ['master', 'admin', 'user'] },
     ]
   },

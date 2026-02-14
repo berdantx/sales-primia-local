@@ -25,7 +25,6 @@ interface TmbWebhookPayload {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -42,7 +41,6 @@ Deno.serve(async (req) => {
   const webhookUserId = Deno.env.get("WEBHOOK_USER_ID")!;
   const defaultClientId = Deno.env.get("WEBHOOK_CLIENT_ID");
 
-  // Get client_id from query parameter (priority) or fall back to env var
   const url = new URL(req.url);
   const clientIdParam = url.searchParams.get('client_id');
   const webhookClientId = clientIdParam || defaultClientId;
@@ -51,12 +49,10 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  // Producer-to-client routing rules
   const PRODUCER_CLIENT_MAP: Record<string, string> = {
-    "Camila Vieira 2": "b48b649d-1b1b-451d-8eb5-1d8cd38f422c", // Camila Vieira - 2026
+    "Camila Vieira 2": "b48b649d-1b1b-451d-8eb5-1d8cd38f422c",
   };
 
-  // Validate client_id if provided
   if (webhookClientId) {
     const { data: clientExists } = await supabase
       .from('clients')
@@ -82,10 +78,8 @@ Deno.serve(async (req) => {
     const rawBody = await req.text();
     console.log("TMB Webhook received:", rawBody.substring(0, 500));
 
-    // Parse the body - handle both array and object formats
     const parsed = JSON.parse(rawBody);
     
-    // If n8n sends the payload wrapped in an array or with body property
     if (Array.isArray(parsed)) {
       body = parsed[0]?.body || parsed[0];
     } else if (parsed.body) {
@@ -107,7 +101,6 @@ Deno.serve(async (req) => {
   const statusPedido = body.status_pedido || "";
   const eventType = "TMB_ORDER_" + (statusPedido.toUpperCase().replace(/\s+/g, "_") || "UNKNOWN");
 
-  // Override client_id based on producer name (lancamento field)
   const producerName = body.lancamento || "";
   let finalClientId = webhookClientId;
   if (producerName && PRODUCER_CLIENT_MAP[producerName]) {
@@ -117,11 +110,13 @@ Deno.serve(async (req) => {
 
   console.log(`Processing TMB order ${orderId} with status: ${statusPedido}, client: ${finalClientId}`);
 
-  // Only process "Efetivado" orders
-  if (statusPedido !== "Efetivado") {
-    console.log(`Skipping order ${orderId} - status is not Efetivado: ${statusPedido}`);
+  // Process both "Efetivado" and "Cancelado" statuses
+  const isEfetivado = statusPedido === "Efetivado";
+  const isCancelado = statusPedido === "Cancelado";
 
-    // Log skipped event
+  if (!isEfetivado && !isCancelado) {
+    console.log(`Skipping order ${orderId} - status is not Efetivado or Cancelado: ${statusPedido}`);
+
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
       client_id: finalClientId || null,
@@ -129,13 +124,13 @@ Deno.serve(async (req) => {
       transaction_code: orderId,
       status: "skipped",
       payload: body,
-      error_message: `Status "${statusPedido}" não é Efetivado`,
+      error_message: `Status "${statusPedido}" não é Efetivado nem Cancelado`,
     });
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Order ${orderId} skipped - status is not Efetivado`,
+        message: `Order ${orderId} skipped - status is not Efetivado or Cancelado`,
         status: statusPedido,
       }),
       {
@@ -146,7 +141,112 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Map TMB fields to tmb_transactions table
+    // Handle cancellation
+    if (isCancelado) {
+      console.log(`Processing cancellation for order ${orderId}`);
+
+      // Try to update existing transaction
+      const { data: existing, error: findError } = await supabase
+        .from("tmb_transactions")
+        .select("id")
+        .eq("order_id", orderId)
+        .maybeSingle();
+
+      if (findError) {
+        console.error("Error finding transaction for cancellation:", findError);
+      }
+
+      if (existing) {
+        // Update existing transaction to cancelled
+        const { error: updateError } = await supabase
+          .from("tmb_transactions")
+          .update({ status: "cancelado", cancelled_at: new Date().toISOString() })
+          .eq("id", existing.id);
+
+        if (updateError) {
+          console.error("Error updating transaction to cancelled:", updateError);
+          await supabase.from("webhook_logs").insert({
+            user_id: webhookUserId,
+            client_id: finalClientId || null,
+            event_type: eventType,
+            transaction_code: orderId,
+            status: "error",
+            payload: body,
+            error_message: updateError.message,
+          });
+          return new Response(JSON.stringify({ success: false, error: updateError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        console.log(`Transaction ${orderId} marked as cancelled`);
+      } else {
+        // Insert new transaction with cancelled status
+        const { error: insertError } = await supabase
+          .from("tmb_transactions")
+          .insert({
+            user_id: webhookUserId,
+            client_id: finalClientId || null,
+            order_id: orderId,
+            product: body.lancamento || null,
+            buyer_name: body.cliente || null,
+            buyer_email: body.email || null,
+            buyer_phone: body.telefone || body.phone || body.celular || null,
+            ticket_value: body.valor_total || 0,
+            currency: "BRL",
+            effective_date: body.data_efetivado || body.criado_em || null,
+            utm_source: body.utm_source || null,
+            utm_medium: body.utm_medium || null,
+            utm_campaign: body.utm_campaign || null,
+            utm_content: body.utm_content || null,
+            source: "webhook",
+            status: "cancelado",
+            cancelled_at: new Date().toISOString(),
+          });
+
+        if (insertError) {
+          console.error("Error inserting cancelled transaction:", insertError);
+          await supabase.from("webhook_logs").insert({
+            user_id: webhookUserId,
+            client_id: finalClientId || null,
+            event_type: eventType,
+            transaction_code: orderId,
+            status: "error",
+            payload: body,
+            error_message: insertError.message,
+          });
+          return new Response(JSON.stringify({ success: false, error: insertError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        console.log(`New cancelled transaction inserted for order ${orderId}`);
+      }
+
+      await supabase.from("webhook_logs").insert({
+        user_id: webhookUserId,
+        client_id: finalClientId || null,
+        event_type: eventType,
+        transaction_code: orderId,
+        status: "processed",
+        payload: body,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `TMB order ${orderId} cancelled successfully`,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Handle "Efetivado" (existing logic)
     const transactionData = {
       user_id: webhookUserId,
       client_id: finalClientId || null,
@@ -163,11 +263,11 @@ Deno.serve(async (req) => {
       utm_campaign: body.utm_campaign || null,
       utm_content: body.utm_content || null,
       source: "webhook",
+      status: "efetivado",
     };
 
     console.log("Upserting TMB transaction:", JSON.stringify(transactionData));
 
-    // Try to insert the transaction - if it's a duplicate, it will be handled by the unique index
     const { data: transaction, error: transactionError } = await supabase
       .from("tmb_transactions")
       .upsert(transactionData, {
@@ -177,7 +277,6 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
-    // Check if error is due to duplicate based on our unique index (client_id, buyer_email, ticket_value, product, effective_date)
     if (transactionError) {
       const isDuplicateError = transactionError.message.includes('idx_tmb_unique_transaction') ||
                                transactionError.message.includes('duplicate key') ||
@@ -186,10 +285,9 @@ Deno.serve(async (req) => {
       if (isDuplicateError) {
         console.log(`Duplicate transaction detected for order ${orderId} - ignoring duplicate webhook`);
         
-        // Log as duplicate (not error)
         await supabase.from("webhook_logs").insert({
           user_id: webhookUserId,
-           client_id: finalClientId || null,
+          client_id: finalClientId || null,
           event_type: eventType,
           transaction_code: orderId,
           status: "duplicate",
@@ -212,7 +310,6 @@ Deno.serve(async (req) => {
 
       console.error("Failed to upsert TMB transaction:", transactionError);
 
-      // Log real error
       await supabase.from("webhook_logs").insert({
         user_id: webhookUserId,
         client_id: finalClientId || null,
@@ -237,7 +334,6 @@ Deno.serve(async (req) => {
 
     console.log("TMB transaction upserted successfully:", transaction?.id);
 
-    // Log success
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
       client_id: finalClientId || null,
@@ -261,7 +357,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Unexpected error processing TMB webhook:", error);
 
-    // Log error
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
       client_id: finalClientId || null,

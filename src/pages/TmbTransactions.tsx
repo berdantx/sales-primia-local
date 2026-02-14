@@ -57,7 +57,8 @@ import {
   Calendar,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Ban,
 } from 'lucide-react';
 import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { TmbTransactionDetailDialog } from '@/components/tmb/TmbTransactionDetailDialog';
@@ -68,6 +69,7 @@ const ITEMS_PER_PAGE = 20;
 type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
 function TmbTransactions() {
+  const [statusFilter, setStatusFilter] = useState<'all' | 'efetivado' | 'cancelado'>('all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -142,6 +144,9 @@ function TmbTransactions() {
     if (!transactions) return [];
     
     return transactions.filter(t => {
+      // Status filter
+      if (statusFilter !== 'all' && t.status !== statusFilter) return false;
+      
       // Text search
       if (debouncedSearch) {
         const lowerSearch = debouncedSearch.toLowerCase();
@@ -167,7 +172,7 @@ function TmbTransactions() {
       
       return true;
     });
-  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, selectedTopItem, topMode]);
+  }, [transactions, debouncedSearch, statusFilter, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, selectedTopItem, topMode]);
 
   // Analytics hooks
   const { topItems, totalCount: totalTopCount } = useTopSales({
@@ -273,10 +278,11 @@ function TmbTransactions() {
     setUtmSourceFilter(null);
     setUtmMediumFilter(null);
     setUtmCampaignFilter(null);
+    setStatusFilter('all');
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter;
+  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter || statusFilter !== 'all';
 
   if (isLoading || isLoadingStats) {
     return (
@@ -313,24 +319,33 @@ function TmbTransactions() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4"
+            className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4"
           >
-            <ColoredKPICard
-              title="Faturamento Total (BRL)"
+             <ColoredKPICard
+              title="Faturamento Efetivado (BRL)"
               value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
-              subtitle={`${stats?.totalTransactions || 0} transações`}
+              subtitle={`${stats?.totalTransactions || 0} transações efetivadas`}
               icon={DollarSign}
               variant="green"
               delay={0}
               className="text-sm sm:text-base"
             />
             <ColoredKPICard
+              title="Cancelamentos"
+              value={formatCurrency(stats?.cancelledTotal || 0, 'BRL')}
+              subtitle={`${stats?.cancelledCount || 0} vendas canceladas`}
+              icon={Ban}
+              variant="red"
+              delay={1}
+              className="text-sm sm:text-base"
+            />
+            <ColoredKPICard
               title="Total de Transações"
-              value={(stats?.totalTransactions || 0).toString()}
-              subtitle="no período filtrado"
+              value={((stats?.totalTransactions || 0) + (stats?.cancelledCount || 0)).toString()}
+              subtitle="efetivadas + canceladas"
               icon={Receipt}
               variant="purple"
-              delay={1}
+              delay={2}
               className="text-sm sm:text-base"
             />
           </motion.div>
@@ -368,6 +383,16 @@ function TmbTransactions() {
                 className="w-full sm:w-[260px]"
               />
             )}
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as 'all' | 'efetivado' | 'cancelado'); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="efetivado">Efetivado</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </motion.div>
 
@@ -556,6 +581,7 @@ function TmbTransactions() {
                       {renderSortIcon('value')}
                     </div>
                   </TableHead>
+                  <TableHead className="min-w-[80px]">Status</TableHead>
                   <TableHead className="hidden lg:table-cell">UTM Source</TableHead>
                 </TableRow>
               </TableHeader>
@@ -608,6 +634,14 @@ function TmbTransactions() {
                     <TableCell className="text-right font-medium">
                       {formatCurrency(Number(transaction.ticket_value), 'BRL')}
                     </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={transaction.status === 'cancelado' ? 'destructive' : 'default'}
+                        className={transaction.status === 'cancelado' ? '' : 'bg-emerald-500/90 hover:bg-emerald-500'}
+                      >
+                        {transaction.status === 'cancelado' ? 'Cancelado' : 'Efetivado'}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {transaction.utm_source ? (
                         <Badge variant="outline" className="text-xs">
@@ -619,7 +653,7 @@ function TmbTransactions() {
                 ))}
                 {paginatedTransactions.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={7} className="text-center py-12">
                       <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <p className="text-muted-foreground">
                         {hasActiveFilters 

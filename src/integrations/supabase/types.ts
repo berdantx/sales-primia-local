@@ -1051,6 +1051,7 @@ export type Database = {
           buyer_email: string | null
           buyer_name: string | null
           buyer_phone: string | null
+          cancelled_at: string | null
           client_id: string | null
           created_at: string | null
           currency: string | null
@@ -1060,6 +1061,7 @@ export type Database = {
           order_id: string
           product: string | null
           source: string | null
+          status: string
           ticket_value: number
           user_id: string
           utm_campaign: string | null
@@ -1071,6 +1073,7 @@ export type Database = {
           buyer_email?: string | null
           buyer_name?: string | null
           buyer_phone?: string | null
+          cancelled_at?: string | null
           client_id?: string | null
           created_at?: string | null
           currency?: string | null
@@ -1080,6 +1083,7 @@ export type Database = {
           order_id: string
           product?: string | null
           source?: string | null
+          status?: string
           ticket_value?: number
           user_id: string
           utm_campaign?: string | null
@@ -1091,6 +1095,7 @@ export type Database = {
           buyer_email?: string | null
           buyer_name?: string | null
           buyer_phone?: string | null
+          cancelled_at?: string | null
           client_id?: string | null
           created_at?: string | null
           currency?: string | null
@@ -1100,6 +1105,7 @@ export type Database = {
           order_id?: string
           product?: string | null
           source?: string | null
+          status?: string
           ticket_value?: number
           user_id?: string
           utm_campaign?: string | null
