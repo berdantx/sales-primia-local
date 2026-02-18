@@ -583,7 +583,7 @@ export default function Dashboard() {
             )}
 
             {/* Top Customers - Only for users with financial access */}
-            {canViewFinancials && <TopCustomers customers={topCustomers || []} />}
+            {canViewFinancials && <TopCustomers customers={topCustomers || []} startDate={filters.startDate} endDate={filters.endDate} clientId={clientId} />}
           </>
         )}
       </div>
