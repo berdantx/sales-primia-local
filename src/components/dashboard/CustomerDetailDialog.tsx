@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +24,7 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 
 interface CustomerDetailDialogProps {
   open: boolean;
@@ -41,6 +44,7 @@ interface UnifiedTransaction {
   value: number;
   currency: string;
   date: string | null;
+  rawData: Record<string, any>;
 }
 
 const platformConfig = {
@@ -48,6 +52,101 @@ const platformConfig = {
   tmb: { label: 'TMB', className: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
   eduzz: { label: 'Eduzz', className: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
 };
+
+const hotmartLabels: Record<string, string> = {
+  buyer_name: 'Nome',
+  buyer_email: 'Email',
+  buyer_phone: 'Telefone',
+  country: 'País',
+  product_id: 'Produto ID',
+  product_ucode: 'Produto UCode',
+  payment_method: 'Método de Pagamento',
+  billing_type: 'Tipo de Cobrança',
+  business_model: 'Modelo de Negócio',
+  offer_code: 'Código da Oferta',
+  sck_code: 'SCK',
+  total_installments: 'Parcelas',
+  recurrence_number: 'Recorrência',
+  subscription_status: 'Status Assinatura',
+  subscriber_code: 'Código Assinante',
+  gross_value_with_taxes: 'Valor Bruto c/ Taxas',
+  producer_commission: 'Comissão Produtor',
+  marketplace_commission: 'Comissão Marketplace',
+  original_currency: 'Moeda Original',
+  original_value: 'Valor Original',
+  projected_value: 'Valor Projetado',
+  date_next_charge: 'Próxima Cobrança',
+  source: 'Fonte',
+};
+
+const tmbLabels: Record<string, string> = {
+  buyer_name: 'Nome',
+  buyer_email: 'Email',
+  buyer_phone: 'Telefone',
+  status: 'Status',
+  cancelled_at: 'Data Cancelamento',
+  utm_source: 'UTM Source',
+  utm_medium: 'UTM Medium',
+  utm_campaign: 'UTM Campaign',
+  utm_content: 'UTM Content',
+  source: 'Fonte',
+};
+
+const eduzzLabels: Record<string, string> = {
+  buyer_name: 'Nome',
+  buyer_email: 'Email',
+  buyer_phone: 'Telefone',
+  invoice_code: 'Código Fatura',
+  product_id: 'Produto ID',
+  original_value: 'Valor Original',
+  original_currency: 'Moeda Original',
+  utm_source: 'UTM Source',
+  utm_medium: 'UTM Medium',
+  utm_campaign: 'UTM Campaign',
+  utm_content: 'UTM Content',
+  source: 'Fonte',
+};
+
+const labelsByPlatform: Record<string, Record<string, string>> = {
+  hotmart: hotmartLabels,
+  tmb: tmbLabels,
+  eduzz: eduzzLabels,
+};
+
+function formatDetailValue(key: string, value: any): string {
+  if (value === null || value === undefined || value === '') return '—';
+  if (key.includes('date') || key.includes('_at') || key === 'date_next_charge') {
+    try {
+      return format(new Date(value), 'dd/MM/yyyy HH:mm', { locale: ptBR });
+    } catch {
+      return String(value);
+    }
+  }
+  if (typeof value === 'number') return String(value);
+  return String(value);
+}
+
+function TransactionDetails({ transaction }: { transaction: UnifiedTransaction }) {
+  const labels = labelsByPlatform[transaction.platform] || {};
+  const entries = Object.keys(labels)
+    .map((key) => ({ label: labels[key], value: transaction.rawData[key] }))
+    .filter((e) => e.value !== null && e.value !== undefined && e.value !== '');
+
+  if (entries.length === 0) {
+    return <p className="text-sm text-muted-foreground p-2">Sem dados adicionais</p>;
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 p-3">
+      {entries.map((e, i) => (
+        <div key={i} className="text-sm">
+          <span className="text-muted-foreground">{e.label}: </span>
+          <span className="font-medium">{formatDetailValue(Object.keys(labels)[i], e.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function CustomerDetailDialog({
   open,
@@ -58,21 +157,18 @@ export function CustomerDetailDialog({
   endDate,
   clientId,
 }: CustomerDetailDialogProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['customer-detail', customerEmail, startDate, endDate, clientId],
     queryFn: async () => {
       const unified: UnifiedTransaction[] = [];
-
-      // Build parallel queries
       const queries: Promise<void>[] = [];
 
-      // Hotmart
+      // Hotmart - select all
       queries.push(
         (async () => {
-          let q = supabase
-            .from('transactions')
-            .select('id, transaction_code, product, computed_value, currency, purchase_date')
-            .eq('buyer_email', customerEmail);
+          let q = supabase.from('transactions').select('*').eq('buyer_email', customerEmail);
           if (clientId) q = q.eq('client_id', clientId);
           if (startDate) q = q.gte('purchase_date', startDate.toISOString());
           if (endDate) q = q.lte('purchase_date', endDate.toISOString());
@@ -86,18 +182,16 @@ export function CustomerDetailDialog({
               value: t.computed_value,
               currency: t.currency,
               date: t.purchase_date,
+              rawData: t,
             })
           );
         })()
       );
 
-      // TMB
+      // TMB - select all
       queries.push(
         (async () => {
-          let q = supabase
-            .from('tmb_transactions')
-            .select('id, order_id, product, ticket_value, currency, effective_date')
-            .eq('buyer_email', customerEmail);
+          let q = supabase.from('tmb_transactions').select('*').eq('buyer_email', customerEmail);
           if (clientId) q = q.eq('client_id', clientId);
           if (startDate) q = q.gte('effective_date', startDate.toISOString());
           if (endDate) q = q.lte('effective_date', endDate.toISOString());
@@ -111,18 +205,16 @@ export function CustomerDetailDialog({
               value: t.ticket_value,
               currency: t.currency || 'BRL',
               date: t.effective_date,
+              rawData: t,
             })
           );
         })()
       );
 
-      // Eduzz
+      // Eduzz - select all
       queries.push(
         (async () => {
-          let q = supabase
-            .from('eduzz_transactions')
-            .select('id, sale_id, product, sale_value, currency, sale_date')
-            .eq('buyer_email', customerEmail);
+          let q = supabase.from('eduzz_transactions').select('*').eq('buyer_email', customerEmail);
           if (clientId) q = q.eq('client_id', clientId);
           if (startDate) q = q.gte('sale_date', startDate.toISOString());
           if (endDate) q = q.lte('sale_date', endDate.toISOString());
@@ -136,6 +228,7 @@ export function CustomerDetailDialog({
               value: t.sale_value,
               currency: t.currency || 'BRL',
               date: t.sale_date,
+              rawData: t,
             })
           );
         })()
@@ -211,27 +304,51 @@ export function CustomerDetailDialog({
               </TableHeader>
               <TableBody>
                 {transactions?.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="whitespace-nowrap">
-                      {t.date
-                        ? format(new Date(t.date), 'dd/MM/yyyy', { locale: ptBR })
-                        : '—'}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs max-w-[120px] truncate">
-                      {t.orderId || '—'}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {t.product || '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={platformConfig[t.platform].className}>
-                        {platformConfig[t.platform].label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(t.value, t.currency)}
-                    </TableCell>
-                  </TableRow>
+                  <>
+                    <TableRow key={t.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {t.date
+                          ? format(new Date(t.date), 'dd/MM/yyyy', { locale: ptBR })
+                          : '—'}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs max-w-[120px] truncate">
+                        {t.orderId || '—'}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {t.product || '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={platformConfig[t.platform].className}>
+                          {platformConfig[t.platform].label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(t.value, t.currency)}
+                      </TableCell>
+                    </TableRow>
+                    <TableRow key={`${t.id}-actions`} className="hover:bg-transparent border-0">
+                      <TableCell colSpan={5} className="py-0 px-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-muted-foreground gap-1 h-7"
+                          onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}
+                        >
+                          {expandedId === t.id ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                          Ver mais detalhes da compra
+                        </Button>
+                        {expandedId === t.id && (
+                          <div className="bg-muted/50 rounded-md mb-2">
+                            <TransactionDetails transaction={t} />
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  </>
                 ))}
               </TableBody>
             </Table>
