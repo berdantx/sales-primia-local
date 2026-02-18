@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, CheckCircle, Filter, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Filter, RefreshCw, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useDuplicateAudit, useResolveDuplicate, DuplicateGroup, useEmailDuplicateAudit, useResolveEmailDuplicate, EmailDuplicateGroup, Platform } from '@/hooks/useDuplicateAudit';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -41,7 +42,7 @@ function IdDuplicatesTab() {
   const { data, isLoading } = useDuplicateAudit();
   const resolve = useResolveDuplicate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
+  const [searchTerm, setSearchTerm] = useState('');
   const toggleSelect = (key: string) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -69,7 +70,18 @@ function IdDuplicatesTab() {
   };
 
   const summary = data?.summary;
-  const duplicates = data?.duplicates ?? [];
+  const allDuplicates = data?.duplicates ?? [];
+
+  const searchLower = searchTerm.toLowerCase().trim();
+  const duplicates = searchLower
+    ? allDuplicates.filter(g =>
+        g.identifier.toLowerCase().includes(searchLower) ||
+        g.records.some(r =>
+          r.email?.toLowerCase().includes(searchLower) ||
+          r.buyer_name?.toLowerCase().includes(searchLower)
+        )
+      )
+    : allDuplicates;
 
   return (
     <div className="space-y-6">
@@ -99,6 +111,17 @@ function IdDuplicatesTab() {
             </Card>
           </>
         )}
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por ID, email ou nome..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="pl-9 max-w-md"
+        />
       </div>
 
       {/* Batch Actions */}
@@ -213,6 +236,7 @@ function EmailDuplicatesTab() {
   const [selectedEduzz, setSelectedEduzz] = useState<EduzzTransaction | null>(null);
   const [selectedTmb, setSelectedTmb] = useState<TmbTransaction | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const toggleRecordForDeletion = (groupKey: string, recordId: string) => {
     setSelectedIds(prev => {
@@ -283,6 +307,16 @@ function EmailDuplicatesTab() {
   }
   if (hideInstallments) {
     duplicates = duplicates.filter(g => !g.isProbablyInstallments);
+  }
+  const emailSearchLower = searchTerm.toLowerCase().trim();
+  if (emailSearchLower) {
+    duplicates = duplicates.filter(g =>
+      g.email.toLowerCase().includes(emailSearchLower) ||
+      g.records.some(r =>
+        r.transactionId.toLowerCase().includes(emailSearchLower) ||
+        r.buyer_name?.toLowerCase().includes(emailSearchLower)
+      )
+    );
   }
 
   const handleRowClick = async (recordId: string, platform: Platform) => {
@@ -359,29 +393,40 @@ function EmailDuplicatesTab() {
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="w-[140px] h-8">
-              <SelectValue placeholder="Plataforma" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              <SelectItem value="hotmart">Hotmart</SelectItem>
-              <SelectItem value="tmb">TMB</SelectItem>
-              <SelectItem value="eduzz">Eduzz</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Search & Filters */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por email, ID de transação ou nome..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-9 max-w-md"
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <Switch id="hide-installments" checked={hideInstallments} onCheckedChange={setHideInstallments} />
-          <Label htmlFor="hide-installments" className="text-sm">Ocultar parcelas (Hotmart)</Label>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={platformFilter} onValueChange={setPlatformFilter}>
+              <SelectTrigger className="w-[140px] h-8">
+                <SelectValue placeholder="Plataforma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="hotmart">Hotmart</SelectItem>
+                <SelectItem value="tmb">TMB</SelectItem>
+                <SelectItem value="eduzz">Eduzz</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch id="hide-installments" checked={hideInstallments} onCheckedChange={setHideInstallments} />
+            <Label htmlFor="hide-installments" className="text-sm">Ocultar parcelas (Hotmart)</Label>
+          </div>
+          <span className="text-sm text-muted-foreground ml-auto">
+            {duplicates.length} grupo(s) encontrado(s)
+          </span>
         </div>
-        <span className="text-sm text-muted-foreground ml-auto">
-          {duplicates.length} grupo(s) encontrado(s)
-        </span>
       </div>
 
       {/* Groups */}
