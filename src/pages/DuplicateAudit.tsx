@@ -20,6 +20,7 @@ import type { Transaction } from '@/hooks/useTransactions';
 import type { EduzzTransaction } from '@/hooks/useEduzzTransactions';
 import type { TmbTransaction } from '@/hooks/useTmbTransactions';
 import { toast } from 'sonner';
+import { formatDateTimeBR } from '@/lib/dateUtils';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -27,7 +28,7 @@ function formatCurrency(value: number) {
 
 function formatDate(date: string | null) {
   if (!date) return '—';
-  return new Date(date).toLocaleDateString('pt-BR');
+  return formatDateTimeBR(date, 'dd/MM/yyyy HH:mm:ss');
 }
 
 function platformLabel(p: string) {
