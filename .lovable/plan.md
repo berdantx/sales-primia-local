@@ -1,72 +1,35 @@
 
-# Busca Completa de Duplicatas
+
+# Filtrar Duplicatas por Cliente Selecionado
+
+## Problema atual
+Os hooks `useDuplicateAudit` e `useEmailDuplicateAudit` buscam **todas** as transacoes de **todos** os clientes sem filtrar pelo cliente selecionado no contexto global. Isso faz com que as abas "Por ID" e "Por Email" misturem dados de clientes diferentes.
 
 ## O que muda
-Adicionar um botao "Busca Completa" no dialog de busca de duplicatas. Esse botao faz uma varredura automatica em todas as transacoes do cliente selecionado (sem precisar digitar nada), agrupa por ID de transacao e por email+produto, e mostra apenas os grupos que tem duplicatas. O campo de busca manual continua existindo para buscas direcionadas.
-
-## Como vai funcionar
-1. O usuario abre o dialog "Buscar Duplicata"
-2. Ele ve o campo de busca manual (como ja existe) E um novo botao "Busca Completa"
-3. Ao clicar em "Busca Completa", o sistema busca TODAS as transacoes do cliente na(s) plataforma(s) selecionada(s)
-4. O sistema agrupa por ID de transacao e por email+produto
-5. Mostra apenas os grupos que possuem mais de 1 registro (ou seja, duplicatas reais)
-6. O usuario pode remover individualmente ou em lote, como ja funciona
+Atualizar os dois hooks para receber o `clientId` do contexto global e filtrar as queries no banco. A pagina `DuplicateAudit.tsx` vai passar o `clientId` do `useFilter()` para os hooks.
 
 ## Detalhes tecnicos
 
-### Arquivo: `src/components/audit/SearchDuplicateDialog.tsx`
+### 1. Arquivo: `src/hooks/useDuplicateAudit.ts`
 
-1. **Adicionar botao "Busca Completa"** ao lado do botao "Buscar" existente
+**`useDuplicateAudit(clientId)`**:
+- Adicionar parametro `clientId: string | null`
+- Incluir `clientId` na `queryKey`: `['duplicate-audit', clientId]`
+- Adicionar `.eq('client_id', clientId)` em cada query (quando clientId existir)
+- Desabilitar a query quando `clientId` for null (para usuarios que precisam selecionar cliente): `enabled: !!clientId`
 
-2. **Criar funcao `handleFullScan`**:
-   - Nao exige `searchTerm` (busca sem filtro de texto)
-   - Busca todas as transacoes do cliente com `client_id = clientId` (sem `.or()`)
-   - Usa paginacao para buscar alem do limite de 1000 (loop com `.range()` ate esgotar)
-   - Reutiliza `groupResults()` para agrupar
-   - Filtra os grupos para exibir **apenas** os que tem `isDuplicate: true`
-   - Exibe contador de duplicatas encontradas
+**`useEmailDuplicateAudit(clientId)`**:
+- Mesmo tratamento: parametro `clientId`, queryKey com clientId, filtro `.eq('client_id', clientId)`, enabled condicional
 
-3. **Adicionar estado `isFullScan`** para diferenciar busca manual de busca completa:
-   - Na busca manual: mostra todos os resultados (duplicatas e nao-duplicatas), como ja faz
-   - Na busca completa: mostra apenas os grupos duplicados
+### 2. Arquivo: `src/pages/DuplicateAudit.tsx`
 
-4. **UI do botao**: variant="outline", icone `SearchCheck` ou `ScanSearch` do lucide, texto "Busca Completa"
+- Importar `useFilter` de `@/contexts/FilterContext`
+- Extrair `clientId` do contexto
+- Passar `clientId` para `IdDuplicatesTab` e `EmailDuplicatesTab` como prop
+- Dentro de cada tab, passar `clientId` para os hooks `useDuplicateAudit(clientId)` e `useEmailDuplicateAudit(clientId)`
 
-### Fluxo
+### Resultado esperado
+- Cliente "Camila Vieira - 2026" selecionado: somente duplicatas desse cliente aparecem
+- Cliente "Paulo Vieira" selecionado: somente duplicatas dele aparecem
+- Para usuarios master sem cliente selecionado: a busca fica desabilitada ate selecionar um cliente (ou alternativamente busca todos, conforme preferencia)
 
-```text
-[Dialog aberto]
-  - Campo de busca (opcional)
-  - Plataforma: Todas | Hotmart | TMB | Eduzz
-  - [Buscar] (busca com termo digitado)
-  - [Busca Completa] (varre tudo do cliente)
-        |
-        v
-[Busca Completa clicado]
-  - Busca TODAS transacoes do cliente (sem filtro de texto)
-  - Agrupa por ID e por email+produto
-  - Filtra apenas grupos com 2+ registros
-  - Exibe: "X grupos de duplicatas encontrados (Y registros)"
-        |
-        v
-[Resultados - apenas duplicatas]
-  - Checkbox + lixeira para remover
-  - Clique na linha abre detalhes
-```
-
-### Paginacao para buscar todos os registros
-Como o Supabase limita a 1000 registros por query, a busca completa fara um loop:
-```
-let all = [];
-let from = 0;
-const PAGE = 1000;
-while (true) {
-  const { data } = await supabase.from(table).select(...).eq('client_id', clientId).range(from, from + PAGE - 1);
-  if (!data || data.length === 0) break;
-  all.push(...data);
-  if (data.length < PAGE) break;
-  from += PAGE;
-}
-```
-
-### Nenhuma migracao necessaria
