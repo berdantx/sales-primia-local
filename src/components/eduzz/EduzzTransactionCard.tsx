@@ -28,12 +28,12 @@ export function EduzzTransactionCard({ transaction, onClick }: EduzzTransactionC
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="outline" className="ml-2 text-xs shrink-0 border-amber-500/50 text-amber-600">
-                    {transaction.currency || 'BRL'} ⇐ {transaction.original_currency}
+                  <Badge variant="outline" className="ml-2 text-xs shrink-0 border-amber-500/50 bg-amber-500/10 text-amber-600">
+                    {transaction.original_currency} → {transaction.currency || 'USD'}
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">Convertido de {formatCurrency(Number(transaction.original_value), transaction.original_currency)} para USD</p>
+                  <p className="text-xs">Convertido de {formatCurrency(Number(transaction.original_value), transaction.original_currency)} para {formatCurrency(Number(transaction.sale_value), transaction.currency || 'USD')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
