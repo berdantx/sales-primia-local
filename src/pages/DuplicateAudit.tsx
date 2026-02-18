@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, CheckCircle, Filter, RefreshCw, Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { SearchDuplicateDialog } from '@/components/audit/SearchDuplicateDialog';
 import { useDuplicateAudit, useResolveDuplicate, DuplicateGroup, useEmailDuplicateAudit, useResolveEmailDuplicate, EmailDuplicateGroup, Platform } from '@/hooks/useDuplicateAudit';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,7 +42,6 @@ function IdDuplicatesTab() {
   const { data, isLoading } = useDuplicateAudit();
   const resolve = useResolveDuplicate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState('');
   const toggleSelect = (key: string) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -72,16 +71,7 @@ function IdDuplicatesTab() {
   const summary = data?.summary;
   const allDuplicates = data?.duplicates ?? [];
 
-  const searchLower = searchTerm.toLowerCase().trim();
-  const duplicates = searchLower
-    ? allDuplicates.filter(g =>
-        g.identifier.toLowerCase().includes(searchLower) ||
-        g.records.some(r =>
-          r.email?.toLowerCase().includes(searchLower) ||
-          r.buyer_name?.toLowerCase().includes(searchLower)
-        )
-      )
-    : allDuplicates;
+  const duplicates = allDuplicates;
 
   return (
     <div className="space-y-6">
@@ -113,16 +103,6 @@ function IdDuplicatesTab() {
         )}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por ID, email ou nome..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="pl-9 max-w-md"
-        />
-      </div>
 
       {/* Batch Actions */}
       {selected.size > 0 && (
@@ -236,7 +216,7 @@ function EmailDuplicatesTab() {
   const [selectedEduzz, setSelectedEduzz] = useState<EduzzTransaction | null>(null);
   const [selectedTmb, setSelectedTmb] = useState<TmbTransaction | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  
 
   const toggleRecordForDeletion = (groupKey: string, recordId: string) => {
     setSelectedIds(prev => {
@@ -307,16 +287,6 @@ function EmailDuplicatesTab() {
   }
   if (hideInstallments) {
     duplicates = duplicates.filter(g => !g.isProbablyInstallments);
-  }
-  const emailSearchLower = searchTerm.toLowerCase().trim();
-  if (emailSearchLower) {
-    duplicates = duplicates.filter(g =>
-      g.email.toLowerCase().includes(emailSearchLower) ||
-      g.records.some(r =>
-        r.transactionId.toLowerCase().includes(emailSearchLower) ||
-        r.buyer_name?.toLowerCase().includes(emailSearchLower)
-      )
-    );
   }
 
   const handleRowClick = async (recordId: string, platform: Platform) => {
@@ -393,17 +363,8 @@ function EmailDuplicatesTab() {
         )}
       </div>
 
-      {/* Search & Filters */}
+      {/* Filters */}
       <div className="space-y-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por email, ID de transação ou nome..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="pl-9 max-w-md"
-          />
-        </div>
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
@@ -553,12 +514,20 @@ function EmailDuplicatesTab() {
 // ============ MAIN PAGE ============
 
 export default function DuplicateAudit() {
+  const [searchOpen, setSearchOpen] = useState(false);
+
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Auditoria de Duplicatas</h1>
-          <p className="text-muted-foreground">Identifique e resolva vendas duplicadas entre CSV e webhook.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Auditoria de Duplicatas</h1>
+            <p className="text-muted-foreground">Identifique e resolva vendas duplicadas entre CSV e webhook.</p>
+          </div>
+          <Button onClick={() => setSearchOpen(true)}>
+            <Search className="h-4 w-4 mr-2" />
+            Buscar Duplicata
+          </Button>
         </div>
 
         <Tabs defaultValue="by-id">
@@ -574,6 +543,8 @@ export default function DuplicateAudit() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <SearchDuplicateDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </MainLayout>
   );
 }
