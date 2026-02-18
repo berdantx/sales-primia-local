@@ -1,52 +1,55 @@
 
-# Botao "Ver mais detalhes" com dropdown expandivel por transacao
+
+# Melhorias no modal de detalhes do cliente
 
 ## Resumo
-Adicionar em cada linha da tabela de transacoes do cliente um botao "Ver mais detalhes da compra" que expande um dropdown (collapsible) mostrando todos os dados completos da transacao.
+Duas melhorias no painel expandivel de detalhes da transacao:
+1. Incluir o ID da transacao dentro da secao "Ver mais detalhes da compra"
+2. Adicionar botao "Ver webhook completo" que mostra o JSON bruto completo da transacao
 
 ## O que muda
 
 ### Editar: `src/components/dashboard/CustomerDetailDialog.tsx`
 
-**1. Buscar todos os campos de cada tabela (nao apenas os resumidos)**
-- Hotmart: trazer todos os campos (`*`) incluindo billing_type, payment_method, sck_code, country, gross_value_with_taxes, total_installments, recurrence_number, business_model, offer_code, subscriber_code, subscription_status, source, buyer_phone, etc.
-- TMB: trazer todos os campos incluindo buyer_phone, status, cancelled_at, utm_source, utm_medium, utm_campaign, utm_content, source
-- Eduzz: trazer todos os campos incluindo buyer_phone, invoice_code, product_id, original_value, original_currency, utm_source, utm_medium, utm_campaign, utm_content, source
+**1. Adicionar ID da transacao nos detalhes expandidos**
+- Incluir `transaction_code` (Hotmart), `order_id` (TMB), `sale_id` (Eduzz) nos respectivos mapas de labels
+- Hotmart: `transaction_code` -> "ID da Transacao"
+- TMB: `order_id` -> "ID do Pedido"
+- Eduzz: `sale_id` -> "ID da Venda"
 
-**2. Atualizar a interface `UnifiedTransaction`**
-- Adicionar campo `rawData: Record<string, any>` para armazenar todos os dados originais da transacao
+**2. Adicionar botao "Ver webhook completo"**
+- Dentro da area expandida, apos o grid de detalhes resumidos, adicionar um botao "Ver webhook completo"
+- Ao clicar, exibe um bloco `<pre>` com o JSON completo do `rawData` formatado com `JSON.stringify(rawData, null, 2)`
+- Estado separado `showRawId: string | null` para controlar qual transacao mostra o JSON
+- O JSON sera exibido em um bloco com fundo `bg-muted`, borda arredondada, scroll horizontal, e fonte mono pequena
+- Botao com icone `Code` do lucide-react
 
-**3. Adicionar estado de expansao**
-- Estado `expandedId: string | null` para controlar qual linha esta expandida
+### Estrutura visual da area expandida (por transacao)
 
-**4. Adicionar botao e area expandivel por linha**
-- Abaixo de cada `TableRow`, renderizar uma linha extra (condicional) quando `expandedId === t.id`
-- Botao "Ver mais detalhes da compra" com icone ChevronDown/ChevronUp
-- Ao expandir, mostrar um grid com todos os campos do `rawData` formatados em pares label/valor
-- Campos exibidos variam por plataforma:
-  - **Hotmart**: Nome, Email, Telefone, Pais, Produto ID, Metodo Pagamento, Tipo Cobranca, Modelo Negocio, Codigo Oferta, SCK, Parcelas, Recorrencia, Status Assinatura, Codigo Assinante, Valor Bruto, Comissao Produtor, Comissao Marketplace, Moeda Original, Valor Original, Fonte
-  - **TMB**: Nome, Email, Telefone, Status, Data Cancelamento, UTM Source/Medium/Campaign/Content, Fonte
-  - **Eduzz**: Nome, Email, Telefone, Codigo Fatura, Produto ID, Valor Original, Moeda Original, UTM Source/Medium/Campaign/Content, Fonte
+```text
++--------------------------------------------+
+| [ChevronUp] Ver mais detalhes da compra    |
+|                                            |
+| ID: ksuaact61mk...  Nome: Michelle...     |
+| Email: ...           Telefone: ...         |
+| Produto ID: ...      Valor Original: ...   |
+| Fonte: webhook                             |
+|                                            |
+| [Code] Ver webhook completo                |
+| +----------------------------------------+ |
+| | {                                      | |
+| |   "id": "...",                         | |
+| |   "sale_id": "...",                    | |
+| |   ...                                 | |
+| | }                                      | |
+| +----------------------------------------+ |
++--------------------------------------------+
+```
 
 ## Detalhes Tecnicos
 
-### Componentes utilizados
-- `Collapsible` do Radix UI (ja instalado) para o efeito de expandir/recolher
-- `ChevronDown` / `ChevronUp` do lucide-react para o icone do botao
-- `Button` com variant `ghost` e tamanho `sm`
-
-### Estrutura da tabela expandida
-Cada linha da tabela tera:
-1. A `TableRow` normal (como esta hoje)
-2. Uma `TableRow` extra com `colspan=5` que aparece apenas quando expandida, contendo um grid 2 ou 3 colunas com os detalhes
-
-### Queries
-- Mudar os `.select(...)` especificos para `.select('*')` nas 3 queries (Hotmart, TMB, Eduzz)
-- Salvar o objeto completo em `rawData` para renderizar no dropdown
-
-### Labels por plataforma
-Um mapa de labels sera criado para traduzir os nomes das colunas do banco para labels amigaveis em portugues, por exemplo:
-- `payment_method` -> "Metodo de Pagamento"
-- `billing_type` -> "Tipo de Cobranca"
-- `buyer_phone` -> "Telefone"
-- `utm_source` -> "UTM Source"
+- Adicionar `Code` ao import do lucide-react
+- Novo estado `showRawId` para controlar visibilidade do JSON
+- Passar `showRawId` e `setShowRawId` para o componente `TransactionDetails` ou mover a logica para inline
+- O JSON bruto exclui campos internos sensiveis como `user_id` e `client_id` antes de exibir
+- ScrollArea horizontal no bloco de JSON para webhooks com muitos campos
