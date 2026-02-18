@@ -246,6 +246,45 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Pre-upsert duplicate check by (order_id, client_id) regardless of user_id
+    const existingQuery = supabase
+      .from("tmb_transactions")
+      .select("id, source")
+      .eq("order_id", orderId);
+
+    if (finalClientId) {
+      existingQuery.eq("client_id", finalClientId);
+    }
+
+    const { data: existingTx } = await existingQuery.maybeSingle();
+
+    if (existingTx) {
+      console.log(`Duplicate detected for order ${orderId} (existing id: ${existingTx.id}, source: ${existingTx.source}) - skipping`);
+
+      await supabase.from("webhook_logs").insert({
+        user_id: webhookUserId,
+        client_id: finalClientId || null,
+        event_type: eventType,
+        transaction_code: orderId,
+        status: "duplicate",
+        payload: body,
+        error_message: `Transação já existe (id: ${existingTx.id}, source: ${existingTx.source})`,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `Duplicate transaction ${orderId} ignored`,
+          duplicate: true,
+          existing_id: existingTx.id,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Handle "Efetivado" (existing logic)
     const transactionData = {
       user_id: webhookUserId,

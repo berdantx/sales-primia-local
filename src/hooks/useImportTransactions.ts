@@ -44,22 +44,34 @@ async function insertBatchWithRetry(
 }
 
 async function fetchExistingHotmartIds(userId: string, clientId: string | null): Promise<Set<string>> {
-  let query = supabase.from('transactions').select('transaction_code').eq('user_id', userId);
-  if (clientId) query = query.eq('client_id', clientId);
+  let query = supabase.from('transactions').select('transaction_code');
+  if (clientId) {
+    query = query.eq('client_id', clientId);
+  } else {
+    query = query.eq('user_id', userId);
+  }
   const { data } = await query;
   return new Set(data?.map(r => r.transaction_code) ?? []);
 }
 
 async function fetchExistingTmbIds(userId: string, clientId: string | null): Promise<Set<string>> {
-  let query = supabase.from('tmb_transactions').select('order_id').eq('user_id', userId);
-  if (clientId) query = query.eq('client_id', clientId);
+  let query = supabase.from('tmb_transactions').select('order_id');
+  if (clientId) {
+    query = query.eq('client_id', clientId);
+  } else {
+    query = query.eq('user_id', userId);
+  }
   const { data } = await query;
   return new Set(data?.map(r => r.order_id) ?? []);
 }
 
 async function fetchExistingEduzzIds(userId: string, clientId: string | null): Promise<Set<string>> {
-  let query = supabase.from('eduzz_transactions').select('sale_id').eq('user_id', userId);
-  if (clientId) query = query.eq('client_id', clientId);
+  let query = supabase.from('eduzz_transactions').select('sale_id');
+  if (clientId) {
+    query = query.eq('client_id', clientId);
+  } else {
+    query = query.eq('user_id', userId);
+  }
   const { data } = await query;
   return new Set(data?.map(r => r.sale_id) ?? []);
 }
