@@ -203,24 +203,69 @@ Deno.serve(async (req) => {
   // ---- CANCELLATION / CHARGEBACK FLOW ----
   if (isCancellation) {
     try {
-      // Try to find existing transaction by sale_id
-      let query = supabase
+      const dataId = body.data?.id ? String(body.data.id) : null;
+      const itemsData = body.data?.items;
+      const priceData = body.data?.price;
+      const utmData = body.data?.utm;
+      const productName = itemsData?.[0]?.name || productData?.name || body.product_name || body.product || null;
+      const productId = itemsData?.[0]?.productId || (productData?.id ? String(productData.id) : null) || (body.product_id ? String(body.product_id) : null);
+      const saleValue = priceData?.paid?.value || priceData?.value || body.data?.value || body.sale_amount || body.sale_value || body.value || 0;
+      const currency = priceData?.currency || body.data?.currency || "BRL";
+      const saleDate = body.data?.createdAt || body.data?.created_at || body.sale_date || body.created_at || new Date().toISOString();
+      const buyerEmail = buyer.email || body.client_email || body.buyer_email || null;
+      const buyerName = buyer.name || body.client_name || body.buyer_name || null;
+      const buyerPhone = buyer.cellphone || buyer.phone || body.client_phone || body.buyer_phone || null;
+
+      console.log(`Cancellation lookup: saleId=${saleId}, dataId=${dataId}, buyerEmail=${buyerEmail}, product=${productName}, saleDate=${saleDate}`);
+
+      // Strategy 1: Search by sale_id OR data.id
+      let existing: { id: string; sale_id: string; status: string } | null = null;
+
+      const orConditions = [`sale_id.eq.${saleId}`];
+      if (dataId && dataId !== saleId) {
+        orConditions.push(`sale_id.eq.${dataId}`);
+      }
+
+      let query1 = supabase
         .from("eduzz_transactions")
         .select("id, sale_id, status")
-        .eq("sale_id", saleId);
-      
+        .or(orConditions.join(','));
+
       if (webhookClientId) {
-        query = query.eq("client_id", webhookClientId);
+        query1 = query1.eq("client_id", webhookClientId);
       }
 
-      const { data: existing, error: findError } = await query.maybeSingle();
-
-      if (findError) {
-        console.error("Error finding transaction for cancellation:", findError);
+      const { data: found1, error: findError1 } = await query1.maybeSingle();
+      if (findError1) {
+        console.error("Error in strategy 1 lookup:", findError1);
+      }
+      if (found1) {
+        existing = found1;
+        console.log(`Found transaction via strategy 1 (sale_id/dataId): ${existing.id}`);
       }
 
+      // Strategy 2: Fallback - search by composite key (buyer_email + product + sale_date)
+      if (!existing && buyerEmail && productName && saleDate && webhookClientId) {
+        const { data: found2, error: findError2 } = await supabase
+          .from("eduzz_transactions")
+          .select("id, sale_id, status")
+          .eq("client_id", webhookClientId)
+          .eq("buyer_email", buyerEmail)
+          .eq("product", productName)
+          .eq("sale_date", saleDate)
+          .maybeSingle();
+
+        if (findError2) {
+          console.error("Error in strategy 2 lookup:", findError2);
+        }
+        if (found2) {
+          existing = found2;
+          console.log(`Found transaction via strategy 2 (composite key): ${existing.id}`);
+        }
+      }
+
+      // If found by any strategy, update to canceled
       if (existing) {
-        // Update existing transaction to canceled
         const { error: updateError } = await supabase
           .from("eduzz_transactions")
           .update({ 
@@ -248,7 +293,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        console.log(`Transaction ${saleId} updated to cancelado (was: ${existing.status})`);
+        console.log(`Transaction ${existing.sale_id} updated to cancelado (was: ${existing.status})`);
 
         await supabase.from("webhook_logs").insert({
           user_id: webhookUserId,
@@ -261,85 +306,82 @@ Deno.serve(async (req) => {
 
         return new Response(JSON.stringify({
           success: true,
-          message: `Transaction ${saleId} marked as canceled`,
+          message: `Transaction ${existing.sale_id} marked as canceled`,
           action: 'updated',
         }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-      } else {
-        // Transaction not found - insert as canceled
-        const itemsData = body.data?.items;
-        const priceData = body.data?.price;
-        const utmData = body.data?.utm;
-        const productName = itemsData?.[0]?.name || productData?.name || body.product_name || body.product || null;
-        const productId = itemsData?.[0]?.productId || (productData?.id ? String(productData.id) : null) || (body.product_id ? String(body.product_id) : null);
-        const saleValue = priceData?.paid?.value || priceData?.value || body.data?.value || body.sale_amount || body.sale_value || body.value || 0;
-        const currency = priceData?.currency || body.data?.currency || "BRL";
-        const saleDate = body.data?.createdAt || body.data?.created_at || body.sale_date || body.created_at || new Date().toISOString();
+      }
 
-        const { error: insertError } = await supabase
-          .from("eduzz_transactions")
-          .insert({
-            user_id: webhookUserId,
-            client_id: webhookClientId || null,
-            sale_id: saleId,
-            product: productName,
-            product_id: productId,
-            buyer_name: buyer.name || body.client_name || body.buyer_name || null,
-            buyer_email: buyer.email || body.client_email || body.buyer_email || null,
-            buyer_phone: buyer.cellphone || buyer.phone || body.client_phone || body.buyer_phone || null,
-            sale_value: saleValue,
-            currency: currency,
-            sale_date: saleDate,
-            utm_source: utmData?.source || body.data?.utm_source || body.utm_source || null,
-            utm_medium: utmData?.medium || body.data?.utm_medium || body.utm_medium || null,
-            utm_campaign: utmData?.campaign || body.data?.utm_campaign || body.utm_campaign || null,
-            utm_content: utmData?.content || body.data?.utm_content || body.utm_content || null,
-            source: "webhook",
-            status: 'cancelado',
-            cancelled_at: new Date().toISOString(),
-          });
+      // Not found by any strategy - upsert to avoid constraint violation
+      console.log(`No existing transaction found for cancellation. Using upsert with onConflict.`);
 
-        if (insertError) {
-          console.error("Error inserting canceled transaction:", insertError);
-          
-          await supabase.from("webhook_logs").insert({
-            user_id: webhookUserId,
-            client_id: webhookClientId || null,
-            event_type: eventType,
-            transaction_code: saleId,
-            status: "error",
-            payload: body,
-            error_message: insertError.message,
-          });
+      const { error: upsertError } = await supabase
+        .from("eduzz_transactions")
+        .upsert({
+          user_id: webhookUserId,
+          client_id: webhookClientId || null,
+          sale_id: dataId || saleId,
+          product: productName,
+          product_id: productId,
+          buyer_name: buyerName,
+          buyer_email: buyerEmail,
+          buyer_phone: buyerPhone,
+          sale_value: saleValue,
+          currency: currency,
+          sale_date: saleDate,
+          utm_source: utmData?.source || body.data?.utm_source || body.utm_source || null,
+          utm_medium: utmData?.medium || body.data?.utm_medium || body.utm_medium || null,
+          utm_campaign: utmData?.campaign || body.data?.utm_campaign || body.utm_campaign || null,
+          utm_content: utmData?.content || body.data?.utm_content || body.utm_content || null,
+          source: "webhook",
+          status: 'cancelado',
+          cancelled_at: new Date().toISOString(),
+        }, {
+          onConflict: "client_id,buyer_email,sale_value,product,sale_date",
+          ignoreDuplicates: false,
+        });
 
-          return new Response(JSON.stringify({ success: false, error: insertError.message }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        console.log(`Canceled transaction ${saleId} inserted (no prior record found)`);
-
+      if (upsertError) {
+        console.error("Error upserting canceled transaction:", upsertError);
+        
         await supabase.from("webhook_logs").insert({
           user_id: webhookUserId,
           client_id: webhookClientId || null,
           event_type: eventType,
           transaction_code: saleId,
-          status: "processed",
+          status: "error",
           payload: body,
+          error_message: upsertError.message,
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: `Canceled transaction ${saleId} inserted`,
-          action: 'inserted_as_canceled',
-        }), {
-          status: 200,
+        return new Response(JSON.stringify({ success: false, error: upsertError.message }), {
+          status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      console.log(`Canceled transaction upserted successfully (sale_id: ${dataId || saleId})`);
+
+      await supabase.from("webhook_logs").insert({
+        user_id: webhookUserId,
+        client_id: webhookClientId || null,
+        event_type: eventType,
+        transaction_code: saleId,
+        status: "processed",
+        payload: body,
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Canceled transaction upserted`,
+        action: 'upserted_as_canceled',
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
     } catch (error) {
       console.error("Unexpected error processing cancellation:", error);
 
