@@ -29,6 +29,7 @@ import AcceptInvite from "./pages/AcceptInvite";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
+import DuplicateAudit from "./pages/DuplicateAudit";
 
 const queryClient = new QueryClient();
 
@@ -94,6 +95,11 @@ const App = () => (
             <Route path="/invite/:token" element={<AcceptInvite />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/landing" element={<LandingPage />} />
+            <Route path="/duplicate-audit" element={
+              <ProtectedRoute allowedRoles={['master', 'admin']}>
+                <DuplicateAudit />
+              </ProtectedRoute>
+            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -34,6 +34,7 @@ import {
   Filter,
   Globe,
   Ban,
+  SearchCheck,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -88,6 +89,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: 'Clientes', url: '/clients', icon: Building2, roles: ['master'] },
       { title: 'Usuários', url: '/users', icon: Users, roles: ['master'] },
+      { title: 'Duplicatas', url: '/duplicate-audit', icon: SearchCheck, roles: ['master', 'admin'] },
       { title: 'Configurações', url: '/settings', icon: Settings, roles: ['master', 'admin'] },
       { title: 'Landing Page', url: '/landing', icon: Globe, roles: ['master', 'admin'] },
     ]
