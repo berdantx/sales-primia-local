@@ -35,6 +35,7 @@ interface CustomerDetailDialogProps {
 
 interface UnifiedTransaction {
   id: string;
+  orderId: string | null;
   platform: 'hotmart' | 'tmb' | 'eduzz';
   product: string | null;
   value: number;
@@ -70,7 +71,7 @@ export function CustomerDetailDialog({
         (async () => {
           let q = supabase
             .from('transactions')
-            .select('id, product, computed_value, currency, purchase_date')
+            .select('id, transaction_code, product, computed_value, currency, purchase_date')
             .eq('buyer_email', customerEmail);
           if (clientId) q = q.eq('client_id', clientId);
           if (startDate) q = q.gte('purchase_date', startDate.toISOString());
@@ -79,6 +80,7 @@ export function CustomerDetailDialog({
           data?.forEach((t) =>
             unified.push({
               id: t.id,
+              orderId: t.transaction_code,
               platform: 'hotmart',
               product: t.product,
               value: t.computed_value,
@@ -94,7 +96,7 @@ export function CustomerDetailDialog({
         (async () => {
           let q = supabase
             .from('tmb_transactions')
-            .select('id, product, ticket_value, currency, effective_date')
+            .select('id, order_id, product, ticket_value, currency, effective_date')
             .eq('buyer_email', customerEmail);
           if (clientId) q = q.eq('client_id', clientId);
           if (startDate) q = q.gte('effective_date', startDate.toISOString());
@@ -103,6 +105,7 @@ export function CustomerDetailDialog({
           data?.forEach((t) =>
             unified.push({
               id: t.id,
+              orderId: t.order_id,
               platform: 'tmb',
               product: t.product,
               value: t.ticket_value,
@@ -118,7 +121,7 @@ export function CustomerDetailDialog({
         (async () => {
           let q = supabase
             .from('eduzz_transactions')
-            .select('id, product, sale_value, currency, sale_date')
+            .select('id, sale_id, product, sale_value, currency, sale_date')
             .eq('buyer_email', customerEmail);
           if (clientId) q = q.eq('client_id', clientId);
           if (startDate) q = q.gte('sale_date', startDate.toISOString());
@@ -127,6 +130,7 @@ export function CustomerDetailDialog({
           data?.forEach((t) =>
             unified.push({
               id: t.id,
+              orderId: t.sale_id,
               platform: 'eduzz',
               product: t.product,
               value: t.sale_value,
@@ -199,6 +203,7 @@ export function CustomerDetailDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
+                  <TableHead>ID</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead>Plataforma</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
@@ -211,6 +216,9 @@ export function CustomerDetailDialog({
                       {t.date
                         ? format(new Date(t.date), 'dd/MM/yyyy', { locale: ptBR })
                         : '—'}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs max-w-[120px] truncate">
+                      {t.orderId || '—'}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
                       {t.product || '—'}
