@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, CheckCircle, Filter, RefreshCw, Search } from 'lucide-react';
 import { SearchDuplicateDialog } from '@/components/audit/SearchDuplicateDialog';
 import { useDuplicateAudit, useResolveDuplicate, DuplicateGroup, useEmailDuplicateAudit, useResolveEmailDuplicate, EmailDuplicateGroup, Platform } from '@/hooks/useDuplicateAudit';
+import { useFilter } from '@/contexts/FilterContext';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -38,8 +39,8 @@ function platformLabel(p: string) {
 
 // ============ ID TAB (existing) ============
 
-function IdDuplicatesTab() {
-  const { data, isLoading } = useDuplicateAudit();
+function IdDuplicatesTab({ clientId }: { clientId: string | null }) {
+  const { data, isLoading } = useDuplicateAudit(clientId);
   const resolve = useResolveDuplicate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const toggleSelect = (key: string) => {
@@ -204,8 +205,8 @@ function IdDuplicatesTab() {
 
 // ============ EMAIL TAB (new) ============
 
-function EmailDuplicatesTab() {
-  const { data, isLoading } = useEmailDuplicateAudit();
+function EmailDuplicatesTab({ clientId }: { clientId: string | null }) {
+  const { data, isLoading } = useEmailDuplicateAudit(clientId);
   const resolve = useResolveEmailDuplicate();
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [hideInstallments, setHideInstallments] = useState(false);
@@ -515,6 +516,7 @@ function EmailDuplicatesTab() {
 
 export default function DuplicateAudit() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const { clientId } = useFilter();
 
   return (
     <MainLayout>
@@ -536,10 +538,10 @@ export default function DuplicateAudit() {
             <TabsTrigger value="by-email">Por Email</TabsTrigger>
           </TabsList>
           <TabsContent value="by-id">
-            <IdDuplicatesTab />
+            <IdDuplicatesTab clientId={clientId} />
           </TabsContent>
           <TabsContent value="by-email">
-            <EmailDuplicatesTab />
+            <EmailDuplicatesTab clientId={clientId} />
           </TabsContent>
         </Tabs>
       </div>
