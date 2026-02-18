@@ -1,65 +1,72 @@
 
-
-# Botao de Busca de Duplicatas por Cliente
+# Busca Completa de Duplicatas
 
 ## O que muda
-Adicionar um botao "Buscar Duplicata" na pagina de Auditoria de Duplicatas que abre um dialog de busca. Nesse dialog, o usuario digita um ID de transacao ou e-mail, escolhe a plataforma (Todas, Hotmart, TMB ou Eduzz), e o sistema faz uma busca direta no banco filtrando pelo cliente selecionado no contexto global.
+Adicionar um botao "Busca Completa" no dialog de busca de duplicatas. Esse botao faz uma varredura automatica em todas as transacoes do cliente selecionado (sem precisar digitar nada), agrupa por ID de transacao e por email+produto, e mostra apenas os grupos que tem duplicatas. O campo de busca manual continua existindo para buscas direcionadas.
 
 ## Como vai funcionar
-1. O usuario clica no botao "Buscar Duplicata"
-2. Um dialog abre com campo de busca (ID ou e-mail) e selector de plataforma
-3. O sistema busca nas tabelas `transactions`, `tmb_transactions` e/ou `eduzz_transactions` filtrando por `client_id` do contexto global
-4. Os resultados sao exibidos agrupados, mostrando todos os registros que compartilham o mesmo ID ou e-mail
-5. O usuario pode clicar em qualquer resultado para abrir os detalhes (reutilizando a logica de `handleRowClick` ja existente)
-6. O usuario pode resolver duplicatas diretamente nos resultados da busca
+1. O usuario abre o dialog "Buscar Duplicata"
+2. Ele ve o campo de busca manual (como ja existe) E um novo botao "Busca Completa"
+3. Ao clicar em "Busca Completa", o sistema busca TODAS as transacoes do cliente na(s) plataforma(s) selecionada(s)
+4. O sistema agrupa por ID de transacao e por email+produto
+5. Mostra apenas os grupos que possuem mais de 1 registro (ou seja, duplicatas reais)
+6. O usuario pode remover individualmente ou em lote, como ja funciona
 
 ## Detalhes tecnicos
 
-### Arquivo: `src/pages/DuplicateAudit.tsx`
+### Arquivo: `src/components/audit/SearchDuplicateDialog.tsx`
 
-1. **Remover as barras de busca inline** das duas abas (as `Input` com icone de `Search` que existem atualmente)
+1. **Adicionar botao "Busca Completa"** ao lado do botao "Buscar" existente
 
-2. **Criar componente `SearchDuplicateDialog`**:
-   - Props: `open`, `onOpenChange`
-   - Estados internos: `searchTerm`, `platformFilter` (all/hotmart/tmb/eduzz), `results`, `isSearching`
-   - Usa `useFilter()` do contexto global para obter o `clientId` selecionado
-   - Ao clicar "Buscar", faz queries no Supabase:
-     - Se `clientId` existe, filtra por `.eq('client_id', clientId)`
-     - Busca por ID: `.ilike('transaction_code', '%termo%')` (hotmart), `.ilike('order_id', '%termo%')` (tmb), `.ilike('sale_id', '%termo%')` (eduzz)
-     - Busca por email: `.ilike('buyer_email', '%termo%')` em cada tabela
-   - Exibe os resultados em uma tabela dentro do dialog
-   - Cada linha e clicavel e abre o dialog de detalhes da plataforma correspondente (Hotmart/Eduzz/TMB)
+2. **Criar funcao `handleFullScan`**:
+   - Nao exige `searchTerm` (busca sem filtro de texto)
+   - Busca todas as transacoes do cliente com `client_id = clientId` (sem `.or()`)
+   - Usa paginacao para buscar alem do limite de 1000 (loop com `.range()` ate esgotar)
+   - Reutiliza `groupResults()` para agrupar
+   - Filtra os grupos para exibir **apenas** os que tem `isDuplicate: true`
+   - Exibe contador de duplicatas encontradas
 
-3. **Adicionar botao na pagina principal** (no header, ao lado do titulo):
-   - Icone `Search` + texto "Buscar Duplicata"
-   - Controla abertura do `SearchDuplicateDialog`
+3. **Adicionar estado `isFullScan`** para diferenciar busca manual de busca completa:
+   - Na busca manual: mostra todos os resultados (duplicatas e nao-duplicatas), como ja faz
+   - Na busca completa: mostra apenas os grupos duplicados
 
-4. **Importacoes adicionais**:
-   - `Dialog, DialogContent, DialogHeader, DialogTitle` de `@/components/ui/dialog`
-   - `useFilter` de `@/contexts/FilterContext`
+4. **UI do botao**: variant="outline", icone `SearchCheck` ou `ScanSearch` do lucide, texto "Busca Completa"
 
-### Fluxo da busca
+### Fluxo
 
 ```text
-[Botao "Buscar Duplicata"]
+[Dialog aberto]
+  - Campo de busca (opcional)
+  - Plataforma: Todas | Hotmart | TMB | Eduzz
+  - [Buscar] (busca com termo digitado)
+  - [Busca Completa] (varre tudo do cliente)
         |
         v
-[Dialog abre]
-  - Campo: ID ou Email
-  - Plataforma: Todas | Hotmart | TMB | Eduzz  
-  - Botao: Buscar
+[Busca Completa clicado]
+  - Busca TODAS transacoes do cliente (sem filtro de texto)
+  - Agrupa por ID e por email+produto
+  - Filtra apenas grupos com 2+ registros
+  - Exibe: "X grupos de duplicatas encontrados (Y registros)"
         |
         v
-[Query no banco com client_id do contexto]
-  - transactions WHERE (transaction_code ILIKE OR buyer_email ILIKE) AND client_id = X
-  - tmb_transactions WHERE (order_id ILIKE OR buyer_email ILIKE) AND client_id = X
-  - eduzz_transactions WHERE (sale_id ILIKE OR buyer_email ILIKE) AND client_id = X
-        |
-        v
-[Resultados agrupados na tabela do dialog]
-  - Plataforma | ID | Email | Nome | Valor | Data | Origem
-  - Clique abre detalhes completos
+[Resultados - apenas duplicatas]
+  - Checkbox + lixeira para remover
+  - Clique na linha abre detalhes
+```
+
+### Paginacao para buscar todos os registros
+Como o Supabase limita a 1000 registros por query, a busca completa fara um loop:
+```
+let all = [];
+let from = 0;
+const PAGE = 1000;
+while (true) {
+  const { data } = await supabase.from(table).select(...).eq('client_id', clientId).range(from, from + PAGE - 1);
+  if (!data || data.length === 0) break;
+  all.push(...data);
+  if (data.length < PAGE) break;
+  from += PAGE;
+}
 ```
 
 ### Nenhuma migracao necessaria
-Reutiliza tabelas e dados existentes, apenas faz queries diretas com filtros.
