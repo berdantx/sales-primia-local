@@ -9,6 +9,7 @@ import { TmbImportPreview } from '@/components/upload/TmbImportPreview';
 import { EduzzImportPreview } from '@/components/upload/EduzzImportPreview';
 import { ImportProgress } from '@/components/upload/ImportProgress';
 import { PlatformSelector, UploadPlatform } from '@/components/upload/PlatformSelector';
+import { DuplicateReviewDialog, DuplicateMatch, DuplicateAction } from '@/components/upload/DuplicateReviewDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,15 +17,15 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useFilter } from '@/contexts/FilterContext';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useImportTransactions } from '@/hooks/useImportTransactions';
+import { useImportTransactions, DuplicateScanResult } from '@/hooks/useImportTransactions';
 import { supabase } from '@/integrations/supabase/client';
 import { parseFile, HotmartTransaction, ParseError } from '@/lib/parsers/hotmartParser';
 import { parseTmbFile, TmbTransaction, TmbParseError } from '@/lib/parsers/tmbParser';
 import { parseEduzzFile, EduzzTransaction, EduzzParseError } from '@/lib/parsers/eduzzParser';
-import { ArrowLeft, ArrowRight, FileSpreadsheet, Store, CheckCircle2, CreditCard } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FileSpreadsheet, Store, CheckCircle2, CreditCard, Loader2 } from 'lucide-react';
 import { DataManagement } from '@/components/upload/DataManagement';
 
-type UploadStep = 'platform' | 'upload' | 'preview' | 'importing' | 'complete';
+type UploadStep = 'platform' | 'upload' | 'preview' | 'scanning' | 'importing' | 'complete';
 
 export default function UploadPage() {
   const navigate = useNavigate();
@@ -32,7 +33,11 @@ export default function UploadPage() {
   const { user } = useAuth();
   const { clientId } = useFilter();
   const { isMaster } = useUserRole();
-  const { progress: importProgress, importHotmart, importTmb, importEduzz } = useImportTransactions();
+  const {
+    progress: importProgress,
+    importHotmart, importTmb, importEduzz,
+    scanHotmartDuplicates, scanTmbDuplicates, scanEduzzDuplicates,
+  } = useImportTransactions();
 
   const [step, setStep] = useState<UploadStep>('platform');
   const [platform, setPlatform] = useState<UploadPlatform>(null);
@@ -54,6 +59,11 @@ export default function UploadPage() {
   const [duplicates, setDuplicates] = useState<string[]>([]);
   const [totalRows, setTotalRows] = useState(0);
   const [importedCount, setImportedCount] = useState(0);
+
+  // Duplicate review state
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [duplicateScanResult, setDuplicateScanResult] = useState<DuplicateScanResult | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
 
   const handlePlatformSelect = (selectedPlatform: UploadPlatform) => {
     setPlatform(selectedPlatform);
@@ -103,6 +113,7 @@ export default function UploadPage() {
     setEduzzErrors([]);
     setDuplicates([]);
     setTotalRows(0);
+    setDuplicateScanResult(null);
     setStep('upload');
   };
 
@@ -112,16 +123,56 @@ export default function UploadPage() {
     setStep('platform');
   };
 
-  const handleImport = async () => {
+  // Pre-scan duplicates before import
+  const handlePreImportScan = async () => {
     if (!user) return;
 
-    const transactionCount = platform === 'hotmart' 
-      ? hotmartTransactions.length 
-      : platform === 'tmb'
-      ? tmbTransactions.length
-      : eduzzTransactions.length;
-    
-    if (transactionCount === 0) return;
+    setIsScanning(true);
+    try {
+      let scanResult: DuplicateScanResult | null = null;
+
+      if (platform === 'hotmart') {
+        scanResult = await scanHotmartDuplicates(hotmartTransactions, user.id, clientId);
+      } else if (platform === 'tmb') {
+        scanResult = await scanTmbDuplicates(tmbTransactions, user.id, clientId);
+      } else if (platform === 'eduzz') {
+        scanResult = await scanEduzzDuplicates(eduzzTransactions, user.id, clientId);
+      }
+
+      if (scanResult && scanResult.duplicateMatches.length > 0) {
+        setDuplicateScanResult(scanResult);
+        setShowDuplicateDialog(true);
+      } else {
+        // No duplicates found, proceed directly
+        await executeImport(scanResult?.newTransactions ?? [], [], 'skip');
+      }
+    } catch (error) {
+      toast({
+        title: 'Erro ao verificar duplicatas',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleDuplicateAction = async (action: DuplicateAction) => {
+    setShowDuplicateDialog(false);
+    if (!duplicateScanResult) return;
+    await executeImport(
+      duplicateScanResult.newTransactions,
+      duplicateScanResult.duplicateMatches,
+      action
+    );
+  };
+
+  const executeImport = async (
+    newTransactions: unknown[],
+    duplicateMatches: DuplicateMatch[],
+    mergeAction: DuplicateAction
+  ) => {
+    if (!user) return;
 
     setStep('importing');
 
@@ -143,11 +194,14 @@ export default function UploadPage() {
 
       if (importError) throw importError;
 
-      let result = { importedCount: 0, duplicateCount: 0, errorCount: 0 };
+      let result = { importedCount: 0, duplicateCount: 0, errorCount: 0, mergedCount: 0 };
 
       if (platform === 'hotmart') {
-        result = await importHotmart(hotmartTransactions, user.id, importRecord.id, clientId);
-        // Log parse errors
+        result = await importHotmart(
+          newTransactions as HotmartTransaction[],
+          user.id, importRecord.id, clientId,
+          duplicateMatches, mergeAction
+        );
         if (hotmartErrors.length > 0) {
           const errorRecords = hotmartErrors.slice(0, 100).map(e => ({
             import_id: importRecord.id,
@@ -160,7 +214,11 @@ export default function UploadPage() {
           result.errorCount += hotmartErrors.length;
         }
       } else if (platform === 'tmb') {
-        result = await importTmb(tmbTransactions, user.id, importRecord.id, clientId);
+        result = await importTmb(
+          newTransactions as TmbTransaction[],
+          user.id, importRecord.id, clientId,
+          duplicateMatches, mergeAction
+        );
         if (tmbErrors.length > 0) {
           const errorRecords = tmbErrors.slice(0, 100).map(e => ({
             import_id: importRecord.id,
@@ -173,7 +231,11 @@ export default function UploadPage() {
           result.errorCount += tmbErrors.length;
         }
       } else if (platform === 'eduzz') {
-        result = await importEduzz(eduzzTransactions, user.id, importRecord.id, clientId);
+        result = await importEduzz(
+          newTransactions as EduzzTransaction[],
+          user.id, importRecord.id, clientId,
+          duplicateMatches, mergeAction
+        );
         if (eduzzErrors.length > 0) {
           const errorRecords = eduzzErrors.slice(0, 100).map(e => ({
             import_id: importRecord.id,
@@ -201,9 +263,11 @@ export default function UploadPage() {
 
       setImportedCount(result.importedCount);
       setStep('complete');
+      
+      const mergeMsg = result.mergedCount > 0 ? ` ${result.mergedCount} registros atualizados (campos vazios preenchidos).` : '';
       toast({
         title: 'Importação concluída!',
-        description: `${result.importedCount} transações importadas com sucesso.${result.duplicateCount > 0 ? ` ${result.duplicateCount} duplicatas ignoradas.` : ''}${result.errorCount > 0 ? ` ${result.errorCount} erros.` : ''}`,
+        description: `${result.importedCount} transações importadas.${result.duplicateCount > 0 ? ` ${result.duplicateCount} duplicatas.` : ''}${mergeMsg}${result.errorCount > 0 ? ` ${result.errorCount} erros.` : ''}`,
       });
     } catch (error) {
       toast({
@@ -234,6 +298,13 @@ export default function UploadPage() {
     if (platform === 'tmb') return 'Arraste sua planilha CSV (delimitador ;) para a área abaixo';
     if (platform === 'eduzz') return 'Arraste sua planilha CSV ou XLSX da Eduzz para a área abaixo';
     return '';
+  };
+
+  const getTransactionCount = () => {
+    if (platform === 'hotmart') return hotmartTransactions.length;
+    if (platform === 'tmb') return tmbTransactions.length;
+    if (platform === 'eduzz') return eduzzTransactions.length;
+    return 0;
   };
 
   return (
@@ -271,7 +342,7 @@ export default function UploadPage() {
               <div key={s.key} className="flex items-center gap-2">
                 <div className={`
                   w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                  ${step === s.key || ['preview', 'importing', 'complete'].indexOf(step) > ['upload', 'preview', 'importing'].indexOf(s.key) 
+                  ${step === s.key || ['preview', 'scanning', 'importing', 'complete'].indexOf(step) > ['upload', 'preview', 'importing'].indexOf(s.key) 
                     ? 'bg-primary text-primary-foreground' 
                     : 'bg-muted text-muted-foreground'}
                 `}>
@@ -308,12 +379,14 @@ export default function UploadPage() {
               <CardTitle>
                 {step === 'upload' && 'Selecione o arquivo'}
                 {step === 'preview' && 'Revise os dados'}
+                {step === 'scanning' && 'Verificando duplicatas...'}
                 {step === 'importing' && 'Importando...'}
                 {step === 'complete' && 'Importação concluída!'}
               </CardTitle>
               <CardDescription>
                 {step === 'upload' && getDropZoneHint()}
                 {step === 'preview' && 'Confira as transações antes de confirmar a importação'}
+                {step === 'scanning' && 'Comparando com registros existentes no banco'}
                 {step === 'importing' && 'Aguarde enquanto processamos os dados'}
                 {step === 'complete' && 'Suas transações foram importadas com sucesso'}
               </CardDescription>
@@ -343,11 +416,20 @@ export default function UploadPage() {
                       Voltar
                     </Button>
                     <Button 
-                      onClick={handleImport}
-                      disabled={hotmartTransactions.length === 0}
+                      onClick={handlePreImportScan}
+                      disabled={hotmartTransactions.length === 0 || isScanning}
                     >
-                      Confirmar Importação
-                      <ArrowRight className="h-4 w-4 ml-2" />
+                      {isScanning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Verificando...
+                        </>
+                      ) : (
+                        <>
+                          Confirmar Importação
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -367,11 +449,20 @@ export default function UploadPage() {
                       Voltar
                     </Button>
                     <Button 
-                      onClick={handleImport}
-                      disabled={tmbTransactions.length === 0}
+                      onClick={handlePreImportScan}
+                      disabled={tmbTransactions.length === 0 || isScanning}
                     >
-                      Confirmar Importação
-                      <ArrowRight className="h-4 w-4 ml-2" />
+                      {isScanning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Verificando...
+                        </>
+                      ) : (
+                        <>
+                          Confirmar Importação
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -391,11 +482,20 @@ export default function UploadPage() {
                       Voltar
                     </Button>
                     <Button 
-                      onClick={handleImport}
-                      disabled={eduzzTransactions.length === 0}
+                      onClick={handlePreImportScan}
+                      disabled={eduzzTransactions.length === 0 || isScanning}
                     >
-                      Confirmar Importação
-                      <ArrowRight className="h-4 w-4 ml-2" />
+                      {isScanning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Verificando...
+                        </>
+                      ) : (
+                        <>
+                          Confirmar Importação
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -439,6 +539,19 @@ export default function UploadPage() {
           </Card>
         )}
       </div>
+
+      {/* Duplicate Review Dialog */}
+      {duplicateScanResult && platform && (
+        <DuplicateReviewDialog
+          open={showDuplicateDialog}
+          onOpenChange={setShowDuplicateDialog}
+          duplicates={duplicateScanResult.duplicateMatches}
+          newCount={duplicateScanResult.newTransactions.length}
+          platform={platform}
+          onConfirm={handleDuplicateAction}
+          isProcessing={step === 'importing'}
+        />
+      )}
     </MainLayout>
   );
 }
