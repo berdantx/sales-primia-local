@@ -1,51 +1,73 @@
 
 
-# Correção de duplicatas TMB: webhook vs importação CSV
+# Correção de Desduplicação: CSV vs Webhook (TMB, Hotmart, Eduzz)
 
 ## Problema
-A transação `order_id: 2012212` (cliente advmulennacarvalhodra@gmail.com) foi inserida duas vezes:
-- 18:34 via **webhook** (source: 'webhook', user_id do webhook)
-- 18:57 via **importação CSV** (source: 'tmb', user_id do usuário logado)
-
-A desduplicação falha porque o webhook grava com `WEBHOOK_USER_ID` e a importação CSV grava com o `user_id` do usuário logado. Como a constraint/verificação é por `(user_id, order_id)`, o mesmo pedido passa duas vezes.
-
-Isso inflou o faturamento em **R$ 2.397**.
+Webhooks gravam com `WEBHOOK_USER_ID` e importações CSV gravam com o `user_id` do usuário logado. A verificação de duplicatas usa `(user_id, order_id)`, permitindo o mesmo pedido ser inserido duas vezes por fontes diferentes.
 
 ## Correções
 
-### 1. Remover o registro duplicado
-- Deletar o registro da importação CSV (`id: 4db539ec-0eb4-4f0a-98e5-d8d79689fe37`), mantendo o do webhook que chegou primeiro.
-
-### 2. Corrigir desduplicação na importação CSV
+### 1. Importação CSV - Priorizar `client_id` na desduplicação
 **Arquivo:** `src/hooks/useImportTransactions.ts`
 
-Alterar `fetchExistingTmbIds` para buscar por `client_id` + `order_id` em vez de `user_id` + `order_id`:
-- Antes: `supabase.from('tmb_transactions').select('order_id').eq('user_id', userId)`
-- Depois: `supabase.from('tmb_transactions').select('order_id').eq('client_id', clientId)` (quando clientId disponivel, senao manter user_id como fallback)
+Alterar as 3 funções de fetch para priorizar `client_id` quando disponível:
 
-Aplicar a mesma correção para `fetchExistingHotmartIds` e `fetchExistingEduzzIds` para consistência.
+- `fetchExistingTmbIds`: se `clientId` disponível, buscar por `client_id` apenas (sem `user_id`); senão, manter fallback por `user_id`
+- `fetchExistingHotmartIds`: mesma lógica
+- `fetchExistingEduzzIds`: mesma lógica
 
-### 3. Adicionar verificação de duplicata no webhook TMB
+Exemplo da mudança:
+```text
+// Antes:
+let query = supabase.from('tmb_transactions').select('order_id').eq('user_id', userId);
+if (clientId) query = query.eq('client_id', clientId);
+
+// Depois:
+let query = supabase.from('tmb_transactions').select('order_id');
+if (clientId) {
+  query = query.eq('client_id', clientId);
+} else {
+  query = query.eq('user_id', userId);
+}
+```
+
+### 2. Webhook TMB - Verificação pre-upsert por `(order_id, client_id)`
 **Arquivo:** `supabase/functions/tmb-webhook/index.ts`
 
-Antes do upsert (linha 271), adicionar verificação por `order_id` + `client_id` (independente de `user_id`):
+Antes do upsert na seção "Efetivado" (antes da linha 250), adicionar:
+
 ```text
--- Verificar se já existe transação com esse order_id para esse client
-SELECT id FROM tmb_transactions WHERE order_id = X AND client_id = Y
+// Verificar se já existe por (order_id, client_id) independente de user_id
+const existingQuery = supabase
+  .from("tmb_transactions")
+  .select("id, source")
+  .eq("order_id", orderId);
+
+if (finalClientId) {
+  existingQuery.eq("client_id", finalClientId);
+}
+
+const { data: existingTx } = await existingQuery.maybeSingle();
+
+if (existingTx) {
+  // Logar como duplicata e retornar sucesso
+  ...return duplicate response...
+}
 ```
-Se já existir, retornar como duplicata sem inserir.
+
+### 3. Deletar o registro duplicado existente
+Executar a remoção do registro duplicado da importação CSV (`id: 4db539ec-0eb4-4f0a-98e5-d8d79689fe37`) para corrigir o faturamento inflado em R$ 2.397.
 
 ## Detalhes Técnicos
 
-### Importação CSV - fetchExistingTmbIds corrigido
-A função passará a priorizar `client_id` para deduplicação. Isso garante que independente de qual usuário importou ou se veio via webhook, o `order_id` não se repete dentro do mesmo cliente.
-
-### Webhook TMB - verificação extra
-Adicionar uma query antes do upsert que verifica existência por `(order_id, client_id)` sem depender de `user_id`. Se encontrar registro existente (de qualquer source), logar como duplicata.
-
-### Mesma correção para Hotmart e Eduzz
-Aplicar o mesmo padrão nos respectivos webhooks e funções de fetch para garantir consistência.
+### Ordem de execução
+1. Deletar registro duplicado existente no banco
+2. Atualizar `useImportTransactions.ts` (3 funções de fetch)
+3. Atualizar `tmb-webhook/index.ts` (pre-upsert check)
+4. Deploy do webhook atualizado
 
 ### Impacto
-- Corrige R$ 2.397 de faturamento inflado na cliente Camila Vieira
-- Previne futuras duplicatas entre webhook e importação CSV em todas as plataformas
+- Corrige R$ 2.397 de faturamento inflado
+- Previne futuras duplicatas entre webhook e CSV em todas as plataformas
+- Sem impacto em funcionalidade existente (fallback para `user_id` quando `client_id` não disponível)
+
