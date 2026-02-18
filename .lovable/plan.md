@@ -1,52 +1,63 @@
 
 
-# Auditoria de Vendas Duplicadas
+# Processar Cancelamentos e Chargebacks da Eduzz
 
-## Situacao Atual
-A pagina de auditoria de duplicatas ainda nao existe no sistema. Precisa ser criada do zero para permitir a busca e resolucao de vendas duplicadas nas 3 plataformas (Hotmart, TMB, Eduzz).
+## Problema
+O webhook da Eduzz atualmente so processa vendas aprovadas. Eventos de cancelamento (`myeduzz.invoice_canceled`) e chargeback (`myeduzz.invoice_chargeback`) sao ignorados com status "skipped". Isso impede que transacoes canceladas sejam subtraidas do faturamento.
 
 ## O que sera implementado
 
-### 1. Hook `useDuplicateAudit`
-Busca duplicatas nas 3 tabelas de transacoes agrupando por identificador + client_id:
-- `transactions`: agrupa por `transaction_code` + `client_id`
-- `tmb_transactions`: agrupa por `order_id` + `client_id`
-- `eduzz_transactions`: agrupa por `sale_id` + `client_id`
+### 1. Migracao de banco de dados
+Adicionar duas colunas na tabela `eduzz_transactions` (igual ao padrao ja usado em `tmb_transactions`):
+- `status` (text, default `'paid'`) -- para diferenciar vendas ativas de canceladas
+- `cancelled_at` (timestamp with time zone, nullable) -- data do cancelamento
 
-Para cada grupo com mais de 1 registro, retorna os detalhes (id, email, produto, valor, source, data).
+### 2. Atualizar o webhook Eduzz
+Modificar `supabase/functions/eduzz-webhook/index.ts` para:
+- Detectar o tipo de evento via campo `event` do payload (ex: `myeduzz.invoice_chargeback`, `myeduzz.invoice_canceled`)
+- Quando for cancelamento/chargeback:
+  - Buscar a transacao existente pelo `sale_id` (ou ID equivalente no payload)
+  - Se encontrada: atualizar `status = 'cancelado'` e `cancelled_at = now()`
+  - Se nao encontrada: inserir como nova transacao ja com status `cancelado`
+  - Logar no `webhook_logs` com event_type `EDUZZ_SALE_CANCELED` ou `EDUZZ_SALE_CHARGEBACK`
+- Manter o fluxo atual para vendas aprovadas (inserir com `status = 'paid'`)
 
-Inclui funcoes de resolucao:
-- Manter webhook (deleta registros com source diferente de webhook)
-- Manter CSV (deleta registros com source = webhook)
-- Acao em lote para resolver multiplas de uma vez
-
-### 2. Pagina `DuplicateAudit`
-- Cards de resumo: total de duplicatas por plataforma, valor total inflado
-- Tabela listando todos os grupos de duplicatas com detalhes
-- Botoes de acao por grupo e selecao em lote
-- Acessivel apenas para master e admin
-
-### 3. Integracao no app
-- Nova rota `/duplicate-audit` em `App.tsx`
-- Link "Duplicatas" na secao "Sistema" do menu lateral (`AppSidebar.tsx`)
+### 3. Ajustar queries de dashboard/KPIs
+Filtrar transacoes Eduzz para excluir `status = 'cancelado'` nas consultas de faturamento, garantindo que cancelamentos nao sejam contados como receita.
 
 ## Detalhes Tecnicos
 
-### Arquivos novos
-- `src/hooks/useDuplicateAudit.ts` -- Hook com queries de deteccao e funcoes de resolucao
-- `src/pages/DuplicateAudit.tsx` -- Pagina com UI completa
+### Migracao SQL
+```text
+ALTER TABLE eduzz_transactions 
+  ADD COLUMN status text NOT NULL DEFAULT 'paid',
+  ADD COLUMN cancelled_at timestamptz;
+```
 
-### Arquivos modificados
-- `src/components/layout/AppSidebar.tsx` -- Adicionar item "Duplicatas" com icone `Search` na secao Sistema (roles: master, admin)
-- `src/App.tsx` -- Adicionar rota protegida `/duplicate-audit`
+### Arquivo modificado
+- `supabase/functions/eduzz-webhook/index.ts`
+  - Extrair campo `event` do payload raiz (ex: `body.event`)
+  - Adicionar lista de eventos de cancelamento: `['myeduzz.invoice_chargeback', 'myeduzz.invoice_canceled']`
+  - Nova branch de logica: se evento e cancelamento, buscar transacao existente e atualizar status
+  - Transacoes aprovadas continuam sendo inseridas com `status: 'paid'`
 
-### Logica de deteccao
-Para cada tabela, busca todos os registros e agrupa no cliente JS por (identifier, client_id). Grupos com count > 1 sao duplicatas. Para cada grupo, calcula o valor inflado (valor x registros extras).
+### Hooks/paginas que podem precisar de ajuste
+- `src/hooks/useEduzzTransactions.ts` -- adicionar filtro `.neq('status', 'cancelado')` ou exibir status
+- `src/hooks/useEduzzTransactionStatsOptimized.ts` -- excluir cancelados dos KPIs
+- `src/hooks/useCombinedStats.ts` / `src/hooks/useCombinedTransactions.ts` -- excluir cancelados
 
-### Logica de resolucao
-- DELETE do registro nao desejado via Supabase client
-- Invalidacao de queries react-query apos cada acao
-- Toast de confirmacao
+### Fluxo do webhook atualizado
 
-### Correcao imediata
-Sera executada uma migracao SQL para deletar a duplicata ja identificada: `DELETE FROM tmb_transactions WHERE id = '17a54d76-50b0-446b-9b90-a2f2db5d3d5c'`
+1. Recebe POST
+2. Verifica ping -- responde 200
+3. Extrai `event` e `sale_id` do payload
+4. Se evento e cancelamento/chargeback:
+   - Busca transacao por `sale_id` + `client_id`
+   - Atualiza ou insere com `status: 'cancelado'`
+   - Loga em `webhook_logs`
+5. Se evento e venda aprovada:
+   - Fluxo atual (upsert com `status: 'paid'`)
+6. Qualquer outro evento: skip + log
+
+### Aguardando
+Os payloads de teste que voce vai enviar serao analisados nos logs para confirmar a estrutura exata dos campos (onde vem o `event`, o `sale_id`, o valor, etc.) antes de finalizar a implementacao.
