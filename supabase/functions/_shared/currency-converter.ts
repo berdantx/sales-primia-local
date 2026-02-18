@@ -16,6 +16,13 @@ const FALLBACK_RATES_TO_USD: Record<string, number> = {
   MXN: 0.058,    // Mexican Peso
   PEN: 0.27,     // Peruvian Sol
   UYU: 0.024,    // Uruguayan Peso
+  DOP: 0.0166,   // Dominican Peso
+  GTQ: 0.129,    // Guatemalan Quetzal
+  HNL: 0.040,    // Honduran Lempira
+  NIO: 0.027,    // Nicaraguan Córdoba
+  PAB: 1.00,     // Panamanian Balboa (pegged to USD)
+  PYG: 0.00013,  // Paraguayan Guaraní
+  CRC: 0.0019,   // Costa Rican Colón
 };
 
 interface ConversionResult {
@@ -65,8 +72,26 @@ export async function convertToUSD(
     return { convertedValue: converted, rate, source: 'fallback' };
   }
 
-  // Unknown currency - log warning and return original value as USD estimate
-  console.error(`No conversion rate available for ${currency}, storing value as-is with USD`);
+  // Try ExchangeRate API as second fallback
+  try {
+    const resp2 = await fetch(
+      `https://open.er-api.com/v6/latest/${currency}`
+    );
+    if (resp2.ok) {
+      const data2 = await resp2.json();
+      if (data2.rates?.USD) {
+        const converted = Number((value * data2.rates.USD).toFixed(2));
+        console.log(`ExchangeRate API: ${value} ${currency} * ${data2.rates.USD} = ${converted} USD`);
+        return { convertedValue: converted, rate: data2.rates.USD, source: 'frankfurter' };
+      }
+    }
+    console.warn(`ExchangeRate API returned non-OK for ${currency}: ${resp2.status}`);
+  } catch (err2) {
+    console.warn(`ExchangeRate API error for ${currency}:`, err2);
+  }
+
+  // Unknown currency - log error and mark as UNKNOWN to avoid polluting KPIs
+  console.error(`CRITICAL: No conversion rate available for ${currency}. Value ${value} will be marked as UNKNOWN.`);
   return { convertedValue: value, rate: 1, source: 'fallback' };
 }
 
