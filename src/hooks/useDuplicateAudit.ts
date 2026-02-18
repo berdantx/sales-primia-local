@@ -61,15 +61,16 @@ function groupDuplicates<T extends { client_id: string | null }>(
   return duplicates;
 }
 
-export function useDuplicateAudit() {
+export function useDuplicateAudit(clientId: string | null) {
   return useQuery({
-    queryKey: ['duplicate-audit'],
+    queryKey: ['duplicate-audit', clientId],
+    enabled: !!clientId,
     queryFn: async () => {
-      // Fetch all 3 tables
+      // Fetch all 3 tables filtered by clientId
       const [hotmart, tmb, eduzz] = await Promise.all([
-        supabase.from('transactions').select('id, transaction_code, client_id, buyer_email, product, computed_value, source, purchase_date, buyer_name').then(r => { if (r.error) throw r.error; return r.data; }),
-        supabase.from('tmb_transactions').select('id, order_id, client_id, buyer_email, product, ticket_value, source, effective_date, buyer_name').then(r => { if (r.error) throw r.error; return r.data; }),
-        supabase.from('eduzz_transactions').select('id, sale_id, client_id, buyer_email, product, sale_value, source, sale_date, buyer_name').then(r => { if (r.error) throw r.error; return r.data; }),
+        supabase.from('transactions').select('id, transaction_code, client_id, buyer_email, product, computed_value, source, purchase_date, buyer_name').eq('client_id', clientId!).then(r => { if (r.error) throw r.error; return r.data; }),
+        supabase.from('tmb_transactions').select('id, order_id, client_id, buyer_email, product, ticket_value, source, effective_date, buyer_name').eq('client_id', clientId!).then(r => { if (r.error) throw r.error; return r.data; }),
+        supabase.from('eduzz_transactions').select('id, sale_id, client_id, buyer_email, product, sale_value, source, sale_date, buyer_name').eq('client_id', clientId!).then(r => { if (r.error) throw r.error; return r.data; }),
       ]);
 
       const hotmartDups = groupDuplicates(
@@ -223,14 +224,15 @@ function groupByEmail<T extends { client_id: string | null }>(
   return duplicates;
 }
 
-export function useEmailDuplicateAudit() {
+export function useEmailDuplicateAudit(clientId: string | null) {
   return useQuery({
-    queryKey: ['email-duplicate-audit'],
+    queryKey: ['email-duplicate-audit', clientId],
+    enabled: !!clientId,
     queryFn: async () => {
       const [hotmart, tmb, eduzz] = await Promise.all([
-        supabase.from('transactions').select('id, transaction_code, client_id, buyer_email, product, computed_value, source, purchase_date, buyer_name, status:subscription_status, billing_type, recurrence_number').then(r => { if (r.error) throw r.error; return r.data; }),
-        supabase.from('tmb_transactions').select('id, order_id, client_id, buyer_email, product, ticket_value, source, effective_date, buyer_name, status').then(r => { if (r.error) throw r.error; return r.data; }),
-        supabase.from('eduzz_transactions').select('id, sale_id, client_id, buyer_email, product, sale_value, source, sale_date, buyer_name, status').then(r => { if (r.error) throw r.error; return r.data; }),
+        supabase.from('transactions').select('id, transaction_code, client_id, buyer_email, product, computed_value, source, purchase_date, buyer_name, status:subscription_status, billing_type, recurrence_number').eq('client_id', clientId!).then(r => { if (r.error) throw r.error; return r.data; }),
+        supabase.from('tmb_transactions').select('id, order_id, client_id, buyer_email, product, ticket_value, source, effective_date, buyer_name, status').eq('client_id', clientId!).then(r => { if (r.error) throw r.error; return r.data; }),
+        supabase.from('eduzz_transactions').select('id, sale_id, client_id, buyer_email, product, sale_value, source, sale_date, buyer_name, status').eq('client_id', clientId!).then(r => { if (r.error) throw r.error; return r.data; }),
       ]);
 
       const hotmartDups = groupByEmail(
