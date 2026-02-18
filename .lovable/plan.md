@@ -1,44 +1,52 @@
 
-# Modal de Detalhes do Cliente - Top 10 Clientes
+# Botao "Ver mais detalhes" com dropdown expandivel por transacao
+
+## Resumo
+Adicionar em cada linha da tabela de transacoes do cliente um botao "Ver mais detalhes da compra" que expande um dropdown (collapsible) mostrando todos os dados completos da transacao.
 
 ## O que muda
-Ao clicar em um cliente na lista "Top 10 Clientes", uma modal sera aberta mostrando todas as compras daquele cliente no periodo selecionado, com detalhes de cada transacao.
 
-## Mudancas
+### Editar: `src/components/dashboard/CustomerDetailDialog.tsx`
 
-### 1. Novo componente: `src/components/dashboard/CustomerDetailDialog.tsx`
-- Modal (Dialog) que recebe o email do cliente selecionado
-- Busca transacoes do cliente nas 3 tabelas (transactions, tmb_transactions, eduzz_transactions) filtrando por `buyer_email`
-- Exibe:
-  - Cabecalho com nome, email, total gasto e quantidade de compras
-  - Lista de transacoes em tabela com: data, produto, plataforma (badge), valor, status
-  - Ordenadas por data (mais recente primeiro)
-- Utiliza o Supabase client diretamente para buscar por email (sem necessidade de nova RPC)
+**1. Buscar todos os campos de cada tabela (nao apenas os resumidos)**
+- Hotmart: trazer todos os campos (`*`) incluindo billing_type, payment_method, sck_code, country, gross_value_with_taxes, total_installments, recurrence_number, business_model, offer_code, subscriber_code, subscription_status, source, buyer_phone, etc.
+- TMB: trazer todos os campos incluindo buyer_phone, status, cancelled_at, utm_source, utm_medium, utm_campaign, utm_content, source
+- Eduzz: trazer todos os campos incluindo buyer_phone, invoice_code, product_id, original_value, original_currency, utm_source, utm_medium, utm_campaign, utm_content, source
 
-### 2. Editar: `src/components/dashboard/TopCustomers.tsx`
-- Adicionar estado para cliente selecionado
-- Tornar cada linha clicavel (cursor pointer, hover effect)
-- Renderizar o `CustomerDetailDialog` passando o cliente selecionado
-- Receber os filtros de periodo (startDate, endDate) e clientId como props para repassar ao dialog
+**2. Atualizar a interface `UnifiedTransaction`**
+- Adicionar campo `rawData: Record<string, any>` para armazenar todos os dados originais da transacao
 
-### 3. Editar: `src/pages/Dashboard.tsx`
-- Passar `filters` e `clientId` como props adicionais para o componente `TopCustomers`
+**3. Adicionar estado de expansao**
+- Estado `expandedId: string | null` para controlar qual linha esta expandida
+
+**4. Adicionar botao e area expandivel por linha**
+- Abaixo de cada `TableRow`, renderizar uma linha extra (condicional) quando `expandedId === t.id`
+- Botao "Ver mais detalhes da compra" com icone ChevronDown/ChevronUp
+- Ao expandir, mostrar um grid com todos os campos do `rawData` formatados em pares label/valor
+- Campos exibidos variam por plataforma:
+  - **Hotmart**: Nome, Email, Telefone, Pais, Produto ID, Metodo Pagamento, Tipo Cobranca, Modelo Negocio, Codigo Oferta, SCK, Parcelas, Recorrencia, Status Assinatura, Codigo Assinante, Valor Bruto, Comissao Produtor, Comissao Marketplace, Moeda Original, Valor Original, Fonte
+  - **TMB**: Nome, Email, Telefone, Status, Data Cancelamento, UTM Source/Medium/Campaign/Content, Fonte
+  - **Eduzz**: Nome, Email, Telefone, Codigo Fatura, Produto ID, Valor Original, Moeda Original, UTM Source/Medium/Campaign/Content, Fonte
 
 ## Detalhes Tecnicos
 
-### CustomerDetailDialog
-- Usa `useQuery` para buscar transacoes quando o dialog abre
-- 3 queries paralelas (uma por plataforma) filtradas por `buyer_email` e periodo
-- Unifica os resultados em uma lista ordenada por data
-- Mostra badge colorido por plataforma (Hotmart verde, TMB azul, Eduzz roxo)
-- ScrollArea para listas longas
-- Loading skeleton enquanto carrega
+### Componentes utilizados
+- `Collapsible` do Radix UI (ja instalado) para o efeito de expandir/recolher
+- `ChevronDown` / `ChevronUp` do lucide-react para o icone do botao
+- `Button` com variant `ghost` e tamanho `sm`
 
-### TopCustomers (alteracoes)
-- Nova interface de props incluindo `startDate`, `endDate`, `clientId`
-- Estado `selectedCustomer` para controlar qual cliente esta aberto
-- `onClick` em cada linha do cliente para abrir o dialog
-- Estilo hover com `cursor-pointer` e `hover:bg-muted/50`
+### Estrutura da tabela expandida
+Cada linha da tabela tera:
+1. A `TableRow` normal (como esta hoje)
+2. Uma `TableRow` extra com `colspan=5` que aparece apenas quando expandida, contendo um grid 2 ou 3 colunas com os detalhes
 
-### Dashboard (alteracoes)
-- Passar `filters.startDate`, `filters.endDate` e `clientId` para `TopCustomers`
+### Queries
+- Mudar os `.select(...)` especificos para `.select('*')` nas 3 queries (Hotmart, TMB, Eduzz)
+- Salvar o objeto completo em `rawData` para renderizar no dropdown
+
+### Labels por plataforma
+Um mapa de labels sera criado para traduzir os nomes das colunas do banco para labels amigaveis em portugues, por exemplo:
+- `payment_method` -> "Metodo de Pagamento"
+- `billing_type` -> "Tipo de Cobranca"
+- `buyer_phone` -> "Telefone"
+- `utm_source` -> "UTM Source"
