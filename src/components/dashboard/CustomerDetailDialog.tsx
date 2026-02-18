@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -54,6 +54,7 @@ const platformConfig = {
 };
 
 const hotmartLabels: Record<string, string> = {
+  transaction_code: 'ID da Transação',
   buyer_name: 'Nome',
   buyer_email: 'Email',
   buyer_phone: 'Telefone',
@@ -80,6 +81,7 @@ const hotmartLabels: Record<string, string> = {
 };
 
 const tmbLabels: Record<string, string> = {
+  order_id: 'ID do Pedido',
   buyer_name: 'Nome',
   buyer_email: 'Email',
   buyer_phone: 'Telefone',
@@ -93,6 +95,7 @@ const tmbLabels: Record<string, string> = {
 };
 
 const eduzzLabels: Record<string, string> = {
+  sale_id: 'ID da Venda',
   buyer_name: 'Nome',
   buyer_email: 'Email',
   buyer_phone: 'Telefone',
@@ -126,25 +129,59 @@ function formatDetailValue(key: string, value: any): string {
   return String(value);
 }
 
-function TransactionDetails({ transaction }: { transaction: UnifiedTransaction }) {
+function TransactionDetails({
+  transaction,
+  showRaw,
+  onToggleRaw,
+}: {
+  transaction: UnifiedTransaction;
+  showRaw: boolean;
+  onToggleRaw: () => void;
+}) {
   const labels = labelsByPlatform[transaction.platform] || {};
   const entries = Object.keys(labels)
     .map((key) => ({ label: labels[key], value: transaction.rawData[key] }))
     .filter((e) => e.value !== null && e.value !== undefined && e.value !== '');
 
-  if (entries.length === 0) {
-    return <p className="text-sm text-muted-foreground p-2">Sem dados adicionais</p>;
-  }
+  const sanitizedRaw = Object.fromEntries(
+    Object.entries(transaction.rawData).filter(
+      ([key]) => !['user_id', 'client_id', 'import_id'].includes(key)
+    )
+  );
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 p-3">
-      {entries.map((e, i) => (
-        <div key={i} className="text-sm">
-          <span className="text-muted-foreground">{e.label}: </span>
-          <span className="font-medium">{formatDetailValue(Object.keys(labels)[i], e.value)}</span>
+    <>
+      {entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground p-2">Sem dados adicionais</p>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 p-3">
+          {entries.map((e, i) => (
+            <div key={i} className="text-sm">
+              <span className="text-muted-foreground">{e.label}: </span>
+              <span className="font-medium">{formatDetailValue(Object.keys(labels)[i], e.value)}</span>
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
+      )}
+      <div className="px-3 pb-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs text-muted-foreground gap-1 h-7"
+          onClick={onToggleRaw}
+        >
+          <Code className="h-3 w-3" />
+          {showRaw ? 'Ocultar webhook completo' : 'Ver webhook completo'}
+        </Button>
+        {showRaw && (
+          <div className="mt-2 bg-muted rounded-md overflow-x-auto max-h-[300px] overflow-y-auto">
+            <pre className="text-xs font-mono p-3 whitespace-pre">
+              {JSON.stringify(sanitizedRaw, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -158,6 +195,7 @@ export function CustomerDetailDialog({
   clientId,
 }: CustomerDetailDialogProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showRawId, setShowRawId] = useState<string | null>(null);
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['customer-detail', customerEmail, startDate, endDate, clientId],
@@ -343,7 +381,11 @@ export function CustomerDetailDialog({
                         </Button>
                         {expandedId === t.id && (
                           <div className="bg-muted/50 rounded-md mb-2">
-                            <TransactionDetails transaction={t} />
+                            <TransactionDetails
+                              transaction={t}
+                              showRaw={showRawId === t.id}
+                              onToggleRaw={() => setShowRawId(showRawId === t.id ? null : t.id)}
+                            />
                           </div>
                         )}
                       </TableCell>
