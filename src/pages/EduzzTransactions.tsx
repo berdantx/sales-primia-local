@@ -110,6 +110,7 @@ function EduzzTransactions() {
   const [utmCampaignFilter, setUtmCampaignFilter] = useState<string | null>(null);
   const [utmContentFilter, setUtmContentFilter] = useState<string | null>(null);
   const [trafficTypeFilter, setTrafficTypeFilter] = useState<'paid' | 'organic' | 'direct' | null>(null);
+  const [currencyFilter, setCurrencyFilter] = useState<string | null>(null);
   // Analytics state
   const [topMode, setTopMode] = useState<SalesViewMode>('products');
   const [trendGroupBy, setTrendGroupBy] = useState<SalesGroupBy>('day');
@@ -185,6 +186,12 @@ function EduzzTransactions() {
       if (utmContentFilter && t.utm_content !== utmContentFilter) return false;
       // Traffic type filter
       if (trafficTypeFilter && getTrafficType(t) !== trafficTypeFilter) return false;
+      // Currency filter
+      if (currencyFilter === 'converted') {
+        if (!t.original_currency) return false;
+      } else if (currencyFilter && currencyFilter !== 'converted') {
+        if ((t.currency || 'BRL') !== currencyFilter) return false;
+      }
       // Filter by selected top item
       if (selectedTopItem) {
         if (topMode === 'products' && t.product !== selectedTopItem) return false;
@@ -194,7 +201,7 @@ function EduzzTransactions() {
       
       return true;
     });
-  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, trafficTypeFilter, selectedTopItem, topMode]);
+  }, [transactions, debouncedSearch, productFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, trafficTypeFilter, currencyFilter, selectedTopItem, topMode]);
 
   // Traffic stats calculation
   const trafficStats = useMemo(() => {
@@ -338,10 +345,11 @@ function EduzzTransactions() {
     setUtmCampaignFilter(null);
     setUtmContentFilter(null);
     setTrafficTypeFilter(null);
+    setCurrencyFilter(null);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter || !!utmContentFilter || !!trafficTypeFilter;
+  const hasActiveFilters = !!search || !!productFilter || !!utmSourceFilter || !!utmMediumFilter || !!utmCampaignFilter || !!utmContentFilter || !!trafficTypeFilter || !!currencyFilter;
 
   if (isLoading || isLoadingStats) {
     return (
@@ -519,7 +527,7 @@ function EduzzTransactions() {
         </motion.div>
 
         {/* Selected Filter Indicators */}
-        {(selectedTopItem || trafficTypeFilter) && (
+        {(selectedTopItem || trafficTypeFilter || currencyFilter) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -531,6 +539,15 @@ function EduzzTransactions() {
                 <X 
                   className="h-3 w-3 cursor-pointer hover:text-destructive" 
                   onClick={() => setTrafficTypeFilter(null)}
+                />
+              </Badge>
+            )}
+            {currencyFilter && (
+              <Badge variant="secondary" className="gap-2 px-3 py-1.5">
+                Moeda: {currencyFilter === 'converted' ? 'Convertidas' : currencyFilter}
+                <X 
+                  className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                  onClick={() => setCurrencyFilter(null)}
                 />
               </Badge>
             )}
@@ -575,6 +592,18 @@ function EduzzTransactions() {
                 className="w-full sm:w-[260px]"
               />
             )}
+            <Select value={currencyFilter || 'all'} onValueChange={(v) => { setCurrencyFilter(v === 'all' ? null : v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <DollarSign className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Moeda" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as moedas</SelectItem>
+                <SelectItem value="BRL">BRL - Real</SelectItem>
+                <SelectItem value="USD">USD - Dólar</SelectItem>
+                <SelectItem value="converted">Convertidas</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </motion.div>
 
