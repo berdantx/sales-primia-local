@@ -23,6 +23,8 @@ export interface EduzzTransaction {
   source: string;
   created_at: string;
   client_id: string | null;
+  status: string;
+  cancelled_at: string | null;
 }
 
 export interface EduzzTransactionFilters {
@@ -98,7 +100,8 @@ export function useEduzzTransactionStats(filters?: EduzzTransactionFilters) {
   };
 
   if (transactions) {
-    stats.totalBRL = transactions.reduce((sum, t) => sum + Number(t.sale_value), 0);
+    const paidTransactions = transactions.filter(t => t.status !== 'cancelado');
+    stats.totalBRL = paidTransactions.reduce((sum, t) => sum + Number(t.sale_value), 0);
     stats.totalTransactions = transactions.length;
 
     // Calculate top products
