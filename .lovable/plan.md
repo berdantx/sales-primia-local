@@ -1,63 +1,53 @@
 
 
-# Processar Cancelamentos e Chargebacks da Eduzz
+# Corrigir busca de transações no fluxo de cancelamento Eduzz
 
-## Problema
-O webhook da Eduzz atualmente so processa vendas aprovadas. Eventos de cancelamento (`myeduzz.invoice_canceled`) e chargeback (`myeduzz.invoice_chargeback`) sao ignorados com status "skipped". Isso impede que transacoes canceladas sejam subtraidas do faturamento.
+## Problema identificado
+O webhook de cancelamento/chargeback recebe um `id` de evento diferente do evento de pagamento original. Exemplo:
+- Evento de pagamento: `id = "abc123..."` (salvo como `sale_id`)
+- Evento de cancelamento: `id = "xyz789..."` (outro ID)
 
-## O que sera implementado
+Ambos compartilham o mesmo `data.id` (ID da fatura, ex: `"12345678"`), mas o codigo atual usa `body.id` como `sale_id` para buscar a transacao existente -- e nao encontra.
 
-### 1. Migracao de banco de dados
-Adicionar duas colunas na tabela `eduzz_transactions` (igual ao padrao ja usado em `tmb_transactions`):
-- `status` (text, default `'paid'`) -- para diferenciar vendas ativas de canceladas
-- `cancelled_at` (timestamp with time zone, nullable) -- data do cancelamento
+Quando nao encontra, tenta inserir uma nova transacao cancelada, mas falha porque a constraint `idx_eduzz_unique_transaction` (`client_id, buyer_email, sale_value, product, sale_date`) detecta duplicata.
 
-### 2. Atualizar o webhook Eduzz
-Modificar `supabase/functions/eduzz-webhook/index.ts` para:
-- Detectar o tipo de evento via campo `event` do payload (ex: `myeduzz.invoice_chargeback`, `myeduzz.invoice_canceled`)
-- Quando for cancelamento/chargeback:
-  - Buscar a transacao existente pelo `sale_id` (ou ID equivalente no payload)
-  - Se encontrada: atualizar `status = 'cancelado'` e `cancelled_at = now()`
-  - Se nao encontrada: inserir como nova transacao ja com status `cancelado`
-  - Logar no `webhook_logs` com event_type `EDUZZ_SALE_CANCELED` ou `EDUZZ_SALE_CHARGEBACK`
-- Manter o fluxo atual para vendas aprovadas (inserir com `status = 'paid'`)
+## Solucao
 
-### 3. Ajustar queries de dashboard/KPIs
-Filtrar transacoes Eduzz para excluir `status = 'cancelado'` nas consultas de faturamento, garantindo que cancelamentos nao sejam contados como receita.
+Alterar o fluxo de cancelamento no `supabase/functions/eduzz-webhook/index.ts` para buscar a transacao existente de **duas formas**:
 
-## Detalhes Tecnicos
+1. **Primeiro**: Tentar encontrar pelo `data.id` (ID da fatura) comparando com o campo `sale_id` existente -- cobre o caso em que o sale_id original foi o `data.id`
+2. **Segundo (fallback)**: Buscar pela combinacao `(client_id, buyer_email, product, sale_date)` -- cobre o caso em que o sale_id original era o ID do evento
 
-### Migracao SQL
-```text
-ALTER TABLE eduzz_transactions 
-  ADD COLUMN status text NOT NULL DEFAULT 'paid',
-  ADD COLUMN cancelled_at timestamptz;
-```
+Se encontrar por qualquer um dos metodos, **atualizar** a transacao para `status = 'cancelado'`.
+
+Se nao encontrar por nenhum, usar **upsert** com `onConflict: 'client_id,buyer_email,sale_value,product,sale_date'` em vez de insert simples, para evitar o erro de constraint.
+
+## Detalhes tecnicos
 
 ### Arquivo modificado
-- `supabase/functions/eduzz-webhook/index.ts`
-  - Extrair campo `event` do payload raiz (ex: `body.event`)
-  - Adicionar lista de eventos de cancelamento: `['myeduzz.invoice_chargeback', 'myeduzz.invoice_canceled']`
-  - Nova branch de logica: se evento e cancelamento, buscar transacao existente e atualizar status
-  - Transacoes aprovadas continuam sendo inseridas com `status: 'paid'`
+`supabase/functions/eduzz-webhook/index.ts`
 
-### Hooks/paginas que podem precisar de ajuste
-- `src/hooks/useEduzzTransactions.ts` -- adicionar filtro `.neq('status', 'cancelado')` ou exibir status
-- `src/hooks/useEduzzTransactionStatsOptimized.ts` -- excluir cancelados dos KPIs
-- `src/hooks/useCombinedStats.ts` / `src/hooks/useCombinedTransactions.ts` -- excluir cancelados
+### Mudancas no fluxo de cancelamento
 
-### Fluxo do webhook atualizado
+```text
+// ANTES (nao funciona - busca pelo ID do evento)
+query.eq("sale_id", saleId)  // saleId = body.id (evento)
 
-1. Recebe POST
-2. Verifica ping -- responde 200
-3. Extrai `event` e `sale_id` do payload
-4. Se evento e cancelamento/chargeback:
-   - Busca transacao por `sale_id` + `client_id`
-   - Atualiza ou insere com `status: 'cancelado'`
-   - Loga em `webhook_logs`
-5. Se evento e venda aprovada:
-   - Fluxo atual (upsert com `status: 'paid'`)
-6. Qualquer outro evento: skip + log
+// DEPOIS (busca pela fatura e fallback por campos unicos)
+1. Extrair dataId = body.data?.id (ID da fatura)
+2. Buscar por sale_id = saleId (body.id) OU sale_id = dataId
+3. Se nao encontrar, buscar por (buyer_email + product + sale_date + client_id)
+4. Se encontrar: UPDATE status = 'cancelado'
+5. Se nao encontrar: UPSERT com onConflict na constraint existente
+```
 
-### Aguardando
-Os payloads de teste que voce vai enviar serao analisados nos logs para confirmar a estrutura exata dos campos (onde vem o `event`, o `sale_id`, o valor, etc.) antes de finalizar a implementacao.
+### Logica detalhada da busca
+
+- Extrair `dataId = String(body.data?.id)` (ex: `"12345678"`)
+- Query 1: `.or(\`sale_id.eq.${saleId},sale_id.eq.${dataId}\`)` filtrado por `client_id`
+- Se nao retornar resultado, Query 2: buscar por `buyer_email + product + sale_date + client_id`
+- Se encontrar em qualquer query: `UPDATE` com `status = 'cancelado'` e `cancelled_at`
+- Se nao encontrar: usar `.upsert()` com `onConflict: "client_id,buyer_email,sale_value,product,sale_date"` para inserir sem conflito
+
+### Nenhuma migracao necessaria
+Todas as colunas e constraints ja existem. A correcao e apenas na logica do Edge Function.
