@@ -1,49 +1,52 @@
 
 
-# Busca de Vendas Duplicadas
+# Auditoria de Vendas Duplicadas
 
-## Problema Atual
-Foram encontradas vendas duplicadas no banco de dados. Exemplo: `order_id: 2012342` (sidimarconsultoria@hotmail.com) aparece 2x na tabela TMB -- uma via CSV e outra via webhook, ambas com R$ 2.397, inflando o faturamento.
+## Situacao Atual
+A pagina de auditoria de duplicatas ainda nao existe no sistema. Precisa ser criada do zero para permitir a busca e resolucao de vendas duplicadas nas 3 plataformas (Hotmart, TMB, Eduzz).
 
-## O que será implementado
+## O que sera implementado
 
-### 1. Nova página "Auditoria de Duplicatas"
-Uma página dedicada acessível pelo menu lateral (seção "Sistema", visível para master/admin) que:
-- Escaneia as 3 tabelas de transações (Hotmart, TMB, Eduzz) buscando registros com o mesmo identificador + client_id
-- Exibe um resumo com total de duplicatas encontradas por plataforma e o valor total inflado
-- Lista todas as duplicatas encontradas com detalhes (email, produto, valor, origem CSV vs webhook, data)
+### 1. Hook `useDuplicateAudit`
+Busca duplicatas nas 3 tabelas de transacoes agrupando por identificador + client_id:
+- `transactions`: agrupa por `transaction_code` + `client_id`
+- `tmb_transactions`: agrupa por `order_id` + `client_id`
+- `eduzz_transactions`: agrupa por `sale_id` + `client_id`
 
-### 2. Resolução de conflitos
-Para cada grupo de duplicatas, o usuário poderá:
-- **Manter webhook**: deleta o registro CSV (recomendado, pois webhook é a fonte oficial)
-- **Manter CSV**: deleta o registro webhook
-- **Ação em lote**: selecionar múltiplas duplicatas e resolver todas de uma vez
+Para cada grupo com mais de 1 registro, retorna os detalhes (id, email, produto, valor, source, data).
 
-### 3. Correção imediata
-A duplicata já identificada (`order_id: 2012342`, ids `d9025859...` e `17a54d76...`) será corrigida deletando o registro CSV (`source: tmb`, id: `17a54d76-50b0-446b-9b90-a2f2db5d3d5c`).
+Inclui funcoes de resolucao:
+- Manter webhook (deleta registros com source diferente de webhook)
+- Manter CSV (deleta registros com source = webhook)
+- Acao em lote para resolver multiplas de uma vez
 
-## Detalhes Técnicos
+### 2. Pagina `DuplicateAudit`
+- Cards de resumo: total de duplicatas por plataforma, valor total inflado
+- Tabela listando todos os grupos de duplicatas com detalhes
+- Botoes de acao por grupo e selecao em lote
+- Acessivel apenas para master e admin
+
+### 3. Integracao no app
+- Nova rota `/duplicate-audit` em `App.tsx`
+- Link "Duplicatas" na secao "Sistema" do menu lateral (`AppSidebar.tsx`)
+
+## Detalhes Tecnicos
 
 ### Arquivos novos
-- `src/pages/DuplicateAudit.tsx` -- Página principal com tabela de duplicatas e ações
-- `src/hooks/useDuplicateAudit.ts` -- Hook que executa queries de agrupamento nas 3 tabelas
+- `src/hooks/useDuplicateAudit.ts` -- Hook com queries de deteccao e funcoes de resolucao
+- `src/pages/DuplicateAudit.tsx` -- Pagina com UI completa
 
 ### Arquivos modificados
-- `src/components/layout/AppSidebar.tsx` -- Adicionar link "Duplicatas" na seção Sistema
-- `src/App.tsx` -- Adicionar rota `/duplicate-audit`
+- `src/components/layout/AppSidebar.tsx` -- Adicionar item "Duplicatas" com icone `Search` na secao Sistema (roles: master, admin)
+- `src/App.tsx` -- Adicionar rota protegida `/duplicate-audit`
 
-### Lógica de detecção (SQL via Supabase client)
-```text
-Para cada tabela:
-  GROUP BY (order_id/transaction_code/sale_id, client_id)
-  HAVING COUNT(*) > 1
-```
+### Logica de deteccao
+Para cada tabela, busca todos os registros e agrupa no cliente JS por (identifier, client_id). Grupos com count > 1 sao duplicatas. Para cada grupo, calcula o valor inflado (valor x registros extras).
 
-### Ação de resolução
-- Ao clicar "Manter webhook", executa DELETE do registro com `source != 'webhook'`
-- Ao clicar "Manter CSV", executa DELETE do registro com `source = 'webhook'`
-- Invalida queries do react-query após cada ação
+### Logica de resolucao
+- DELETE do registro nao desejado via Supabase client
+- Invalidacao de queries react-query apos cada acao
+- Toast de confirmacao
 
-### Migração SQL
-- Deletar a duplicata existente: `DELETE FROM tmb_transactions WHERE id = '17a54d76-50b0-446b-9b90-a2f2db5d3d5c'`
-
+### Correcao imediata
+Sera executada uma migracao SQL para deletar a duplicata ja identificada: `DELETE FROM tmb_transactions WHERE id = '17a54d76-50b0-446b-9b90-a2f2db5d3d5c'`
