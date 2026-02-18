@@ -180,6 +180,7 @@ export type Database = {
           buyer_email: string | null
           buyer_name: string | null
           buyer_phone: string | null
+          cancelled_at: string | null
           client_id: string | null
           created_at: string | null
           currency: string | null
@@ -194,6 +195,7 @@ export type Database = {
           sale_id: string
           sale_value: number
           source: string | null
+          status: string
           user_id: string
           utm_campaign: string | null
           utm_content: string | null
@@ -204,6 +206,7 @@ export type Database = {
           buyer_email?: string | null
           buyer_name?: string | null
           buyer_phone?: string | null
+          cancelled_at?: string | null
           client_id?: string | null
           created_at?: string | null
           currency?: string | null
@@ -218,6 +221,7 @@ export type Database = {
           sale_id: string
           sale_value?: number
           source?: string | null
+          status?: string
           user_id: string
           utm_campaign?: string | null
           utm_content?: string | null
@@ -228,6 +232,7 @@ export type Database = {
           buyer_email?: string | null
           buyer_name?: string | null
           buyer_phone?: string | null
+          cancelled_at?: string | null
           client_id?: string | null
           created_at?: string | null
           currency?: string | null
@@ -242,6 +247,7 @@ export type Database = {
           sale_id?: string
           sale_value?: number
           source?: string | null
+          status?: string
           user_id?: string
           utm_campaign?: string | null
           utm_content?: string | null
