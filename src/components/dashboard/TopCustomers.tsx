@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
+import { CustomerDetailDialog } from './CustomerDetailDialog';
 
 interface Customer {
   email: string;
@@ -14,9 +16,14 @@ interface Customer {
 
 interface TopCustomersProps {
   customers: Customer[];
+  startDate?: Date;
+  endDate?: Date;
+  clientId?: string | null;
 }
 
-export function TopCustomers({ customers }: TopCustomersProps) {
+export function TopCustomers({ customers, startDate, endDate, clientId }: TopCustomersProps) {
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -44,7 +51,8 @@ export function TopCustomers({ customers }: TopCustomersProps) {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 * index }}
-                className="flex items-center gap-4"
+                className="flex items-center gap-4 cursor-pointer rounded-lg p-2 -mx-2 hover:bg-muted/50 transition-colors"
+                onClick={() => setSelectedCustomer(customer)}
               >
                 <span className="text-sm font-medium text-muted-foreground w-6">
                   #{index + 1}
@@ -78,6 +86,18 @@ export function TopCustomers({ customers }: TopCustomersProps) {
           </div>
         </CardContent>
       </Card>
+
+      {selectedCustomer && (
+        <CustomerDetailDialog
+          open={!!selectedCustomer}
+          onOpenChange={(open) => !open && setSelectedCustomer(null)}
+          customerEmail={selectedCustomer.email}
+          customerName={selectedCustomer.name}
+          startDate={startDate}
+          endDate={endDate}
+          clientId={clientId}
+        />
+      )}
     </motion.div>
   );
 }
