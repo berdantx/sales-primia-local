@@ -10,6 +10,7 @@ import { AlertTriangle, CheckCircle, Filter, RefreshCw, Search } from 'lucide-re
 import { SearchDuplicateDialog } from '@/components/audit/SearchDuplicateDialog';
 import { useDuplicateAudit, useResolveDuplicate, DuplicateGroup, useEmailDuplicateAudit, useResolveEmailDuplicate, EmailDuplicateGroup, Platform } from '@/hooks/useDuplicateAudit';
 import { useFilter } from '@/contexts/FilterContext';
+import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -522,10 +523,10 @@ export default function DuplicateAudit() {
     <MainLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Auditoria de Duplicatas</h1>
-            <p className="text-muted-foreground">Identifique e resolva vendas duplicadas entre CSV e webhook.</p>
-          </div>
+          <ClientContextHeader 
+            title="Auditoria de Duplicatas" 
+            description="Identifique e resolva vendas duplicadas entre CSV e webhook."
+          />
           <Button onClick={() => setSearchOpen(true)}>
             <Search className="h-4 w-4 mr-2" />
             Buscar Duplicata
