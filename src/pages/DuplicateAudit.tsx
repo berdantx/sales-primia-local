@@ -12,6 +12,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
+import { EduzzTransactionDetailDialog } from '@/components/eduzz/EduzzTransactionDetailDialog';
+import { TmbTransactionDetailDialog } from '@/components/tmb/TmbTransactionDetailDialog';
+import type { Transaction } from '@/hooks/useTransactions';
+import type { EduzzTransaction } from '@/hooks/useEduzzTransactions';
+import type { TmbTransaction } from '@/hooks/useTmbTransactions';
+import { toast } from 'sonner';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -197,7 +205,13 @@ function EmailDuplicatesTab() {
   const resolve = useResolveEmailDuplicate();
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [hideInstallments, setHideInstallments] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Map<string, Set<string>>>(new Map()); // groupKey -> set of record ids to delete
+  const [selectedIds, setSelectedIds] = useState<Map<string, Set<string>>>(new Map());
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
+  const [selectedHotmart, setSelectedHotmart] = useState<Transaction | null>(null);
+  const [selectedEduzz, setSelectedEduzz] = useState<EduzzTransaction | null>(null);
+  const [selectedTmb, setSelectedTmb] = useState<TmbTransaction | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const toggleRecordForDeletion = (groupKey: string, recordId: string) => {
     setSelectedIds(prev => {
@@ -269,6 +283,50 @@ function EmailDuplicatesTab() {
   if (hideInstallments) {
     duplicates = duplicates.filter(g => !g.isProbablyInstallments);
   }
+
+  const handleRowClick = async (recordId: string, platform: Platform) => {
+    setLoadingDetail(true);
+    try {
+      let data: any = null;
+      let error: any = null;
+
+      if (platform === 'hotmart') {
+        const res = await supabase.from('transactions').select('*').eq('id', recordId).single();
+        data = res.data; error = res.error;
+      } else if (platform === 'eduzz') {
+        const res = await supabase.from('eduzz_transactions').select('*').eq('id', recordId).single();
+        data = res.data; error = res.error;
+      } else {
+        const res = await supabase.from('tmb_transactions').select('*').eq('id', recordId).single();
+        data = res.data; error = res.error;
+      }
+
+      if (error || !data) {
+        toast.error('Erro ao carregar detalhes da transação');
+        return;
+      }
+
+      setSelectedPlatform(platform);
+      if (platform === 'hotmart') setSelectedHotmart(data as unknown as Transaction);
+      else if (platform === 'eduzz') setSelectedEduzz(data as unknown as EduzzTransaction);
+      else setSelectedTmb(data as unknown as TmbTransaction);
+      setDetailOpen(true);
+    } catch {
+      toast.error('Erro ao carregar detalhes');
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const closeDetail = (open: boolean) => {
+    if (!open) {
+      setDetailOpen(false);
+      setSelectedPlatform(null);
+      setSelectedHotmart(null);
+      setSelectedEduzz(null);
+      setSelectedTmb(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -399,8 +457,8 @@ function EmailDuplicatesTab() {
                     </TableHeader>
                     <TableBody>
                       {group.records.map((rec) => (
-                        <TableRow key={rec.id}>
-                          <TableCell>
+                        <TableRow key={rec.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleRowClick(rec.id, rec.platform)}>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={groupSelectedIds?.has(rec.id) ?? false}
                               onCheckedChange={() => toggleRecordForDeletion(key, rec.id)}
@@ -426,6 +484,22 @@ function EmailDuplicatesTab() {
           })}
         </div>
       )}
+
+      <HotmartTransactionDetailDialog
+        transaction={selectedHotmart}
+        open={detailOpen && selectedPlatform === 'hotmart'}
+        onOpenChange={closeDetail}
+      />
+      <EduzzTransactionDetailDialog
+        transaction={selectedEduzz}
+        open={detailOpen && selectedPlatform === 'eduzz'}
+        onOpenChange={closeDetail}
+      />
+      <TmbTransactionDetailDialog
+        transaction={selectedTmb}
+        open={detailOpen && selectedPlatform === 'tmb'}
+        onOpenChange={closeDetail}
+      />
     </div>
   );
 }
