@@ -53,7 +53,6 @@ interface EduzzWebhookPayload {
       id?: string | number;
       name?: string;
     };
-    // Nested price object (new Eduzz format)
     price?: {
       currency?: string;
       value?: number;
@@ -62,13 +61,11 @@ interface EduzzWebhookPayload {
         value?: number;
       };
     };
-    // Items array (new Eduzz format)
     items?: Array<{
       productId?: string;
       name?: string;
       parentId?: string;
     }>;
-    // UTM object (new Eduzz format)
     utm?: {
       source?: string;
       medium?: string;
@@ -83,8 +80,13 @@ interface EduzzWebhookPayload {
   };
 }
 
+// Events that indicate cancellation or chargeback
+const CANCELLATION_EVENTS = [
+  'myeduzz.invoice_canceled',
+  'myeduzz.invoice_chargeback',
+];
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -101,7 +103,6 @@ Deno.serve(async (req) => {
   const webhookUserId = Deno.env.get("WEBHOOK_USER_ID")!;
   const defaultClientId = Deno.env.get("WEBHOOK_CLIENT_ID");
 
-  // Get client_id from query parameter (priority) or fall back to env var
   const url = new URL(req.url);
   const clientIdParam = url.searchParams.get('client_id');
   const webhookClientId = clientIdParam || defaultClientId;
@@ -137,10 +138,8 @@ Deno.serve(async (req) => {
     rawBody = await req.text();
     console.log("Eduzz Webhook received:", rawBody.substring(0, 1000));
 
-    // Parse the body - handle both array and object formats
     const parsed = JSON.parse(rawBody);
     
-    // If n8n sends the payload wrapped in an array or with body property
     if (Array.isArray(parsed)) {
       body = parsed[0]?.body || parsed[0];
     } else if (parsed.body) {
@@ -178,25 +177,199 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Extract event type from payload
+  const eventName = body.event || '';
+  const isCancellation = CANCELLATION_EVENTS.includes(eventName);
+
   // Support both new format (data object) and old format (flat)
-  const eduzzData = body.data ?? body;
   const buyer = body.data?.buyer ?? {};
   const productData = body.data?.product;
 
   const saleId = String(body.id || body.data?.id || body.sale_id || "unknown");
   const saleStatus = body.data?.status || body.sale_status || body.status || "";
-  const eventType = "EDUZZ_SALE_" + (saleStatus.toUpperCase().replace(/\s+/g, "_") || "UNKNOWN");
+  
+  // Determine event type for logging
+  let eventType: string;
+  if (isCancellation) {
+    eventType = eventName === 'myeduzz.invoice_chargeback' 
+      ? 'EDUZZ_SALE_CHARGEBACK' 
+      : 'EDUZZ_SALE_CANCELED';
+  } else {
+    eventType = "EDUZZ_SALE_" + (saleStatus.toUpperCase().replace(/\s+/g, "_") || "UNKNOWN");
+  }
 
-  console.log(`Processing Eduzz sale ${saleId} with status: ${saleStatus}`);
+  console.log(`Processing Eduzz sale ${saleId} - event: ${eventName}, status: ${saleStatus}, isCancellation: ${isCancellation}`);
 
-  // Only process "approved" or "aprovado" sales
+  // ---- CANCELLATION / CHARGEBACK FLOW ----
+  if (isCancellation) {
+    try {
+      // Try to find existing transaction by sale_id
+      let query = supabase
+        .from("eduzz_transactions")
+        .select("id, sale_id, status")
+        .eq("sale_id", saleId);
+      
+      if (webhookClientId) {
+        query = query.eq("client_id", webhookClientId);
+      }
+
+      const { data: existing, error: findError } = await query.maybeSingle();
+
+      if (findError) {
+        console.error("Error finding transaction for cancellation:", findError);
+      }
+
+      if (existing) {
+        // Update existing transaction to canceled
+        const { error: updateError } = await supabase
+          .from("eduzz_transactions")
+          .update({ 
+            status: 'cancelado', 
+            cancelled_at: new Date().toISOString() 
+          })
+          .eq("id", existing.id);
+
+        if (updateError) {
+          console.error("Error updating transaction to canceled:", updateError);
+          
+          await supabase.from("webhook_logs").insert({
+            user_id: webhookUserId,
+            client_id: webhookClientId || null,
+            event_type: eventType,
+            transaction_code: saleId,
+            status: "error",
+            payload: body,
+            error_message: updateError.message,
+          });
+
+          return new Response(JSON.stringify({ success: false, error: updateError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        console.log(`Transaction ${saleId} updated to cancelado (was: ${existing.status})`);
+
+        await supabase.from("webhook_logs").insert({
+          user_id: webhookUserId,
+          client_id: webhookClientId || null,
+          event_type: eventType,
+          transaction_code: saleId,
+          status: "processed",
+          payload: body,
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: `Transaction ${saleId} marked as canceled`,
+          action: 'updated',
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } else {
+        // Transaction not found - insert as canceled
+        const itemsData = body.data?.items;
+        const priceData = body.data?.price;
+        const utmData = body.data?.utm;
+        const productName = itemsData?.[0]?.name || productData?.name || body.product_name || body.product || null;
+        const productId = itemsData?.[0]?.productId || (productData?.id ? String(productData.id) : null) || (body.product_id ? String(body.product_id) : null);
+        const saleValue = priceData?.paid?.value || priceData?.value || body.data?.value || body.sale_amount || body.sale_value || body.value || 0;
+        const currency = priceData?.currency || body.data?.currency || "BRL";
+        const saleDate = body.data?.createdAt || body.data?.created_at || body.sale_date || body.created_at || new Date().toISOString();
+
+        const { error: insertError } = await supabase
+          .from("eduzz_transactions")
+          .insert({
+            user_id: webhookUserId,
+            client_id: webhookClientId || null,
+            sale_id: saleId,
+            product: productName,
+            product_id: productId,
+            buyer_name: buyer.name || body.client_name || body.buyer_name || null,
+            buyer_email: buyer.email || body.client_email || body.buyer_email || null,
+            buyer_phone: buyer.cellphone || buyer.phone || body.client_phone || body.buyer_phone || null,
+            sale_value: saleValue,
+            currency: currency,
+            sale_date: saleDate,
+            utm_source: utmData?.source || body.data?.utm_source || body.utm_source || null,
+            utm_medium: utmData?.medium || body.data?.utm_medium || body.utm_medium || null,
+            utm_campaign: utmData?.campaign || body.data?.utm_campaign || body.utm_campaign || null,
+            utm_content: utmData?.content || body.data?.utm_content || body.utm_content || null,
+            source: "webhook",
+            status: 'cancelado',
+            cancelled_at: new Date().toISOString(),
+          });
+
+        if (insertError) {
+          console.error("Error inserting canceled transaction:", insertError);
+          
+          await supabase.from("webhook_logs").insert({
+            user_id: webhookUserId,
+            client_id: webhookClientId || null,
+            event_type: eventType,
+            transaction_code: saleId,
+            status: "error",
+            payload: body,
+            error_message: insertError.message,
+          });
+
+          return new Response(JSON.stringify({ success: false, error: insertError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        console.log(`Canceled transaction ${saleId} inserted (no prior record found)`);
+
+        await supabase.from("webhook_logs").insert({
+          user_id: webhookUserId,
+          client_id: webhookClientId || null,
+          event_type: eventType,
+          transaction_code: saleId,
+          status: "processed",
+          payload: body,
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          message: `Canceled transaction ${saleId} inserted`,
+          action: 'inserted_as_canceled',
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch (error) {
+      console.error("Unexpected error processing cancellation:", error);
+
+      await supabase.from("webhook_logs").insert({
+        user_id: webhookUserId,
+        client_id: webhookClientId || null,
+        event_type: eventType,
+        transaction_code: saleId,
+        status: "error",
+        payload: body,
+        error_message: error instanceof Error ? error.message : String(error),
+      });
+
+      return new Response(JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  // ---- APPROVED SALE FLOW (existing logic) ----
   const approvedStatuses = ["approved", "aprovado", "pago", "paid", "completed"];
   const isApproved = approvedStatuses.some(s => saleStatus.toLowerCase().includes(s));
 
   if (!isApproved) {
     console.log(`Skipping sale ${saleId} - status is not approved: ${saleStatus}`);
 
-    // Log skipped event
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
       client_id: webhookClientId || null,
@@ -221,31 +394,24 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Extract data from new Eduzz format
     const priceData = body.data?.price;
     const itemsData = body.data?.items;
     const utmData = body.data?.utm;
     
-    // Get product from items array (new format) or product object (old format)
     const productName = itemsData?.[0]?.name || productData?.name || body.product_name || body.product || null;
     const productId = itemsData?.[0]?.productId || (productData?.id ? String(productData.id) : null) || (body.product_id ? String(body.product_id) : null);
     
-    // Get sale value from price object (new format) or direct value
     const saleValue = priceData?.paid?.value || priceData?.value || body.data?.value || body.sale_amount || body.sale_value || body.value || 0;
-    
-    // Get currency from price object or data
     const currency = priceData?.currency || body.data?.currency || "BRL";
     
-    // Get UTM from utm object (new format) or direct fields
     const utmSource = utmData?.source || body.data?.utm_source || body.utm_source || null;
     const utmMedium = utmData?.medium || body.data?.utm_medium || body.utm_medium || null;
     const utmCampaign = utmData?.campaign || body.data?.utm_campaign || body.utm_campaign || null;
     const utmContent = utmData?.content || body.data?.utm_content || body.utm_content || null;
     
-    // Get sale date
     const saleDate = body.data?.createdAt || body.data?.created_at || body.sale_date || body.created_at || new Date().toISOString();
 
-    // Currency conversion: convert exotic currencies to USD
+    // Currency conversion
     let finalValue = saleValue;
     let finalCurrency = currency;
     let originalCurrency: string | null = null;
@@ -261,7 +427,6 @@ Deno.serve(async (req) => {
       console.log(`Converted: ${saleValue} ${currency} -> ${finalValue} USD (rate: ${conversion.rate}, source: ${conversion.source})`);
     }
 
-    // Map Eduzz fields to eduzz_transactions table - support both formats
     const transactionData = {
       user_id: webhookUserId,
       client_id: webhookClientId || null,
@@ -282,11 +447,11 @@ Deno.serve(async (req) => {
       utm_campaign: utmCampaign,
       utm_content: utmContent,
       source: "webhook",
+      status: "paid",
     };
 
     console.log("Upserting Eduzz transaction:", JSON.stringify(transactionData));
 
-    // Try to insert the transaction - if it's a duplicate, it will be handled by the unique index
     const { data: transaction, error: transactionError } = await supabase
       .from("eduzz_transactions")
       .upsert(transactionData, {
@@ -296,16 +461,14 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
-    // Check if error is due to duplicate based on our unique index (client_id, buyer_email, sale_value, product, sale_date)
     if (transactionError) {
       const isDuplicateError = transactionError.message.includes('idx_eduzz_unique_transaction') ||
                                transactionError.message.includes('duplicate key') ||
                                transactionError.code === '23505';
       
       if (isDuplicateError) {
-        console.log(`Duplicate transaction detected for sale ${saleId} - ignoring duplicate webhook`);
+        console.log(`Duplicate transaction detected for sale ${saleId}`);
         
-        // Log as duplicate (not error)
         await supabase.from("webhook_logs").insert({
           user_id: webhookUserId,
           client_id: webhookClientId || null,
@@ -317,21 +480,13 @@ Deno.serve(async (req) => {
         });
 
         return new Response(
-          JSON.stringify({
-            success: true,
-            message: `Duplicate transaction ${saleId} ignored`,
-            duplicate: true,
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
+          JSON.stringify({ success: true, message: `Duplicate transaction ${saleId} ignored`, duplicate: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       console.error("Failed to upsert Eduzz transaction:", transactionError);
 
-      // Log real error
       await supabase.from("webhook_logs").insert({
         user_id: webhookUserId,
         client_id: webhookClientId || null,
@@ -343,20 +498,13 @@ Deno.serve(async (req) => {
       });
 
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: transactionError.message,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ success: false, error: transactionError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log("Eduzz transaction upserted successfully:", transaction?.id);
 
-    // Log success
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
       client_id: webhookClientId || null,
@@ -372,15 +520,11 @@ Deno.serve(async (req) => {
         message: `Eduzz sale ${saleId} processed successfully`,
         transaction_id: transaction?.id,
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Unexpected error processing Eduzz webhook:", error);
 
-    // Log error
     await supabase.from("webhook_logs").insert({
       user_id: webhookUserId,
       client_id: webhookClientId || null,
@@ -396,10 +540,7 @@ Deno.serve(async (req) => {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
       }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
