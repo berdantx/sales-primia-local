@@ -1,66 +1,51 @@
 
-# Estrategia de Analise de Duplicatas por Email
 
-## Problema
-A auditoria atual agrupa duplicatas apenas pelo ID da transacao (`sale_id`, `transaction_code`, `order_id`). Porem, existem vendas com IDs diferentes para o mesmo email + produto que representam compras canceladas nao processadas ou duplicacoes reais. Exemplo: `bbellie@icloud.com` tem 2 transacoes Eduzz distintas para "CIS Online" com `sale_id`s diferentes.
+# Abrir detalhes da venda ao clicar na linha de duplicata por email
 
-Na Hotmart, muitas dessas "duplicatas por email" sao parcelas legitimas (tratadas pelo Recuperador Inteligente), entao precisam de tratamento diferente.
+## O que muda
+Ao clicar em qualquer linha da tabela na aba "Por Email" da Auditoria de Duplicatas, o sistema vai buscar os dados completos daquela transacao e abrir o dialog de detalhes correspondente a plataforma (Hotmart, Eduzz ou TMB), incluindo informacoes de webhook, UTM, latencia, etc.
 
-## Solucao
-
-Adicionar uma **segunda aba** na pagina de Auditoria de Duplicatas: "Por Email", que agrupa transacoes pelo par `(buyer_email, product, client_id)` em vez de pelo ID da transacao.
-
-### Funcionalidades da nova aba
-
-1. **Cards de resumo** mostrando quantos grupos de email duplicado existem por plataforma e o valor total potencialmente inflado
-2. **Tabela expandivel** com cada grupo mostrando:
-   - Email, produto, cliente
-   - Todas as transacoes do grupo com sale_id, valor, data, fonte e status
-   - Valor total do grupo vs. valor unitario
-3. **Acoes por grupo**:
-   - "Manter mais recente" (deleta os mais antigos)
-   - "Manter webhook" / "Manter CSV" (quando ha fontes mistas)
-   - "Selecionar manualmente" quais manter/remover via checkbox
-4. **Filtros**:
-   - Por plataforma (Hotmart/TMB/Eduzz)
-   - Por cliente
-   - Apenas com fontes mistas (webhook vs CSV)
-   - Excluir parcelas Hotmart (billing_type = recurrence)
-
-### Diferenciacao de parcelas vs duplicatas reais (Hotmart)
-Para a Hotmart, transacoes com `recurrence_number > 1` ou `billing_type` de recorrencia serao marcadas como "provavelmente parcelas" e exibidas com um badge informativo, podendo ser filtradas para fora.
+## Como vai funcionar
+1. O usuario clica em uma linha da tabela de duplicatas
+2. O sistema identifica a plataforma (hotmart/eduzz/tmb) e o ID do registro
+3. Busca os dados completos dessa transacao no banco
+4. Abre o dialog de detalhes correto para aquela plataforma
 
 ## Detalhes tecnicos
 
-### Arquivos modificados
+### Arquivo: `src/pages/DuplicateAudit.tsx`
 
-**`src/hooks/useDuplicateAudit.ts`**
-- Adicionar novo hook `useEmailDuplicateAudit` que:
-  - Busca as 3 tabelas (mesmas queries, mas incluindo `status`, `billing_type`, `recurrence_number` para Hotmart)
-  - Agrupa por `(buyer_email, product, client_id)` em vez de pelo ID
-  - Calcula valor inflado como `soma_total - valor_maior_transacao`
-  - Marca grupos Hotmart com recorrencia como "parcelas"
-- Adicionar interface `EmailDuplicateGroup` com campo extra `isProbablyInstallments`
+Alteracoes no componente `EmailDuplicatesTab`:
 
-**`src/pages/DuplicateAudit.tsx`**
-- Adicionar `Tabs` (shadcn) com duas abas: "Por ID" (atual) e "Por Email" (nova)
-- A aba "Por Email" reutiliza a mesma estrutura visual mas com os dados do novo hook
-- Adicionar filtros inline: plataforma, cliente, "ocultar parcelas"
-- Adicionar acoes de resolucao manual (checkbox por registro dentro do grupo)
+1. **Adicionar estados** para controlar o dialog de detalhes:
+   - `selectedTransaction`: armazena a transacao completa carregada
+   - `selectedPlatform`: identifica qual dialog abrir (hotmart/eduzz/tmb)
+   - `detailOpen`: controla abertura/fechamento do dialog
 
-**`src/hooks/useDuplicateAudit.ts`** (mutation)
-- Adicionar `useResolveEmailDuplicate` que recebe IDs especificos para deletar (selecionados manualmente pelo usuario)
+2. **Funcao `handleRowClick(record)`**: ao clicar na linha da tabela:
+   - Recebe o `EmailDuplicateRecord` (que tem `id` e `platform`)
+   - Faz um `supabase.from(tabela).select('*').eq('id', record.id).single()`
+   - Armazena o resultado e abre o dialog
 
-### Fluxo da busca por email
+3. **Renderizar os 3 dialogs** condicionalmente:
+   - `HotmartTransactionDetailDialog` quando `platform === 'hotmart'`
+   - `EduzzTransactionDetailDialog` quando `platform === 'eduzz'`
+   - `TmbTransactionDetailDialog` quando `platform === 'tmb'`
 
-```text
-1. Buscar todas transacoes das 3 tabelas
-2. Agrupar por (email_normalizado, produto, client_id)
-3. Filtrar grupos com count > 1
-4. Para Hotmart: marcar como "parcelas" se recurrence_number varia
-5. Calcular valor inflado = soma - max(valor)
-6. Ordenar por valor inflado desc
-```
+4. **Estilo da linha**: adicionar `cursor-pointer hover:bg-muted/50` nas `TableRow` para indicar que sao clicaveis
+
+### Importacoes adicionais necessarias
+- `HotmartTransactionDetailDialog` de `@/components/hotmart/`
+- `EduzzTransactionDetailDialog` de `@/components/eduzz/`
+- `TmbTransactionDetailDialog` de `@/components/tmb/`
+- `supabase` de `@/integrations/supabase/client`
+- Tipos `Transaction`, `EduzzTransaction`, `TmbTransaction` dos hooks respectivos
+
+### Mapeamento plataforma -> tabela
+- `hotmart` -> `transactions`
+- `eduzz` -> `eduzz_transactions`
+- `tmb` -> `tmb_transactions`
 
 ### Nenhuma migracao necessaria
-Todas as colunas ja existem nas tabelas. A logica e inteiramente frontend.
+Os dados ja estao nas tabelas existentes, apenas precisamos buscar o registro completo pelo ID ao clicar.
+
