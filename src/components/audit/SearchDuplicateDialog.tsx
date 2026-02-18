@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, Loader2, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, Loader2, Trash2, AlertTriangle, ScanSearch } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useFilter } from '@/contexts/FilterContext';
 import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
@@ -138,6 +138,7 @@ export function SearchDuplicateDialog({ open, onOpenChange }: SearchDuplicateDia
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedForDeletion, setSelectedForDeletion] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFullScan, setIsFullScan] = useState(false);
 
   // Detail dialog state
   const [detailOpen, setDetailOpen] = useState(false);
@@ -145,6 +146,32 @@ export function SearchDuplicateDialog({ open, onOpenChange }: SearchDuplicateDia
   const [selectedHotmart, setSelectedHotmart] = useState<Transaction | null>(null);
   const [selectedEduzz, setSelectedEduzz] = useState<EduzzTransaction | null>(null);
   const [selectedTmb, setSelectedTmb] = useState<TmbTransaction | null>(null);
+
+  const fetchAllFromTable = async (
+    table: 'transactions' | 'tmb_transactions' | 'eduzz_transactions',
+    platform: Platform,
+    mapFn: (r: any) => SearchResult
+  ): Promise<SearchResult[]> => {
+    const all: SearchResult[] = [];
+    let from = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data } = await supabase
+        .from(table)
+        .select('id, ' + (
+          table === 'transactions' ? 'transaction_code, buyer_email, buyer_name, computed_value, purchase_date, source, product' :
+          table === 'tmb_transactions' ? 'order_id, buyer_email, buyer_name, ticket_value, effective_date, source, product' :
+          'sale_id, buyer_email, buyer_name, sale_value, sale_date, source, product'
+        ))
+        .eq('client_id', clientId!)
+        .range(from, from + PAGE - 1);
+      if (!data || data.length === 0) break;
+      for (const r of data) all.push(mapFn(r));
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all;
+  };
 
   const handleSearch = async () => {
     const term = searchTerm.trim();
@@ -159,6 +186,7 @@ export function SearchDuplicateDialog({ open, onOpenChange }: SearchDuplicateDia
 
     setIsSearching(true);
     setHasSearched(true);
+    setIsFullScan(false);
     setSelectedForDeletion(new Set());
     const allResults: SearchResult[] = [];
 
@@ -243,6 +271,85 @@ export function SearchDuplicateDialog({ open, onOpenChange }: SearchDuplicateDia
       setResults(allResults);
     } catch {
       toast.error('Erro ao buscar duplicatas');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleFullScan = async () => {
+    if (!clientId) {
+      toast.error('Selecione um cliente primeiro');
+      return;
+    }
+
+    setIsSearching(true);
+    setHasSearched(true);
+    setIsFullScan(true);
+    setSelectedForDeletion(new Set());
+    const allResults: SearchResult[] = [];
+
+    try {
+      const searchPlatforms = platformFilter === 'all' ? ['hotmart', 'tmb', 'eduzz'] : [platformFilter];
+
+      if (searchPlatforms.includes('hotmart')) {
+        const records = await fetchAllFromTable('transactions', 'hotmart', (r) => ({
+          id: r.id,
+          platform: 'hotmart' as Platform,
+          transactionId: r.transaction_code,
+          email: r.buyer_email,
+          buyer_name: r.buyer_name,
+          value: Number(r.computed_value) || 0,
+          date: r.purchase_date,
+          source: r.source,
+          product: r.product,
+        }));
+        allResults.push(...records);
+      }
+
+      if (searchPlatforms.includes('tmb')) {
+        const records = await fetchAllFromTable('tmb_transactions', 'tmb', (r) => ({
+          id: r.id,
+          platform: 'tmb' as Platform,
+          transactionId: r.order_id,
+          email: r.buyer_email,
+          buyer_name: r.buyer_name,
+          value: Number(r.ticket_value) || 0,
+          date: r.effective_date,
+          source: r.source,
+          product: r.product,
+        }));
+        allResults.push(...records);
+      }
+
+      if (searchPlatforms.includes('eduzz')) {
+        const records = await fetchAllFromTable('eduzz_transactions', 'eduzz', (r) => ({
+          id: r.id,
+          platform: 'eduzz' as Platform,
+          transactionId: r.sale_id,
+          email: r.buyer_email,
+          buyer_name: r.buyer_name,
+          value: Number(r.sale_value) || 0,
+          date: r.sale_date,
+          source: r.source,
+          product: r.product,
+        }));
+        allResults.push(...records);
+      }
+
+      setResults(allResults);
+
+      // Count duplicates for feedback
+      const groups = groupResults(allResults);
+      const dupGroups = groups.filter(g => g.isDuplicate);
+      const dupCount = dupGroups.reduce((s, g) => s + g.records.length, 0);
+
+      if (dupGroups.length === 0) {
+        toast.info('Nenhuma duplicata encontrada');
+      } else {
+        toast.success(`${dupGroups.length} grupo(s) de duplicatas encontrado(s) (${dupCount} registros)`);
+      }
+    } catch {
+      toast.error('Erro ao realizar busca completa');
     } finally {
       setIsSearching(false);
     }
@@ -348,8 +455,9 @@ export function SearchDuplicateDialog({ open, onOpenChange }: SearchDuplicateDia
     }
   };
 
-  const groups = groupResults(results);
-  const duplicateCount = groups.filter(g => g.isDuplicate).reduce((sum, g) => sum + g.records.length, 0);
+  const allGroups = groupResults(results);
+  const groups = isFullScan ? allGroups.filter(g => g.isDuplicate) : allGroups;
+  const duplicateCount = allGroups.filter(g => g.isDuplicate).reduce((sum, g) => sum + g.records.length, 0);
 
   return (
     <>
@@ -389,8 +497,12 @@ export function SearchDuplicateDialog({ open, onOpenChange }: SearchDuplicateDia
                 </Select>
               </div>
               <Button onClick={handleSearch} disabled={isSearching}>
-                {isSearching ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
+                {isSearching && !isFullScan ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Search className="h-4 w-4 mr-2" />}
                 Buscar
+              </Button>
+              <Button variant="outline" onClick={handleFullScan} disabled={isSearching}>
+                {isSearching && isFullScan ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ScanSearch className="h-4 w-4 mr-2" />}
+                Busca Completa
               </Button>
             </div>
 
