@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Database,
   Download,
@@ -19,13 +21,24 @@ import {
   ShieldCheck,
   AlertTriangle,
   XCircle,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useClientSideBackup } from '@/hooks/useClientSideBackup';
+import { useClientSideBackup, BACKUP_TABLES } from '@/hooks/useClientSideBackup';
+
+const TABLE_CATEGORIES: { label: string; tables: string[] }[] = [
+  { label: 'Dados Principais', tables: ['transactions', 'eduzz_transactions', 'tmb_transactions', 'leads'] },
+  { label: 'Configuração', tables: ['clients', 'profiles', 'client_users', 'goals', 'goal_history', 'filter_views', 'app_settings', 'llm_integrations', 'external_webhooks'] },
+  { label: 'Importação/Exportação', tables: ['imports', 'import_errors', 'export_jobs', 'backup_logs'] },
+  { label: 'Convites', tables: ['invitations', 'invitation_history'] },
+  { label: 'Logs/Auditoria', tables: ['access_logs', 'lead_deletion_logs', 'duplicate_deletion_logs', 'eduzz_transaction_deletion_logs', 'permission_audit_logs'] },
+  { label: 'Outros', tables: ['known_landing_pages', 'interest_leads'] },
+];
 
 function useBackupLogs() {
   return useQuery({
@@ -55,6 +68,32 @@ export default function BackupDashboard() {
   const queryClient = useQueryClient();
   const { progress, startBackup, cancelBackup, reset, isExporting } = useClientSideBackup();
 
+  const [selectedTables, setSelectedTables] = useState<Set<string>>(
+    () => new Set(BACKUP_TABLES as readonly string[])
+  );
+  const [selectorOpen, setSelectorOpen] = useState(true);
+
+  const toggleTable = (table: string) => {
+    setSelectedTables(prev => {
+      const next = new Set(prev);
+      if (next.has(table)) next.delete(table);
+      else next.add(table);
+      return next;
+    });
+  };
+
+  const toggleCategory = (tables: string[]) => {
+    setSelectedTables(prev => {
+      const next = new Set(prev);
+      const allSelected = tables.every(t => next.has(t));
+      tables.forEach(t => allSelected ? next.delete(t) : next.add(t));
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedTables(new Set(BACKUP_TABLES as readonly string[]));
+  const deselectAll = () => setSelectedTables(new Set());
+
   const successLogs = logs?.filter(l => l.status === 'success') || [];
   const totalBackups = logs?.length || 0;
   const successRate = totalBackups > 0 ? Math.round((successLogs.length / totalBackups) * 100) : 0;
@@ -62,7 +101,7 @@ export default function BackupDashboard() {
 
   const handleBackup = async () => {
     reset();
-    const result = await startBackup();
+    const result = await startBackup(Array.from(selectedTables));
     if (result) {
       toast.success(`Backup concluído! ${result.totalRecords.toLocaleString('pt-BR')} registros em ${(result.durationMs / 1000).toFixed(1)}s`);
       queryClient.invalidateQueries({ queryKey: ['backup-logs'] });
@@ -106,7 +145,7 @@ export default function BackupDashboard() {
                   Cancelar
                 </Button>
               ) : (
-                <Button onClick={handleBackup} disabled={isExporting}>
+                <Button onClick={handleBackup} disabled={isExporting || selectedTables.size === 0}>
                   <Download className="h-4 w-4 mr-2" />
                   Novo Backup
                 </Button>
@@ -114,6 +153,59 @@ export default function BackupDashboard() {
             </div>
           </div>
         </motion.div>
+
+        {/* Table Selector */}
+        <Card>
+          <Collapsible open={selectorOpen} onOpenChange={setSelectorOpen}>
+            <CardHeader className="pb-3">
+              <CollapsibleTrigger className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg">Selecionar Tabelas</CardTitle>
+                  <Badge variant="secondary">
+                    {selectedTables.size} de {BACKUP_TABLES.length}
+                  </Badge>
+                </div>
+                {selectorOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAll}>Selecionar Todas</Button>
+                  <Button variant="outline" size="sm" onClick={deselectAll}>Desmarcar Todas</Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {TABLE_CATEGORIES.map(cat => {
+                    const allSelected = cat.tables.every(t => selectedTables.has(t));
+                    const someSelected = cat.tables.some(t => selectedTables.has(t));
+                    return (
+                      <div key={cat.label} className="space-y-2 border rounded-lg p-3">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                            onCheckedChange={() => toggleCategory(cat.tables)}
+                          />
+                          <span className="font-medium text-sm">{cat.label}</span>
+                        </div>
+                        <div className="ml-6 space-y-1">
+                          {cat.tables.map(table => (
+                            <label key={table} className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                              <Checkbox
+                                checked={selectedTables.has(table)}
+                                onCheckedChange={() => toggleTable(table)}
+                              />
+                              {table}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
 
         {/* Export Progress */}
         {(progress.status !== 'idle') && (
