@@ -14,17 +14,18 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  HardDrive,
   Loader2,
   Activity,
   ShieldCheck,
   AlertTriangle,
+  XCircle,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useClientSideBackup } from '@/hooks/useClientSideBackup';
 
 function useBackupLogs() {
   return useQuery({
@@ -51,45 +52,25 @@ function formatBytes(bytes: number): string {
 
 export default function BackupDashboard() {
   const { data: logs, isLoading, refetch } = useBackupLogs();
-  const [retryingId, setRetryingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { progress, startBackup, cancelBackup, reset, isExporting } = useClientSideBackup();
 
   const successLogs = logs?.filter(l => l.status === 'success') || [];
-  const errorLogs = logs?.filter(l => l.status === 'error') || [];
-  const lastSuccess = successLogs[0];
   const totalBackups = logs?.length || 0;
   const successRate = totalBackups > 0 ? Math.round((successLogs.length / totalBackups) * 100) : 0;
+  const lastSuccess = successLogs[0];
 
-  const handleRetry = async () => {
-    setRetryingId('retry');
-    try {
-      const { data, error } = await supabase.functions.invoke('export-backup', {
-        body: { includeMetadata: true }
-      });
-      if (error) throw error;
-
-      const jsonString = JSON.stringify(data, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `backup_${timestamp}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast.success('Backup gerado com sucesso!');
+  const handleBackup = async () => {
+    reset();
+    const result = await startBackup();
+    if (result) {
+      toast.success(`Backup concluído! ${result.totalRecords.toLocaleString('pt-BR')} registros em ${(result.durationMs / 1000).toFixed(1)}s`);
       queryClient.invalidateQueries({ queryKey: ['backup-logs'] });
-    } catch (err: any) {
-      toast.error('Erro ao gerar backup: ' + (err.message || 'Erro desconhecido'));
-    } finally {
-      setRetryingId(null);
+    } else if (progress.status === 'cancelled') {
+      toast.info('Backup cancelado.');
     }
   };
 
-  // Health check: last backup older than 7 days?
   const lastBackupDate = lastSuccess?.created_at ? new Date(lastSuccess.created_at) : null;
   const daysSinceLastBackup = lastBackupDate
     ? Math.floor((Date.now() - lastBackupDate.getTime()) / (1000 * 60 * 60 * 24))
@@ -119,17 +100,72 @@ export default function BackupDashboard() {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Atualizar
               </Button>
-              <Button onClick={handleRetry} disabled={retryingId !== null}>
-                {retryingId ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
+              {isExporting ? (
+                <Button variant="destructive" onClick={cancelBackup}>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancelar
+                </Button>
+              ) : (
+                <Button onClick={handleBackup} disabled={isExporting}>
                   <Download className="h-4 w-4 mr-2" />
-                )}
-                Novo Backup
-              </Button>
+                  Novo Backup
+                </Button>
+              )}
             </div>
           </div>
         </motion.div>
+
+        {/* Export Progress */}
+        {(progress.status !== 'idle') && (
+          <Card>
+            <CardContent className="pt-6 space-y-3">
+              {progress.status === 'exporting' && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Exportando <strong>{progress.currentTable}</strong>
+                      <span className="text-muted-foreground">
+                        ({progress.currentTableIndex}/{progress.totalTables} tabelas)
+                      </span>
+                    </span>
+                    <span className="text-muted-foreground">
+                      {progress.currentTableRecords.toLocaleString('pt-BR')} registros nesta tabela
+                    </span>
+                  </div>
+                  <Progress value={progress.percentage} className="h-2" />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {progress.totalRecords.toLocaleString('pt-BR')} registros total • {progress.percentage}%
+                  </p>
+                </>
+              )}
+              {progress.status === 'generating' && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Gerando arquivo JSON... ({progress.totalRecords.toLocaleString('pt-BR')} registros)
+                </div>
+              )}
+              {progress.status === 'complete' && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Backup concluído com {progress.totalRecords.toLocaleString('pt-BR')} registros
+                </div>
+              )}
+              {progress.status === 'error' && (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  Erro: {progress.error}
+                </div>
+              )}
+              {progress.status === 'cancelled' && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <XCircle className="h-4 w-4" />
+                  Backup cancelado pelo usuário
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Health Alert */}
         {healthStatus === 'critical' && (
