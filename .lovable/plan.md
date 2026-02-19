@@ -1,62 +1,68 @@
 
-# Correcao do ID de Venda Eduzz
 
-## Problema identificado
-O webhook da Eduzz esta salvando o hash do evento (`body.id`, ex: `mb0dwlj6yu14olaibk5628dw9`) como `sale_id` em vez do ID numerico real da venda (`body.data.id`, ex: `97320984`). Isso afeta **2.152 transacoes** recebidas via webhook.
+# Auditoria Completa para Remocao de Duplicatas
 
-## O que sera feito
+## Problema
+Todas as remocoes de transacoes na pagina de Duplicatas acontecem sem pedir justificativa e sem registrar log de auditoria. Isso vale para as 3 plataformas (Hotmart, TMB e Eduzz) e para ambas as abas (por ID e por Email).
 
-### 1. Corrigir o webhook (edge function)
-**Arquivo:** `supabase/functions/eduzz-webhook/index.ts`
+## Solucao
 
-Alterar a linha de extracao do `saleId` (linha 197):
-- **Antes:** `body.id || body.data?.id || body.sale_id`
-- **Depois:** `body.data?.id || body.sale_id || body.id`
-
-Isso garante que o ID numerico real da venda (dentro de `body.data.id`) tenha prioridade sobre o hash do evento webhook.
-
-A mesma correcao sera aplicada no `transaction_code` salvo nos `webhook_logs` para manter consistencia.
-
-### 2. Corrigir os dados existentes (migracao SQL)
-Atualizar os 2.152 registros que ja tem o hash errado, usando os payloads armazenados na tabela `webhook_logs`:
+### 1. Criar tabela unificada de logs de exclusao de duplicatas
+Uma nova tabela `duplicate_deletion_logs` para registrar cada exclusao feita na pagina de auditoria, cobrindo todas as plataformas:
 
 ```text
-UPDATE eduzz_transactions et
-SET sale_id = (wl.payload->'data'->>'id')
-FROM webhook_logs wl
-WHERE wl.transaction_code = et.sale_id
-  AND wl.event_type LIKE 'EDUZZ%'
-  AND wl.status = 'processed'
-  AND wl.payload->'data'->>'id' IS NOT NULL
-  AND et.source = 'webhook'
-  AND et.sale_id !~ '^[0-9]+$';
+duplicate_deletion_logs:
+  - id (uuid, PK)
+  - transaction_id (uuid) -- ID do registro excluido
+  - platform (text) -- 'hotmart', 'tmb', 'eduzz'
+  - transaction_identifier (text) -- transaction_code / order_id / sale_id
+  - client_id (uuid)
+  - deleted_by (uuid)
+  - justification (text, NOT NULL)
+  - transaction_data (jsonb) -- snapshot completo do registro
+  - audit_type (text) -- 'id_duplicate' ou 'email_duplicate'
+  - created_at (timestamptz)
 ```
 
-### 3. Atualizar a constraint de unicidade
-A constraint atual `(user_id, sale_id)` nao esta alinhada com a estrategia de desduplicacao por `(client_id, sale_id)`. A migracao ira:
-- Remover `eduzz_transactions_user_sale_unique` em `(user_id, sale_id)`
-- Criar nova constraint em `(client_id, sale_id)`
+Politicas RLS: master pode inserir e visualizar.
 
-Isso tambem exige ajustar o `onConflict` no webhook de `"user_id,sale_id"` para `"client_id,sale_id"`.
+### 2. Criar dialog de justificativa reutilizavel
+Novo componente `DuplicateDeletionDialog` que:
+- Mostra resumo dos registros que serao excluidos (quantidade, plataforma, valor total)
+- Exige campo de justificativa obrigatorio (textarea)
+- Botoes Cancelar / Confirmar Exclusao
 
-### 4. Atualizar o transaction_code nos webhook_logs
-Para manter consistencia, os `transaction_code` nos logs tambem serao corrigidos:
+### 3. Alterar fluxo de resolucao nas duas abas
 
-```text
-UPDATE webhook_logs
-SET transaction_code = (payload->'data'->>'id')
-WHERE event_type LIKE 'EDUZZ%'
-  AND payload->'data'->>'id' IS NOT NULL
-  AND transaction_code !~ '^[0-9]+$';
-```
+**Aba por ID** -- Botoes "Manter Webhook" e "Manter CSV" (individual e lote):
+- Em vez de excluir imediatamente, abrem o dialog de justificativa
+- So apos preenchimento e confirmacao, executam a exclusao + log
 
-## Resumo de arquivos
+**Aba por Email** -- Botoes "Manter Mais Recente", "Manter Webhook", "Manter CSV", "Remover Selecionados":
+- Mesmo comportamento: abrem dialog, exigem justificativa, depois executam
 
-| Arquivo | Acao |
+### 4. Atualizar hooks de resolucao
+Alterar `useResolveDuplicate` e `useResolveEmailDuplicate` para:
+1. Buscar os dados completos dos registros antes de excluir
+2. Inserir logs na tabela `duplicate_deletion_logs` com snapshot + justificativa
+3. Somente depois, deletar os registros
+
+---
+
+## Secao tecnica
+
+### Arquivos a criar
+| Arquivo | Descricao |
 |---|---|
-| `supabase/functions/eduzz-webhook/index.ts` | Inverter prioridade do saleId + ajustar onConflict |
-| Migracao SQL | Corrigir sale_id em 2152 registros + transaction_code nos logs + atualizar constraint |
+| `src/components/audit/DuplicateDeletionDialog.tsx` | Dialog reutilizavel com campo de justificativa |
 
-## Riscos e mitigacao
-- **Duplicatas pos-correcao**: se dois registros com hashes diferentes mapearem para o mesmo sale_id numerico, a migracao tratara conflitos mantendo o registro mais recente
-- **Sem downtime**: a correcao do webhook e a migracao podem ser aplicadas simultaneamente sem interromper o servico
+### Arquivos a modificar
+| Arquivo | Mudanca |
+|---|---|
+| `src/hooks/useDuplicateAudit.ts` | `useResolveDuplicate` e `useResolveEmailDuplicate` passam a receber justificativa, buscar dados, inserir logs antes de deletar |
+| `src/pages/DuplicateAudit.tsx` | Botoes de resolucao abrem o dialog em vez de executar diretamente |
+
+### Migracao SQL
+- Criar tabela `duplicate_deletion_logs` com RLS para master
+- Sem foreign keys para tabelas de transacoes (o registro ja foi excluido quando o log e consultado)
+
