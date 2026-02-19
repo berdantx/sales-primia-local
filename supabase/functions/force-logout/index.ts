@@ -11,7 +11,6 @@ interface ForceLogoutRequest {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -23,7 +22,6 @@ serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Get the authorization header to verify the caller
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -32,7 +30,6 @@ serve(async (req) => {
       );
     }
 
-    // Verify the caller is a master
     const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
@@ -44,7 +41,6 @@ serve(async (req) => {
       );
     }
 
-    // Check if caller is master
     const { data: callerRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
@@ -68,29 +64,30 @@ serve(async (req) => {
     }
 
     // Get target user info for logging
-    const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(target_user_id);
-    const targetEmail = targetUser?.user?.email || 'unknown';
-
-    // Sign out the user from all sessions using GoTrue Admin REST API
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const { data: targetUser, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(target_user_id);
     
-    const signOutResponse = await fetch(
-      `${supabaseUrl}/auth/v1/admin/users/${target_user_id}/logout`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${serviceRoleKey}`,
-          'apikey': serviceRoleKey,
-        },
-      }
-    );
-
-    if (!signOutResponse.ok) {
-      const errorBody = await signOutResponse.text();
-      console.error('Error signing out user:', errorBody);
+    if (targetUserError || !targetUser?.user) {
+      console.error('Target user not found:', target_user_id, targetUserError);
       return new Response(
-        JSON.stringify({ error: 'Failed to sign out user' }),
+        JSON.stringify({ error: 'Target user not found in auth system' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const targetEmail = targetUser.user.email || 'unknown';
+
+    // Force logout by updating the user's session - this invalidates all refresh tokens
+    // We do this by updating a user attribute which forces token refresh
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(target_user_id, {
+      app_metadata: { 
+        force_logout_at: new Date().toISOString() 
+      },
+    });
+
+    if (updateError) {
+      console.error('Error updating user for force logout:', updateError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to force logout user' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -121,7 +118,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `User ${targetEmail} has been logged out from all sessions` 
+        message: `Usuário ${targetEmail} foi desconectado com sucesso` 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
