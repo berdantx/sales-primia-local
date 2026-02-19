@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -41,6 +42,20 @@ export interface DateRange {
 
 export function useTransactionStatsOptimized(filters?: TransactionFilters) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Subscribe to realtime changes for auto-refresh
+  useEffect(() => {
+    const channel = supabase
+      .channel('transactions-stats-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['transaction-stats-optimized'] });
+        queryClient.invalidateQueries({ queryKey: ['top-customers-optimized'] });
+        queryClient.invalidateQueries({ queryKey: ['sales-by-date-optimized'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   return useQuery({
     queryKey: [

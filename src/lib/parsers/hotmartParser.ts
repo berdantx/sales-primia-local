@@ -223,14 +223,8 @@ function parseInteger(value: string | number | undefined): number {
   return isNaN(num) ? 1 : num;
 }
 
-export function parseHotmartData(data: Record<string, unknown>[], headers: string[]): ParseResult {
-  const transactions: HotmartTransaction[] = [];
-  const errors: ParseError[] = [];
-  const seenCodes = new Set<string>();
-  const duplicates: string[] = [];
-  
-  // Find column mappings
-  const columnMap = {
+export function autoDetectHotmartColumns(headers: string[]): Record<string, string | null> {
+  return {
     transactionCode: findColumn(headers, HOTMART_COLUMNS.transactionCode),
     product: findColumn(headers, HOTMART_COLUMNS.product, PRODUCT_EXCLUSIONS),
     currency: findColumn(headers, HOTMART_COLUMNS.currency),
@@ -245,6 +239,30 @@ export function parseHotmartData(data: Record<string, unknown>[], headers: strin
     buyerEmail: findColumn(headers, HOTMART_COLUMNS.buyerEmail),
     purchaseDate: findColumn(headers, HOTMART_COLUMNS.purchaseDate),
   };
+}
+
+export function parseHotmartData(data: Record<string, unknown>[], headers: string[], customColumnMap?: Record<string, string | null>): ParseResult {
+  const transactions: HotmartTransaction[] = [];
+  const errors: ParseError[] = [];
+  const seenCodes = new Set<string>();
+  const duplicates: string[] = [];
+  
+  // Find column mappings - use custom map if provided
+  const columnMap = customColumnMap ? {
+    transactionCode: customColumnMap.transactionCode || null,
+    product: customColumnMap.product || null,
+    currency: customColumnMap.currency || null,
+    country: customColumnMap.country || null,
+    grossValue: customColumnMap.grossValue || null,
+    grossValueNoTax: customColumnMap.grossValueNoTax || null,
+    sckCode: customColumnMap.sckCode || null,
+    paymentMethod: customColumnMap.paymentMethod || null,
+    totalInstallments: customColumnMap.totalInstallments || null,
+    billingType: customColumnMap.billingType || null,
+    buyerName: customColumnMap.buyerName || null,
+    buyerEmail: customColumnMap.buyerEmail || null,
+    purchaseDate: customColumnMap.purchaseDate || null,
+  } : autoDetectHotmartColumns(headers);
   
   // Check required columns
   if (!columnMap.transactionCode) {

@@ -19,13 +19,17 @@ import { useFilter } from '@/contexts/FilterContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useImportTransactions, DuplicateScanResult } from '@/hooks/useImportTransactions';
 import { supabase } from '@/integrations/supabase/client';
-import { parseFile, HotmartTransaction, ParseError } from '@/lib/parsers/hotmartParser';
-import { parseTmbFile, TmbTransaction, TmbParseError } from '@/lib/parsers/tmbParser';
-import { parseEduzzFile, EduzzTransaction, EduzzParseError } from '@/lib/parsers/eduzzParser';
+import { parseFile, parseCSV, parseXLSX, parseHotmartData, autoDetectHotmartColumns, HotmartTransaction, ParseError } from '@/lib/parsers/hotmartParser';
+import { parseTmbFile, parseTmbCSV, parseTmbData, autoDetectTmbColumns, TmbTransaction, TmbParseError } from '@/lib/parsers/tmbParser';
+import { parseEduzzFile, parseEduzzCSV, parseEduzzXLSX, parseEduzzData, autoDetectEduzzColumns, EduzzTransaction, EduzzParseError } from '@/lib/parsers/eduzzParser';
 import { ArrowLeft, ArrowRight, FileSpreadsheet, Store, CheckCircle2, CreditCard, Loader2 } from 'lucide-react';
 import { DataManagement } from '@/components/upload/DataManagement';
+import { 
+  ColumnMappingStep, ColumnMappingResult,
+  HOTMART_FIELD_DEFINITIONS, TMB_FIELD_DEFINITIONS, EDUZZ_FIELD_DEFINITIONS 
+} from '@/components/upload/ColumnMappingStep';
 
-type UploadStep = 'platform' | 'upload' | 'preview' | 'scanning' | 'importing' | 'complete';
+type UploadStep = 'platform' | 'upload' | 'mapping' | 'preview' | 'scanning' | 'importing' | 'complete';
 
 export default function UploadPage() {
   const navigate = useNavigate();
@@ -65,6 +69,11 @@ export default function UploadPage() {
   const [duplicateScanResult, setDuplicateScanResult] = useState<DuplicateScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
 
+  // Column mapping state
+  const [fileHeaders, setFileHeaders] = useState<string[]>([]);
+  const [rawData, setRawData] = useState<Record<string, unknown>[]>([]);
+  const [autoDetectedMap, setAutoDetectedMap] = useState<Record<string, string | null>>({});
+
   const handlePlatformSelect = (selectedPlatform: UploadPlatform) => {
     setPlatform(selectedPlatform);
     setStep('upload');
@@ -74,20 +83,66 @@ export default function UploadPage() {
     setFile(acceptedFile);
     
     try {
+      // Parse file to get raw data and headers, then go to mapping step
+      let data: Record<string, unknown>[];
+      let headers: string[];
+      
       if (platform === 'hotmart') {
-        const result = await parseFile(acceptedFile);
+        const ext = acceptedFile.name.split('.').pop()?.toLowerCase();
+        if (ext === 'csv') {
+          const r = await parseCSV(acceptedFile);
+          data = r.data; headers = r.headers;
+        } else {
+          const r = await parseXLSX(acceptedFile);
+          data = r.data; headers = r.headers;
+        }
+        setAutoDetectedMap(autoDetectHotmartColumns(headers));
+      } else if (platform === 'tmb') {
+        const r = await parseTmbCSV(acceptedFile);
+        data = r.data; headers = r.headers;
+        setAutoDetectedMap(autoDetectTmbColumns(headers));
+      } else if (platform === 'eduzz') {
+        const ext = acceptedFile.name.split('.').pop()?.toLowerCase();
+        if (ext === 'csv') {
+          const r = await parseEduzzCSV(acceptedFile);
+          data = r.data; headers = r.headers;
+        } else {
+          const r = await parseEduzzXLSX(acceptedFile);
+          data = r.data; headers = r.headers;
+        }
+        setAutoDetectedMap(autoDetectEduzzColumns(headers));
+      } else {
+        return;
+      }
+      
+      setRawData(data);
+      setFileHeaders(headers);
+      setStep('mapping');
+    } catch (error) {
+      toast({
+        title: 'Erro ao processar arquivo',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleMappingConfirm = (mapping: ColumnMappingResult) => {
+    try {
+      if (platform === 'hotmart') {
+        const result = parseHotmartData(rawData, fileHeaders, mapping);
         setHotmartTransactions(result.transactions);
         setHotmartErrors(result.errors);
         setDuplicates(result.duplicates);
         setTotalRows(result.totalRows);
       } else if (platform === 'tmb') {
-        const result = await parseTmbFile(acceptedFile);
+        const result = parseTmbData(rawData, fileHeaders, mapping);
         setTmbTransactions(result.transactions);
         setTmbErrors(result.errors);
         setDuplicates(result.duplicates);
         setTotalRows(result.totalRows);
       } else if (platform === 'eduzz') {
-        const result = await parseEduzzFile(acceptedFile);
+        const result = parseEduzzData(rawData, fileHeaders, mapping);
         setEduzzTransactions(result.transactions);
         setEduzzErrors(result.errors);
         setDuplicates(result.duplicates);
@@ -96,7 +151,7 @@ export default function UploadPage() {
       setStep('preview');
     } catch (error) {
       toast({
-        title: 'Erro ao processar arquivo',
+        title: 'Erro ao processar dados',
         description: error instanceof Error ? error.message : 'Erro desconhecido',
         variant: 'destructive',
       });
@@ -333,27 +388,34 @@ export default function UploadPage() {
 
         {/* Steps */}
         {step !== 'platform' && (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             {[
               { key: 'upload', label: '1. Upload' },
-              { key: 'preview', label: '2. Preview' },
-              { key: 'importing', label: '3. Importar' },
-            ].map((s, index) => (
-              <div key={s.key} className="flex items-center gap-2">
-                <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
-                  ${step === s.key || ['preview', 'scanning', 'importing', 'complete'].indexOf(step) > ['upload', 'preview', 'importing'].indexOf(s.key) 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted text-muted-foreground'}
-                `}>
-                  {index + 1}
+              { key: 'mapping', label: '2. Mapeamento' },
+              { key: 'preview', label: '3. Preview' },
+              { key: 'importing', label: '4. Importar' },
+            ].map((s, index) => {
+              const allSteps = ['upload', 'mapping', 'preview', 'scanning', 'importing', 'complete'];
+              const stepOrder = ['upload', 'mapping', 'preview', 'importing'];
+              const currentIdx = allSteps.indexOf(step);
+              const thisIdx = stepOrder.indexOf(s.key);
+              const isActive = step === s.key || currentIdx > allSteps.indexOf(s.key);
+              
+              return (
+                <div key={s.key} className="flex items-center gap-2">
+                  <div className={`
+                    w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium
+                    ${isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}
+                  `}>
+                    {index + 1}
+                  </div>
+                  <span className={step === s.key ? 'font-medium' : 'text-muted-foreground'}>
+                    {s.label}
+                  </span>
+                  {index < 3 && <div className="w-8 h-px bg-border" />}
                 </div>
-                <span className={step === s.key ? 'font-medium' : 'text-muted-foreground'}>
-                  {s.label}
-                </span>
-                {index < 2 && <div className="w-12 h-px bg-border" />}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -378,6 +440,7 @@ export default function UploadPage() {
             <CardHeader>
               <CardTitle>
                 {step === 'upload' && 'Selecione o arquivo'}
+                {step === 'mapping' && 'Mapeamento de Colunas'}
                 {step === 'preview' && 'Revise os dados'}
                 {step === 'scanning' && 'Verificando duplicatas...'}
                 {step === 'importing' && 'Importando...'}
@@ -385,6 +448,7 @@ export default function UploadPage() {
               </CardTitle>
               <CardDescription>
                 {step === 'upload' && getDropZoneHint()}
+                {step === 'mapping' && 'Verifique e ajuste o mapeamento das colunas do arquivo para os campos do sistema'}
                 {step === 'preview' && 'Confira as transações antes de confirmar a importação'}
                 {step === 'scanning' && 'Comparando com registros existentes no banco'}
                 {step === 'importing' && 'Aguarde enquanto processamos os dados'}
@@ -400,6 +464,21 @@ export default function UploadPage() {
                     Voltar e escolher outra plataforma
                   </Button>
                 </div>
+              )}
+
+              {step === 'mapping' && platform && (
+                <ColumnMappingStep
+                  platform={platform}
+                  fileHeaders={fileHeaders}
+                  autoDetectedMap={autoDetectedMap}
+                  fieldDefinitions={
+                    platform === 'hotmart' ? HOTMART_FIELD_DEFINITIONS :
+                    platform === 'tmb' ? TMB_FIELD_DEFINITIONS :
+                    EDUZZ_FIELD_DEFINITIONS
+                  }
+                  onConfirm={handleMappingConfirm}
+                  onBack={handleClear}
+                />
               )}
 
               {step === 'preview' && platform === 'hotmart' && (

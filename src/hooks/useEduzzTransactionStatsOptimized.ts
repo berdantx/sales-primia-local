@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -25,6 +26,19 @@ export interface EduzzTopCustomer {
 
 export function useEduzzTransactionStatsOptimized(filters?: EduzzTransactionFilters) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('eduzz-stats-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'eduzz_transactions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['eduzz-transaction-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['eduzz-top-customers'] });
+        queryClient.invalidateQueries({ queryKey: ['eduzz-sales-by-date'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   return useQuery({
     queryKey: ['eduzz-transaction-stats', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString(), filters?.clientId],

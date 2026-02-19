@@ -6,6 +6,7 @@ import { useActiveGoals } from '@/hooks/useGoals';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useLeadCount } from '@/hooks/useLeads';
 import { useSalesBreakdown, useProjectionStats } from '@/hooks/useSalesBreakdown';
+import { useCombinedTransactions } from '@/hooks/useCombinedTransactions';
 import { useFilter } from '@/contexts/FilterContext';
 import { useClients } from '@/hooks/useClients';
 import { useFinancialAccess } from '@/hooks/useFinancialAccess';
@@ -17,6 +18,7 @@ import { SalesByTimeChart } from '@/components/dashboard/SalesByTimeChart';
 import { SalesBreakdownDialog } from '@/components/dashboard/SalesBreakdownDialog';
 import { DashboardSalesAnalytics } from '@/components/dashboard/DashboardSalesAnalytics';
 import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
+import { ProductDrilldownCard } from '@/components/dashboard/ProductDrilldownCard';
 
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 
@@ -149,6 +151,14 @@ export default function Dashboard() {
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
     clientId,
+  });
+  
+  // Fetch combined transactions for product drill-down
+  const { transactions: combinedTransactions } = useCombinedTransactions({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    clientId,
+    platform,
   });
   
   // Calculate platform totals for pie chart - include USD converted to BRL
@@ -584,6 +594,14 @@ export default function Dashboard() {
 
             {/* Top Customers - Only for users with financial access */}
             {canViewFinancials && <TopCustomers customers={topCustomers || []} startDate={filters.startDate} endDate={filters.endDate} clientId={clientId} />}
+
+            {/* Product Drill-down Card */}
+            {canViewFinancials && combinedTransactions.length > 0 && (
+              <ProductDrilldownCard
+                transactions={combinedTransactions}
+                dollarRate={dollarRate?.rate}
+              />
+            )}
           </>
         )}
       </div>

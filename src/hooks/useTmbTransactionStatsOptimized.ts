@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -26,6 +27,19 @@ export interface TmbTopCustomer {
 
 export function useTmbTransactionStatsOptimized(filters?: TmbTransactionFilters) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('tmb-stats-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tmb_transactions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['tmb-transaction-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['tmb-top-customers'] });
+        queryClient.invalidateQueries({ queryKey: ['tmb-sales-by-date'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   return useQuery({
     queryKey: ['tmb-transaction-stats', user?.id, filters?.startDate?.toISOString(), filters?.endDate?.toISOString(), filters?.clientId],
