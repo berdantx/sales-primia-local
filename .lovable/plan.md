@@ -1,27 +1,27 @@
 
-# Plano de Implementacao: 4 Funcionalidades do Dashboard e Upload
+# Exportar Apenas o Schema do Banco
 
-## Status: ✅ CONCLUÍDO
+## Problema Atual
+O botao "Novo Backup" fica desabilitado quando nenhuma tabela esta selecionada, e o hook sempre exporta dados de tabelas mesmo quando voce so quer a estrutura do banco.
 
----
+## Solucao
+Adicionar um botao "Exportar Schema" dedicado e ajustar o hook para permitir exportacao sem dados.
 
-## 1. ✅ KPI de Vendas por Produto com Drill-Down por Pais e Moeda
-- Criado `ProductDrilldownCard.tsx` com Accordion para Top 5 produtos
-- Campo `country` adicionado ao `UnifiedTransaction`
-- Drill-down mostra breakdown por país e moeda (BRL/USD separados)
+### Mudancas
 
-## 2. ✅ Toggle de Conversao de Moeda com Taxas ao Vivo (BRL/USD)
-- Adicionada opção "Tudo em USD" ao `CurrencyViewToggle`
-- 4 modos: Combinado, Apenas BRL, Tudo em USD, Separado
+**1. `src/hooks/useClientSideBackup.ts`**
+- Quando `selectedTables` for um array vazio E `includeSchema` for `true`, pular o loop de exportacao de tabelas e gerar o JSON apenas com o bloco `schema`
+- Remover o fallback que substitui array vazio por todas as tabelas (atualmente na linha que faz `selectedTables || BACKUP_TABLES`)
 
-## 3. ✅ Exportar Schema do Banco com Backup (já implementado anteriormente)
+**2. `src/pages/BackupDashboard.tsx`**
+- Adicionar botao "Exportar Schema" ao lado do botao "Novo Backup"
+- Ao clicar, chama `startBackup([], true)` -- nenhuma tabela, apenas schema
+- Manter o botao "Novo Backup" para backup completo (dados + schema opcional)
 
-## 4. ✅ Atualizacao em Tempo Real do Ranking de Top Clientes
-- Realtime listeners adicionados em `useTransactionStatsOptimized`, `useTmbTransactionStatsOptimized` e `useEduzzTransactionStatsOptimized`
-- Cache do React Query invalidado automaticamente em INSERTs
+### Experiencia do usuario
+- Clicou em "Exportar Schema": baixa um JSON so com a estrutura (tabelas, indices, RLS, funcoes, triggers, foreign keys)
+- Clicou em "Novo Backup": comportamento atual, exporta dados das tabelas selecionadas + schema se marcado
 
-## 5. ✅ Mapeamento Manual de Colunas no Upload
-- Criado `ColumnMappingStep.tsx` com interface completa
-- Parsers refatorados para aceitar `columnMap` customizado
-- Funções `autoDetect*Columns` exportadas para cada plataforma
-- Novo step "mapping" no fluxo de upload entre upload e preview
+### Arquivos editados
+1. `src/hooks/useClientSideBackup.ts` -- permitir backup sem dados
+2. `src/pages/BackupDashboard.tsx` -- adicionar botao dedicado
