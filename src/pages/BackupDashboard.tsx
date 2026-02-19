@@ -71,6 +71,7 @@ export default function BackupDashboard() {
   const [selectedTables, setSelectedTables] = useState<Set<string>>(
     () => new Set(BACKUP_TABLES as readonly string[])
   );
+  const [includeSchema, setIncludeSchema] = useState(true);
   const [selectorOpen, setSelectorOpen] = useState(true);
 
   const toggleTable = (table: string) => {
@@ -101,7 +102,7 @@ export default function BackupDashboard() {
 
   const handleBackup = async () => {
     reset();
-    const result = await startBackup(Array.from(selectedTables));
+    const result = await startBackup(Array.from(selectedTables), includeSchema);
     if (result) {
       toast.success(`Backup concluído! ${result.totalRecords.toLocaleString('pt-BR')} registros em ${(result.durationMs / 1000).toFixed(1)}s`);
       queryClient.invalidateQueries({ queryKey: ['backup-logs'] });
@@ -170,9 +171,21 @@ export default function BackupDashboard() {
             </CardHeader>
             <CollapsibleContent>
               <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={selectAll}>Selecionar Todas</Button>
-                  <Button variant="outline" size="sm" onClick={deselectAll}>Desmarcar Todas</Button>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={selectAll}>Selecionar Todas</Button>
+                    <Button variant="outline" size="sm" onClick={deselectAll}>Desmarcar Todas</Button>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer border rounded-lg px-3 py-2 bg-muted/50">
+                    <Checkbox
+                      checked={includeSchema}
+                      onCheckedChange={(checked) => setIncludeSchema(checked === true)}
+                    />
+                    <div className="text-sm">
+                      <span className="font-medium">Incluir estrutura do banco</span>
+                      <span className="text-muted-foreground ml-1">(tabelas, índices, RLS, funções)</span>
+                    </div>
+                  </label>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {TABLE_CATEGORIES.map(cat => {
@@ -211,6 +224,12 @@ export default function BackupDashboard() {
         {(progress.status !== 'idle') && (
           <Card>
             <CardContent className="pt-6 space-y-3">
+              {progress.status === 'schema' && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Exportando estrutura do banco de dados...
+                </div>
+              )}
               {progress.status === 'exporting' && (
                 <>
                   <div className="flex items-center justify-between text-sm">
