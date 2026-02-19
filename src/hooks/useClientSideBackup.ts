@@ -68,7 +68,8 @@ export function useClientSideBackup() {
   const startBackup = useCallback(async (selectedTables?: string[], includeSchema?: boolean) => {
     cancelledRef.current = false;
     const startTime = Date.now();
-    const tables = selectedTables && selectedTables.length > 0 ? selectedTables : BACKUP_TABLES;
+    const tables = selectedTables ?? [...BACKUP_TABLES];
+    const hasTablesSelected = tables.length > 0;
     const backupData: Record<string, any[]> = {};
     const tableStats: Record<string, number> = {};
     let totalRecords = 0;
@@ -82,7 +83,7 @@ export function useClientSideBackup() {
           ...prev,
           status: 'schema',
           currentTable: 'Estrutura do banco',
-          percentage: 0,
+          percentage: hasTablesSelected ? 0 : 50,
         }));
         const { data: schema, error: schemaError } = await supabase.functions.invoke('export-schema');
         if (schemaError) {
@@ -92,58 +93,60 @@ export function useClientSideBackup() {
         }
       }
 
-      for (let i = 0; i < tables.length; i++) {
-        if (cancelledRef.current) return null;
-
-        const tableName = tables[i];
-
-        setProgress({
-          status: 'exporting',
-          currentTable: tableName,
-          currentTableIndex: i + 1,
-          totalTables: tables.length,
-          currentTableRecords: 0,
-          totalRecords,
-          percentage: Math.round((i / tables.length) * 100),
-        });
-
-        let allData: any[] = [];
-        let offset = 0;
-        let hasMore = true;
-
-        while (hasMore) {
+      if (hasTablesSelected) {
+        for (let i = 0; i < tables.length; i++) {
           if (cancelledRef.current) return null;
 
-          const { data, error } = await (supabase
-            .from(tableName as any)
-            .select('*')
-            .range(offset, offset + BATCH_SIZE - 1) as any);
+          const tableName = tables[i];
 
-          if (error) {
-            console.warn(`Erro ao exportar ${tableName}:`, error.message);
-            break;
+          setProgress({
+            status: 'exporting',
+            currentTable: tableName,
+            currentTableIndex: i + 1,
+            totalTables: tables.length,
+            currentTableRecords: 0,
+            totalRecords,
+            percentage: Math.round((i / tables.length) * 100),
+          });
+
+          let allData: any[] = [];
+          let offset = 0;
+          let hasMore = true;
+
+          while (hasMore) {
+            if (cancelledRef.current) return null;
+
+            const { data, error } = await (supabase
+              .from(tableName as any)
+              .select('*')
+              .range(offset, offset + BATCH_SIZE - 1) as any);
+
+            if (error) {
+              console.warn(`Erro ao exportar ${tableName}:`, error.message);
+              break;
+            }
+
+            if (data && data.length > 0) {
+              allData = allData.concat(data);
+              offset += data.length;
+              hasMore = data.length === BATCH_SIZE;
+
+              setProgress(prev => ({
+                ...prev,
+                currentTableRecords: allData.length,
+              }));
+            } else {
+              hasMore = false;
+            }
+
+            // Small yield to keep UI responsive
+            await new Promise(r => setTimeout(r, 5));
           }
 
-          if (data && data.length > 0) {
-            allData = allData.concat(data);
-            offset += data.length;
-            hasMore = data.length === BATCH_SIZE;
-
-            setProgress(prev => ({
-              ...prev,
-              currentTableRecords: allData.length,
-            }));
-          } else {
-            hasMore = false;
-          }
-
-          // Small yield to keep UI responsive
-          await new Promise(r => setTimeout(r, 5));
+          backupData[tableName] = allData;
+          tableStats[tableName] = allData.length;
+          totalRecords += allData.length;
         }
-
-        backupData[tableName] = allData;
-        tableStats[tableName] = allData.length;
-        totalRecords += allData.length;
       }
 
       if (cancelledRef.current) return null;
