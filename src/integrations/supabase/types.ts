@@ -142,6 +142,45 @@ export type Database = {
         }
         Relationships: []
       }
+      duplicate_deletion_logs: {
+        Row: {
+          audit_type: string
+          client_id: string
+          created_at: string
+          deleted_by: string
+          id: string
+          justification: string
+          platform: string
+          transaction_data: Json
+          transaction_id: string
+          transaction_identifier: string
+        }
+        Insert: {
+          audit_type?: string
+          client_id: string
+          created_at?: string
+          deleted_by: string
+          id?: string
+          justification: string
+          platform: string
+          transaction_data: Json
+          transaction_id: string
+          transaction_identifier: string
+        }
+        Update: {
+          audit_type?: string
+          client_id?: string
+          created_at?: string
+          deleted_by?: string
+          id?: string
+          justification?: string
+          platform?: string
+          transaction_data?: Json
+          transaction_id?: string
+          transaction_identifier?: string
+        }
+        Relationships: []
+      }
       eduzz_transaction_deletion_logs: {
         Row: {
           client_id: string

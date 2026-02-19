@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, CheckCircle, Filter, RefreshCw, Search } from 'lucide-react';
 import { SearchDuplicateDialog } from '@/components/audit/SearchDuplicateDialog';
+import { DuplicateDeletionDialog, DuplicateDeletionRequest } from '@/components/audit/DuplicateDeletionDialog';
 import { useDuplicateAudit, useResolveDuplicate, DuplicateGroup, useEmailDuplicateAudit, useResolveEmailDuplicate, EmailDuplicateGroup, Platform } from '@/hooks/useDuplicateAudit';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFilter } from '@/contexts/FilterContext';
@@ -45,6 +46,9 @@ function IdDuplicatesTab({ clientId }: { clientId: string | null }) {
   const { data, isLoading } = useDuplicateAudit(clientId);
   const resolve = useResolveDuplicate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ platform: Platform; idsToDelete: string[]; value: number }[] | null>(null);
+
   const toggleSelect = (key: string) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -53,23 +57,50 @@ function IdDuplicatesTab({ clientId }: { clientId: string | null }) {
     });
   };
 
-  const resolveGroup = (group: DuplicateGroup, keep: 'webhook' | 'csv') => {
+  const openDialogForGroup = (group: DuplicateGroup, keep: 'webhook' | 'csv') => {
     const idsToDelete = group.records
       .filter(r => keep === 'webhook' ? r.source !== 'webhook' : r.source === 'webhook')
       .map(r => r.id);
     if (idsToDelete.length === 0) return;
-    resolve.mutate({ platform: group.platform, idsToDelete });
+    const value = group.records.filter(r => idsToDelete.includes(r.id)).reduce((s, r) => s + r.value, 0);
+    setPendingAction([{ platform: group.platform, idsToDelete, value }]);
+    setDialogOpen(true);
   };
 
-  const batchResolve = (keep: 'webhook' | 'csv') => {
+  const openDialogForBatch = (keep: 'webhook' | 'csv') => {
     if (!data) return;
+    const actions: { platform: Platform; idsToDelete: string[]; value: number }[] = [];
     for (const group of data.duplicates) {
       const key = `${group.platform}_${group.identifier}_${group.clientId}`;
       if (!selected.has(key)) continue;
-      resolveGroup(group, keep);
+      const idsToDelete = group.records
+        .filter(r => keep === 'webhook' ? r.source !== 'webhook' : r.source === 'webhook')
+        .map(r => r.id);
+      if (idsToDelete.length > 0) {
+        const value = group.records.filter(r => idsToDelete.includes(r.id)).reduce((s, r) => s + r.value, 0);
+        actions.push({ platform: group.platform, idsToDelete, value });
+      }
     }
+    if (actions.length === 0) return;
+    setPendingAction(actions);
+    setDialogOpen(true);
+  };
+
+  const handleConfirm = (justification: string) => {
+    if (!pendingAction) return;
+    for (const action of pendingAction) {
+      resolve.mutate({ platform: action.platform, idsToDelete: action.idsToDelete, justification, auditType: 'id_duplicate' });
+    }
+    setDialogOpen(false);
+    setPendingAction(null);
     setSelected(new Set());
   };
+
+  const deletionRequests: DuplicateDeletionRequest[] = (pendingAction ?? []).map(a => ({
+    platform: a.platform,
+    count: a.idsToDelete.length,
+    totalValue: a.value,
+  }));
 
   const summary = data?.summary;
   const allDuplicates = data?.duplicates ?? [];
@@ -111,10 +142,10 @@ function IdDuplicatesTab({ clientId }: { clientId: string | null }) {
       {selected.size > 0 && (
         <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
           <span className="text-sm font-medium">{selected.size} grupo(s) selecionado(s)</span>
-          <Button size="sm" variant="outline" onClick={() => batchResolve('webhook')} disabled={resolve.isPending}>
+          <Button size="sm" variant="outline" onClick={() => openDialogForBatch('webhook')} disabled={resolve.isPending}>
             Manter Webhook (lote)
           </Button>
-          <Button size="sm" variant="outline" onClick={() => batchResolve('csv')} disabled={resolve.isPending}>
+          <Button size="sm" variant="outline" onClick={() => openDialogForBatch('csv')} disabled={resolve.isPending}>
             Manter CSV (lote)
           </Button>
         </div>
@@ -157,10 +188,10 @@ function IdDuplicatesTab({ clientId }: { clientId: string | null }) {
                     <div className="flex gap-2">
                       {hasWebhook && hasCsv && (
                         <>
-                          <Button size="sm" variant="default" onClick={() => resolveGroup(group, 'webhook')} disabled={resolve.isPending}>
+                          <Button size="sm" variant="default" onClick={() => openDialogForGroup(group, 'webhook')} disabled={resolve.isPending}>
                             Manter Webhook
                           </Button>
-                          <Button size="sm" variant="secondary" onClick={() => resolveGroup(group, 'csv')} disabled={resolve.isPending}>
+                          <Button size="sm" variant="secondary" onClick={() => openDialogForGroup(group, 'csv')} disabled={resolve.isPending}>
                             Manter CSV
                           </Button>
                         </>
@@ -201,6 +232,14 @@ function IdDuplicatesTab({ clientId }: { clientId: string | null }) {
           })}
         </div>
       )}
+
+      <DuplicateDeletionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        deletions={deletionRequests}
+        onConfirm={handleConfirm}
+        isPending={resolve.isPending}
+      />
     </div>
   );
 }
@@ -219,7 +258,9 @@ function EmailDuplicatesTab({ clientId }: { clientId: string | null }) {
   const [selectedEduzz, setSelectedEduzz] = useState<EduzzTransaction | null>(null);
   const [selectedTmb, setSelectedTmb] = useState<TmbTransaction | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingDeletions, setPendingDeletions] = useState<{ deletions: { platform: Platform; ids: string[] }[]; summary: DuplicateDeletionRequest[] } | null>(null);
+  const [pendingGroupKey, setPendingGroupKey] = useState<string | null>(null);
 
   const toggleRecordForDeletion = (groupKey: string, recordId: string) => {
     setSelectedIds(prev => {
@@ -233,52 +274,61 @@ function EmailDuplicatesTab({ clientId }: { clientId: string | null }) {
     });
   };
 
-  const resolveKeepNewest = (group: EmailDuplicateGroup) => {
+  const buildDeletionsByPlatform = (records: { id: string; platform: Platform; value: number }[]) => {
+    const byPlatform = new Map<Platform, { ids: string[]; value: number }>();
+    for (const r of records) {
+      const entry = byPlatform.get(r.platform) ?? { ids: [], value: 0 };
+      entry.ids.push(r.id);
+      entry.value += r.value;
+      byPlatform.set(r.platform, entry);
+    }
+    const deletions = Array.from(byPlatform.entries()).map(([platform, { ids }]) => ({ platform, ids }));
+    const summary: DuplicateDeletionRequest[] = Array.from(byPlatform.entries()).map(([platform, { ids, value }]) => ({ platform, count: ids.length, totalValue: value }));
+    return { deletions, summary };
+  };
+
+  const openDialogKeepNewest = (group: EmailDuplicateGroup) => {
     const sorted = [...group.records].sort((a, b) => {
       const da = a.date ? new Date(a.date).getTime() : 0;
       const db = b.date ? new Date(b.date).getTime() : 0;
       return db - da;
     });
-    const toDelete = sorted.slice(1); // keep first (newest)
+    const toDelete = sorted.slice(1);
     if (toDelete.length === 0) return;
-
-    const byPlatform = new Map<Platform, string[]>();
-    for (const r of toDelete) {
-      const ids = byPlatform.get(r.platform) ?? [];
-      ids.push(r.id);
-      byPlatform.set(r.platform, ids);
-    }
-    resolve.mutate(Array.from(byPlatform.entries()).map(([platform, ids]) => ({ platform, ids })));
+    const result = buildDeletionsByPlatform(toDelete);
+    setPendingDeletions(result);
+    setDialogOpen(true);
   };
 
-  const resolveKeepSource = (group: EmailDuplicateGroup, keepSource: 'webhook' | 'csv') => {
+  const openDialogKeepSource = (group: EmailDuplicateGroup, keepSource: 'webhook' | 'csv') => {
     const toDelete = group.records.filter(r =>
       keepSource === 'webhook' ? r.source !== 'webhook' : r.source === 'webhook'
     );
     if (toDelete.length === 0) return;
-
-    const byPlatform = new Map<Platform, string[]>();
-    for (const r of toDelete) {
-      const ids = byPlatform.get(r.platform) ?? [];
-      ids.push(r.id);
-      byPlatform.set(r.platform, ids);
-    }
-    resolve.mutate(Array.from(byPlatform.entries()).map(([platform, ids]) => ({ platform, ids })));
+    const result = buildDeletionsByPlatform(toDelete);
+    setPendingDeletions(result);
+    setDialogOpen(true);
   };
 
-  const resolveSelected = (groupKey: string, group: EmailDuplicateGroup) => {
+  const openDialogSelected = (groupKey: string, group: EmailDuplicateGroup) => {
     const idsToDelete = selectedIds.get(groupKey);
     if (!idsToDelete || idsToDelete.size === 0) return;
+    const toDelete = group.records.filter(r => idsToDelete.has(r.id));
+    const result = buildDeletionsByPlatform(toDelete);
+    setPendingDeletions(result);
+    setPendingGroupKey(groupKey);
+    setDialogOpen(true);
+  };
 
-    const byPlatform = new Map<Platform, string[]>();
-    for (const rec of group.records) {
-      if (!idsToDelete.has(rec.id)) continue;
-      const ids = byPlatform.get(rec.platform) ?? [];
-      ids.push(rec.id);
-      byPlatform.set(rec.platform, ids);
+  const handleConfirm = (justification: string) => {
+    if (!pendingDeletions) return;
+    resolve.mutate({ deletions: pendingDeletions.deletions, justification });
+    setDialogOpen(false);
+    setPendingDeletions(null);
+    if (pendingGroupKey) {
+      setSelectedIds(prev => { const n = new Map(prev); n.delete(pendingGroupKey!); return n; });
+      setPendingGroupKey(null);
     }
-    resolve.mutate(Array.from(byPlatform.entries()).map(([platform, ids]) => ({ platform, ids })));
-    setSelectedIds(prev => { const n = new Map(prev); n.delete(groupKey); return n; });
   };
 
   let duplicates = data?.duplicates ?? [];
@@ -431,21 +481,21 @@ function EmailDuplicatesTab({ clientId }: { clientId: string | null }) {
                       </p>
                     </div>
                     <div className="flex gap-2 flex-wrap">
-                      <Button size="sm" variant="outline" onClick={() => resolveKeepNewest(group)} disabled={resolve.isPending}>
+                      <Button size="sm" variant="outline" onClick={() => openDialogKeepNewest(group)} disabled={resolve.isPending}>
                         Manter mais recente
                       </Button>
                       {hasWebhook && hasCsv && (
                         <>
-                          <Button size="sm" variant="default" onClick={() => resolveKeepSource(group, 'webhook')} disabled={resolve.isPending}>
+                          <Button size="sm" variant="default" onClick={() => openDialogKeepSource(group, 'webhook')} disabled={resolve.isPending}>
                             Manter Webhook
                           </Button>
-                          <Button size="sm" variant="secondary" onClick={() => resolveKeepSource(group, 'csv')} disabled={resolve.isPending}>
+                          <Button size="sm" variant="secondary" onClick={() => openDialogKeepSource(group, 'csv')} disabled={resolve.isPending}>
                             Manter CSV
                           </Button>
                         </>
                       )}
                       {groupSelectedIds && groupSelectedIds.size > 0 && (
-                        <Button size="sm" variant="destructive" onClick={() => resolveSelected(key, group)} disabled={resolve.isPending}>
+                        <Button size="sm" variant="destructive" onClick={() => openDialogSelected(key, group)} disabled={resolve.isPending}>
                           Remover {groupSelectedIds.size} selecionado(s)
                         </Button>
                       )}
@@ -509,6 +559,13 @@ function EmailDuplicatesTab({ clientId }: { clientId: string | null }) {
         transaction={selectedTmb}
         open={detailOpen && selectedPlatform === 'tmb'}
         onOpenChange={closeDetail}
+      />
+      <DuplicateDeletionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        deletions={pendingDeletions?.summary ?? []}
+        onConfirm={handleConfirm}
+        isPending={resolve.isPending}
       />
     </div>
   );
