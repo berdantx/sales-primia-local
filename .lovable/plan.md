@@ -1,35 +1,53 @@
 
 
-# Filtrar Duplicatas por Cliente Selecionado
+# Pagina de Cancelamentos Eduzz
 
-## Problema atual
-Os hooks `useDuplicateAudit` e `useEmailDuplicateAudit` buscam **todas** as transacoes de **todos** os clientes sem filtrar pelo cliente selecionado no contexto global. Isso faz com que as abas "Por ID" e "Por Email" misturem dados de clientes diferentes.
+## O que sera criado
+Uma nova pagina "Cancelamentos Eduzz" com duas abas:
+1. **Cancelamentos Automaticos** - transacoes com status "cancelado" (vindas do webhook)
+2. **Exclusoes Manuais** - registros da tabela `eduzz_transaction_deletion_logs` (exclusoes feitas por usuarios com justificativa)
 
-## O que muda
-Atualizar os dois hooks para receber o `clientId` do contexto global e filtrar as queries no banco. A pagina `DuplicateAudit.tsx` vai passar o `clientId` do `useFilter()` para os hooks.
+## Estrutura
 
-## Detalhes tecnicos
+A pagina segue o mesmo padrao visual da pagina "Cancelamentos TMB" ja existente, adaptada para Eduzz.
 
-### 1. Arquivo: `src/hooks/useDuplicateAudit.ts`
+### Aba "Cancelamentos Automaticos"
+- Lista transacoes da tabela `eduzz_transactions` filtradas por `status = 'cancelado'`
+- KPIs: Total cancelado, quantidade, taxa de cancelamento
+- Filtros: periodo, busca por texto
+- Tabela com: ID venda, produto, cliente, valor, data venda, data cancelamento
+- Exportar CSV
 
-**`useDuplicateAudit(clientId)`**:
-- Adicionar parametro `clientId: string | null`
-- Incluir `clientId` na `queryKey`: `['duplicate-audit', clientId]`
-- Adicionar `.eq('client_id', clientId)` em cada query (quando clientId existir)
-- Desabilitar a query quando `clientId` for null (para usuarios que precisam selecionar cliente): `enabled: !!clientId`
+### Aba "Exclusoes Manuais"
+- Lista registros da tabela `eduzz_transaction_deletion_logs`
+- Mostra: dados da transacao original (do campo JSONB `transaction_data`), quem excluiu, quando, e o **motivo da exclusao**
+- Busca por produto, cliente ou ID
+- Badge destacando a justificativa
 
-**`useEmailDuplicateAudit(clientId)`**:
-- Mesmo tratamento: parametro `clientId`, queryKey com clientId, filtro `.eq('client_id', clientId)`, enabled condicional
+## Arquivos a criar/modificar
 
-### 2. Arquivo: `src/pages/DuplicateAudit.tsx`
+### 1. Criar: `src/hooks/useEduzzDeletionLogs.ts`
+- Hook que busca registros de `eduzz_transaction_deletion_logs` filtrados por `client_id`
+- Aceita filtros de periodo e busca textual
+- Faz join com `profiles` para trazer o nome de quem excluiu (via `deleted_by`)
 
-- Importar `useFilter` de `@/contexts/FilterContext`
-- Extrair `clientId` do contexto
-- Passar `clientId` para `IdDuplicatesTab` e `EmailDuplicatesTab` como prop
-- Dentro de cada tab, passar `clientId` para os hooks `useDuplicateAudit(clientId)` e `useEmailDuplicateAudit(clientId)`
+### 2. Criar: `src/pages/EduzzCancellations.tsx`
+- Pagina com duas abas usando componente `Tabs`
+- Aba 1: reutiliza `useEduzzTransactions` filtrando por `status === 'cancelado'` (mesmo padrao do TmbCancellations)
+- Aba 2: usa o novo hook `useEduzzDeletionLogs`
+- Header com `ClientContextHeader`
+- KPIs com `ColoredKPICard`
+- Tabela paginada, busca com debounce, exportar CSV
 
-### Resultado esperado
-- Cliente "Camila Vieira - 2026" selecionado: somente duplicatas desse cliente aparecem
-- Cliente "Paulo Vieira" selecionado: somente duplicatas dele aparecem
-- Para usuarios master sem cliente selecionado: a busca fica desabilitada ate selecionar um cliente (ou alternativamente busca todos, conforme preferencia)
+### 3. Modificar: `src/components/layout/AppSidebar.tsx`
+- Adicionar item "Cancelamentos Eduzz" no grupo "Vendas", abaixo de "Eduzz"
+- Icone: `Ban` (mesmo dos cancelamentos TMB)
+- Rota: `/eduzz-cancellations`
+- Roles: `['master', 'admin', 'user']`
+
+### 4. Modificar: `src/App.tsx`
+- Adicionar rota `/eduzz-cancellations` apontando para o novo componente
+
+### Nenhuma migracao necessaria
+A tabela `eduzz_transaction_deletion_logs` ja existe e possui as RLS policies corretas (somente master pode inserir e visualizar).
 
