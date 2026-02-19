@@ -1,64 +1,40 @@
 
 
-# Corrigir Diagnostico CORS
+# Seletor de Tabelas no Backup
 
-## Problema
-O teste atual envia `fetch` com `method: 'OPTIONS'` manualmente pelo browser. Isso nao funciona porque:
-1. O browser trata a propria requisicao OPTIONS como cross-origin
-2. A requisicao precisa de um preflight para si mesma (loop impossivel)
-3. Resultado: "Failed to fetch" em todas as funcoes
+## Situacao Atual
+Ao clicar "Novo Backup", todas as 26 tabelas sao exportadas automaticamente. Nao existe nenhuma interface para escolher quais tabelas incluir no backup.
 
-## Solucao
-Substituir o teste OPTIONS manual por requisicoes reais (POST com body vazio) que naturalmente disparam o preflight do browser. Se a requisicao chegar ao servidor e retornar com headers CORS, o teste passa. Se o browser bloquear, e um problema CORS real.
+## O que vai mudar
 
-## Mudancas
+### 1. Hook `useClientSideBackup.ts`
+- Exportar a constante `BACKUP_TABLES` para que o dashboard possa usar a lista
+- Alterar `startBackup` para receber um parametro opcional `selectedTables: string[]`
+- Se `selectedTables` for passado, exportar somente essas tabelas; senao, exportar todas (comportamento atual mantido)
+- Atualizar `totalTables` no progresso para refletir a quantidade selecionada
 
-### Arquivo: `src/pages/CorsDiagnostics.tsx`
+### 2. Dashboard `BackupDashboard.tsx`
+- Adicionar um card "Selecionar Tabelas" entre o header e o botao de backup
+- Usar checkboxes para cada tabela, agrupadas em categorias:
+  - **Dados principais**: transactions, eduzz_transactions, tmb_transactions, leads
+  - **Configuracao**: clients, profiles, client_users, goals, goal_history, filter_views, app_settings, llm_integrations, external_webhooks
+  - **Importacao/Exportacao**: imports, import_errors, export_jobs, backup_logs
+  - **Convites**: invitations, invitation_history
+  - **Logs/Auditoria**: access_logs, lead_deletion_logs, duplicate_deletion_logs, eduzz_transaction_deletion_logs, permission_audit_logs
+  - **Outros**: known_landing_pages, interest_leads
+- Botao "Selecionar Todas" / "Desmarcar Todas"
+- Badge mostrando "X de 26 tabelas selecionadas"
+- O card fica colapsavel (usando Collapsible) para nao poluir a tela -- inicia expandido na primeira vez, depois o usuario pode fechar
+- Passar as tabelas selecionadas para `startBackup(selectedTables)`
+- Desabilitar o botao "Novo Backup" se nenhuma tabela estiver selecionada
 
-**Logica do teste (`testFunction`)**:
-
-1. **Teste real**: Enviar um POST com `Content-Type: application/json` e headers `apikey` + `authorization` (igual ao que a app faz normalmente). O browser fara o preflight automaticamente.
-2. **Verificar resposta**: Se a resposta chegar (qualquer status HTTP), o CORS esta funcionando. Extrair os headers `access-control-*` da resposta.
-3. **Classificar resultado**:
-   - `success` - requisicao completou (CORS OK), independente do status HTTP (401, 400, etc. sao esperados pois nao estamos enviando payload valido)
-   - `cors-error` - browser bloqueou a requisicao (TypeError: Failed to fetch)
-   - `timeout` - demorou mais de 10s
-4. **Exibir info extra**: Mostrar o status HTTP real da resposta (401, 200, etc.) para contexto
-
-**Nova coluna na tabela**: Remover coluna "CORS Headers" (nao acessiveis via fetch normal) e manter foco no resultado binario: passou ou nao passou.
-
-**Melhoria visual**: Adicionar card de resumo no topo com contagem de sucesso/falha e explicacao do que o teste faz.
-
-### Detalhes tecnicos da mudanca
-
-Substituir o metodo `testFunction` de:
-```typescript
-// ATUAL - nao funciona
-const preflightRes = await fetch(url, {
-  method: 'OPTIONS',
-  headers: {
-    'Origin': window.location.origin,
-    'Access-Control-Request-Method': 'POST',
-    ...
-  },
-});
-```
-
-Para:
-```typescript
-// NOVO - funciona
-const res = await fetch(url, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'apikey': anonKey,
-    'Authorization': `Bearer ${anonKey}`,
-  },
-  body: JSON.stringify({}),
-});
-// Se chegou aqui, CORS esta OK
-// Status 401/400/500 sao esperados (payload invalido)
-```
+### Experiencia do Usuario
+1. Ao abrir /backup-dashboard, ve o card com todas as tabelas ja marcadas por padrao
+2. Pode desmarcar as que nao quer
+3. Clica "Novo Backup" e so as selecionadas sao exportadas
+4. O progresso mostra "Tabela X de Y" considerando apenas as selecionadas
 
 ### Arquivos alterados
-1. `src/pages/CorsDiagnostics.tsx` - reescrever logica de teste e ajustar tabela de resultados
+1. `src/hooks/useClientSideBackup.ts` -- exportar BACKUP_TABLES, aceitar parametro selectedTables
+2. `src/pages/BackupDashboard.tsx` -- adicionar UI de selecao com checkboxes agrupados
+
