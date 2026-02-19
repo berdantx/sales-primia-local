@@ -16,6 +16,9 @@ export interface EduzzTransaction {
   utm_medium: string;
   utm_campaign: string;
   utm_content: string;
+  total_installments: number | null;
+  payment_method: string;
+  payment_form: string;
 }
 
 export interface EduzzParseResult {
@@ -47,6 +50,9 @@ const EDUZZ_COLUMNS = {
   utmMedium: ['utm_medium', 'medium', 'mídia', 'midia'],
   utmCampaign: ['utm_campaign', 'campaign', 'campanha'],
   utmContent: ['utm_content', 'content', 'conteúdo utm'],
+  totalInstallments: ['no parcelas', 'n parcelas', 'parcelas', 'nº parcelas', 'total_installments', 'numero de parcelas'],
+  paymentMethod: ['forma de pagamento', 'payment_method', 'forma pagamento', 'metodo pagamento'],
+  paymentForm: ['metodo de pagamento', 'método de pagamento', 'payment_form', 'bandeira', 'tipo cartao'],
 };
 
 function normalizeHeader(header: string): string {
@@ -185,6 +191,9 @@ export function parseEduzzData(data: Record<string, unknown>[], headers: string[
     utmMedium: findColumn(headers, EDUZZ_COLUMNS.utmMedium),
     utmCampaign: findColumn(headers, EDUZZ_COLUMNS.utmCampaign),
     utmContent: findColumn(headers, EDUZZ_COLUMNS.utmContent),
+    totalInstallments: findColumn(headers, EDUZZ_COLUMNS.totalInstallments),
+    paymentMethod: findColumn(headers, EDUZZ_COLUMNS.paymentMethod),
+    paymentForm: findColumn(headers, EDUZZ_COLUMNS.paymentForm),
   };
   
   // Check required columns
@@ -244,6 +253,11 @@ export function parseEduzzData(data: Record<string, unknown>[], headers: string[
         utm_medium: columnMap.utmMedium ? String(row[columnMap.utmMedium] || '').trim() : '',
         utm_campaign: columnMap.utmCampaign ? String(row[columnMap.utmCampaign] || '').trim() : '',
         utm_content: columnMap.utmContent ? String(row[columnMap.utmContent] || '').trim() : '',
+        total_installments: columnMap.totalInstallments 
+          ? (parseInt(String(row[columnMap.totalInstallments] || ''), 10) || null)
+          : null,
+        payment_method: columnMap.paymentMethod ? String(row[columnMap.paymentMethod] || '').trim() : '',
+        payment_form: columnMap.paymentForm ? String(row[columnMap.paymentForm] || '').trim() : '',
       };
       
       const existing = groupedBySaleId.get(saleId);
