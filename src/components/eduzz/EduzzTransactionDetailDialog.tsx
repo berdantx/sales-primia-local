@@ -11,6 +11,8 @@ import { formatDateTimeBR } from '@/lib/dateUtils';
 import { differenceInSeconds, differenceInMinutes, differenceInHours } from 'date-fns';
 import { useUserRole } from '@/hooks/useUserRole';
 import { DeleteEduzzTransactionDialog } from './DeleteEduzzTransactionDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { 
   Receipt, 
   User, 
@@ -24,7 +26,11 @@ import {
   FileText,
   HelpCircle,
   Clock,
-  Trash2
+  Trash2,
+  Code,
+  Copy,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import type { EduzzTransaction } from '@/hooks/useEduzzTransactions';
 
@@ -72,8 +78,55 @@ export function EduzzTransactionDetailDialog({
   onOpenChange 
 }: EduzzTransactionDetailDialogProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [webhookPayload, setWebhookPayload] = useState<Record<string, unknown> | null>(null);
+  const [webhookLoading, setWebhookLoading] = useState(false);
+  const [webhookLoaded, setWebhookLoaded] = useState(false);
+  const [showWebhook, setShowWebhook] = useState(false);
   const { role } = useUserRole();
   const isMaster = role === 'master';
+
+  const sanitizePayload = (payload: Record<string, unknown>) => {
+    const sensitiveKeys = ['user_id', 'client_id', 'id'];
+    const sanitized = { ...payload };
+    sensitiveKeys.forEach(key => delete sanitized[key]);
+    return sanitized;
+  };
+
+  const fetchWebhookPayload = async () => {
+    if (webhookLoaded || !transaction) return;
+    setWebhookLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('webhook_logs')
+        .select('payload')
+        .eq('transaction_code', transaction.sale_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data?.payload) {
+        setWebhookPayload(sanitizePayload(data.payload as Record<string, unknown>));
+      } else {
+        setWebhookPayload(null);
+      }
+    } catch (err) {
+      console.error('Error fetching webhook payload:', err);
+      toast.error('Erro ao buscar payload do webhook');
+    } finally {
+      setWebhookLoading(false);
+      setWebhookLoaded(true);
+      setShowWebhook(true);
+    }
+  };
+
+  const copyPayload = () => {
+    if (webhookPayload) {
+      navigator.clipboard.writeText(JSON.stringify(webhookPayload, null, 2));
+      toast.success('Payload copiado!');
+    }
+  };
 
   if (!transaction) return null;
 
@@ -318,6 +371,71 @@ export function EduzzTransactionDetailDialog({
                     </>
                   );
                 })()}
+              </CardContent>
+            </Card>
+            {/* Webhook Payload */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Code className="h-4 w-4" />
+                  Webhook Completo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {!webhookLoaded && !webhookLoading && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={fetchWebhookPayload}
+                  >
+                    <Code className="h-4 w-4 mr-2" />
+                    Ver webhook completo
+                  </Button>
+                )}
+
+                {webhookLoading && (
+                  <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Carregando...</span>
+                  </div>
+                )}
+
+                {webhookLoaded && !webhookPayload && (
+                  <div className="flex items-center gap-2 py-3 text-muted-foreground">
+                    <AlertCircle className="h-4 w-4" />
+                    <span className="text-sm">
+                      Webhook não disponível (transação importada via CSV)
+                    </span>
+                  </div>
+                )}
+
+                {webhookLoaded && webhookPayload && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowWebhook(!showWebhook)}
+                      >
+                        {showWebhook ? 'Ocultar' : 'Mostrar'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={copyPayload}
+                      >
+                        <Copy className="h-3.5 w-3.5 mr-1" />
+                        Copiar
+                      </Button>
+                    </div>
+                    {showWebhook && (
+                      <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-[300px] border">
+                        {JSON.stringify(webhookPayload, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
