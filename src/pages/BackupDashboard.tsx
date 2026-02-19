@@ -146,10 +146,27 @@ export default function BackupDashboard() {
                   Cancelar
                 </Button>
               ) : (
-                <Button onClick={handleBackup} disabled={isExporting || selectedTables.size === 0}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Novo Backup
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      reset();
+                      const result = await startBackup([], true);
+                      if (result) {
+                        toast.success('Schema exportado com sucesso!');
+                        queryClient.invalidateQueries({ queryKey: ['backup-logs'] });
+                      }
+                    }}
+                    disabled={isExporting}
+                  >
+                    <Database className="h-4 w-4 mr-2" />
+                    Exportar Schema
+                  </Button>
+                  <Button onClick={handleBackup} disabled={isExporting || selectedTables.size === 0}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Novo Backup
+                  </Button>
+                </>
               )}
             </div>
           </div>
