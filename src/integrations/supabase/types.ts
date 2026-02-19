@@ -77,6 +77,45 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          file_size_bytes: number | null
+          id: string
+          status: string
+          tables_included: string[]
+          total_records: number | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          status?: string
+          tables_included?: string[]
+          total_records?: number | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          status?: string
+          tables_included?: string[]
+          total_records?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       client_users: {
         Row: {
           can_view_financials: boolean | null

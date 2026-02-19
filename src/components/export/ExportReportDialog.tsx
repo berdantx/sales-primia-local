@@ -24,8 +24,10 @@ import { generateExcelReport } from '@/lib/export/generateExcelReport';
 import { generateCsvReport } from '@/lib/export/generateCsvReport';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useTmbTransactions } from '@/hooks/useTmbTransactions';
+import { useEduzzTransactions } from '@/hooks/useEduzzTransactions';
 import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
 import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsOptimized';
+import { useEduzzTransactionStatsOptimized } from '@/hooks/useEduzzTransactionStatsOptimized';
 import { useClients } from '@/hooks/useClients';
 import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
@@ -81,6 +83,7 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
   const [options, setOptions] = useState({
     includeHotmart: true,
     includeTmb: true,
+    includeEduzz: true,
     includeSummary: true,
     includeCombined: true,
   });
@@ -109,13 +112,15 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
   // Fetch data with filters
   const { data: hotmartTransactions, isLoading: loadingHotmart } = useTransactions(filters);
   const { data: tmbTransactions, isLoading: loadingTmb } = useTmbTransactions(filters);
+  const { data: eduzzTransactions, isLoading: loadingEduzz } = useEduzzTransactions(filters);
   const { data: hotmartStats, isLoading: loadingHotmartStats } = useTransactionStatsOptimized(filters);
   const { data: tmbStats, isLoading: loadingTmbStats } = useTmbTransactionStatsOptimized(filters);
+  const { data: eduzzStats, isLoading: loadingEduzzStats } = useEduzzTransactionStatsOptimized(filters);
 
-  const isLoading = loadingHotmart || loadingTmb || loadingHotmartStats || loadingTmbStats;
+  const isLoading = loadingHotmart || loadingTmb || loadingEduzz || loadingHotmartStats || loadingTmbStats || loadingEduzzStats;
 
   const selectedClient = clients?.find((c) => c.id === selectedClientId);
-  const transactionCount = (hotmartTransactions?.length || 0) + (tmbTransactions?.length || 0);
+  const transactionCount = (hotmartTransactions?.length || 0) + (tmbTransactions?.length || 0) + (eduzzTransactions?.length || 0);
 
   const handleExport = async () => {
     try {
@@ -163,7 +168,7 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
 
   const hasAnySelected = exportFormat === 'excel' 
     ? Object.values(options).some(Boolean)
-    : options.includeHotmart || options.includeTmb || options.includeCombined;
+    : options.includeHotmart || options.includeTmb || options.includeEduzz || options.includeCombined;
 
   const formatPeriodDisplay = () => {
     if (period === 'all') return 'Todo o período';
@@ -347,6 +352,17 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
               />
               <Label htmlFor="tmb" className="cursor-pointer">
                 Transações TMB
+              </Label>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="eduzz"
+                checked={options.includeEduzz}
+                onCheckedChange={() => toggleOption('includeEduzz')}
+              />
+              <Label htmlFor="eduzz" className="cursor-pointer">
+                Transações Eduzz
               </Label>
             </div>
 
