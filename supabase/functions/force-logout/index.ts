@@ -71,11 +71,24 @@ serve(async (req) => {
     const { data: targetUser } = await supabaseAdmin.auth.admin.getUserById(target_user_id);
     const targetEmail = targetUser?.user?.email || 'unknown';
 
-    // Sign out the user from all sessions using Supabase Admin API
-    const { error: signOutError } = await supabaseAdmin.auth.admin.signOut(target_user_id, 'global');
+    // Sign out the user from all sessions using GoTrue Admin REST API
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
+    const signOutResponse = await fetch(
+      `${supabaseUrl}/auth/v1/admin/users/${target_user_id}/logout`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${serviceRoleKey}`,
+          'apikey': serviceRoleKey,
+        },
+      }
+    );
 
-    if (signOutError) {
-      console.error('Error signing out user:', signOutError);
+    if (!signOutResponse.ok) {
+      const errorBody = await signOutResponse.text();
+      console.error('Error signing out user:', errorBody);
       return new Response(
         JSON.stringify({ error: 'Failed to sign out user' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
