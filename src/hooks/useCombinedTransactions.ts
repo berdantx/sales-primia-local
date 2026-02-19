@@ -15,6 +15,7 @@ export interface UnifiedTransaction {
   date: string | null;
   utm_campaign: string | null;
   sck_code: string | null; // Only for Hotmart
+  country: string | null;
 }
 
 export interface CombinedTransactionFilters {
@@ -74,6 +75,7 @@ export function useCombinedTransactions(filters?: CombinedTransactionFilters) {
           date: t.purchase_date,
           utm_campaign: null, // Hotmart doesn't have UTM in current schema
           sck_code: t.sck_code,
+          country: t.country || null,
         });
       });
     }
@@ -92,6 +94,7 @@ export function useCombinedTransactions(filters?: CombinedTransactionFilters) {
           date: t.effective_date,
           utm_campaign: t.utm_campaign,
           sck_code: null,
+          country: null,
         });
       });
     }
@@ -110,6 +113,7 @@ export function useCombinedTransactions(filters?: CombinedTransactionFilters) {
           date: t.sale_date,
           utm_campaign: t.utm_campaign,
           sck_code: null,
+          country: null,
         });
       });
     }

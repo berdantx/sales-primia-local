@@ -170,14 +170,8 @@ function parseDate(value: string | number | undefined): Date | null {
   return null;
 }
 
-export function parseEduzzData(data: Record<string, unknown>[], headers: string[]): EduzzParseResult {
-  const transactions: EduzzTransaction[] = [];
-  const errors: EduzzParseError[] = [];
-  const duplicates: string[] = [];
-  
-  
-  // Find column mappings
-  const columnMap = {
+export function autoDetectEduzzColumns(headers: string[]): Record<string, string | null> {
+  return {
     saleId: findColumn(headers, EDUZZ_COLUMNS.saleId),
     invoiceCode: findColumn(headers, EDUZZ_COLUMNS.invoiceCode),
     product: findColumn(headers, EDUZZ_COLUMNS.product),
@@ -195,6 +189,33 @@ export function parseEduzzData(data: Record<string, unknown>[], headers: string[
     paymentMethod: findColumn(headers, EDUZZ_COLUMNS.paymentMethod),
     paymentForm: findColumn(headers, EDUZZ_COLUMNS.paymentForm),
   };
+}
+
+export function parseEduzzData(data: Record<string, unknown>[], headers: string[], customColumnMap?: Record<string, string | null>): EduzzParseResult {
+  const transactions: EduzzTransaction[] = [];
+  const errors: EduzzParseError[] = [];
+  const duplicates: string[] = [];
+  
+  
+  // Find column mappings - use custom map if provided
+  const columnMap = customColumnMap ? {
+    saleId: customColumnMap.saleId || null,
+    invoiceCode: customColumnMap.invoiceCode || null,
+    product: customColumnMap.product || null,
+    productId: customColumnMap.productId || null,
+    buyerName: customColumnMap.buyerName || null,
+    buyerEmail: customColumnMap.buyerEmail || null,
+    buyerPhone: customColumnMap.buyerPhone || null,
+    saleValue: customColumnMap.saleValue || null,
+    saleDate: customColumnMap.saleDate || null,
+    utmSource: customColumnMap.utmSource || null,
+    utmMedium: customColumnMap.utmMedium || null,
+    utmCampaign: customColumnMap.utmCampaign || null,
+    utmContent: customColumnMap.utmContent || null,
+    totalInstallments: customColumnMap.totalInstallments || null,
+    paymentMethod: customColumnMap.paymentMethod || null,
+    paymentForm: customColumnMap.paymentForm || null,
+  } : autoDetectEduzzColumns(headers);
   
   // Check required columns
   if (!columnMap.saleId) {

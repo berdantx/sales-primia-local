@@ -1,8 +1,8 @@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { DollarSign, Layers, SplitSquareVertical } from 'lucide-react';
+import { DollarSign, Layers, SplitSquareVertical, CircleDollarSign } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-export type CurrencyView = 'combined' | 'brl-only' | 'separated';
+export type CurrencyView = 'combined' | 'brl-only' | 'usd-only' | 'separated';
 
 interface CurrencyViewToggleProps {
   value: CurrencyView;
@@ -40,6 +40,18 @@ export function CurrencyViewToggle({ value, onChange, className }: CurrencyViewT
           </TooltipTrigger>
           <TooltipContent>
             <p>Apenas vendas em Reais</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <ToggleGroupItem value="usd-only" aria-label="Tudo em USD" className="h-8 px-2 sm:px-3">
+              <CircleDollarSign className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1.5 text-xs">Tudo em USD</span>
+            </ToggleGroupItem>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Todos os valores convertidos para USD</p>
           </TooltipContent>
         </Tooltip>
 

@@ -157,14 +157,8 @@ function parseDate(value: string | number | undefined): Date | null {
   return null;
 }
 
-export function parseTmbData(data: Record<string, unknown>[], headers: string[]): TmbParseResult {
-  const transactions: TmbTransaction[] = [];
-  const errors: TmbParseError[] = [];
-  const seenOrderIds = new Set<string>();
-  const duplicates: string[] = [];
-  
-  // Find column mappings
-  const columnMap = {
+export function autoDetectTmbColumns(headers: string[]): Record<string, string | null> {
+  return {
     orderId: findColumn(headers, TMB_COLUMNS.orderId),
     product: findColumn(headers, TMB_COLUMNS.product),
     buyerName: findColumn(headers, TMB_COLUMNS.buyerName),
@@ -176,6 +170,27 @@ export function parseTmbData(data: Record<string, unknown>[], headers: string[])
     utmCampaign: findColumn(headers, TMB_COLUMNS.utmCampaign),
     utmContent: findColumn(headers, TMB_COLUMNS.utmContent),
   };
+}
+
+export function parseTmbData(data: Record<string, unknown>[], headers: string[], customColumnMap?: Record<string, string | null>): TmbParseResult {
+  const transactions: TmbTransaction[] = [];
+  const errors: TmbParseError[] = [];
+  const seenOrderIds = new Set<string>();
+  const duplicates: string[] = [];
+  
+  // Find column mappings - use custom map if provided
+  const columnMap = customColumnMap ? {
+    orderId: customColumnMap.orderId || null,
+    product: customColumnMap.product || null,
+    buyerName: customColumnMap.buyerName || null,
+    buyerEmail: customColumnMap.buyerEmail || null,
+    ticketValue: customColumnMap.ticketValue || null,
+    effectiveDate: customColumnMap.effectiveDate || null,
+    utmSource: customColumnMap.utmSource || null,
+    utmMedium: customColumnMap.utmMedium || null,
+    utmCampaign: customColumnMap.utmCampaign || null,
+    utmContent: customColumnMap.utmContent || null,
+  } : autoDetectTmbColumns(headers);
   
   // Check required columns
   if (!columnMap.orderId) {
