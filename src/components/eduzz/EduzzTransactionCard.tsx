@@ -9,6 +9,7 @@ import {
 import { formatCurrency } from '@/lib/calculations/goalCalculations';
 import { formatDateTimeBR, formatDateTimeUTC } from '@/lib/dateUtils';
 import { EduzzTransaction } from '@/hooks/useEduzzTransactions';
+import { InstallmentBadge } from '@/components/transactions/InstallmentBadge';
 
 interface EduzzTransactionCardProps {
   transaction: EduzzTransaction;
@@ -41,13 +42,26 @@ export function EduzzTransactionCard({ transaction, onClick }: EduzzTransactionC
             <Badge variant="outline" className="ml-2 text-xs shrink-0">{transaction.currency || 'BRL'}</Badge>
           )}
         </div>
-        {transaction.utm_source && (
-          <div className="flex justify-between items-center mb-2">
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {transaction.total_installments && transaction.total_installments > 1 && (
+            <InstallmentBadge
+              recurrenceNumber={null}
+              totalInstallments={transaction.total_installments}
+              billingType="inteligente"
+              compact
+            />
+          )}
+          {transaction.payment_method && (
+            <Badge variant="secondary" className="text-xs">
+              {transaction.payment_method}
+            </Badge>
+          )}
+          {transaction.utm_source && (
             <Badge variant="secondary" className="text-xs">
               {transaction.utm_source}
             </Badge>
-          </div>
-        )}
+          )}
+        </div>
         <div className="flex justify-between items-end">
           <TooltipProvider>
             <Tooltip>

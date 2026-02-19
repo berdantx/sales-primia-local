@@ -20,6 +20,9 @@ export interface EduzzTransaction {
   utm_medium: string | null;
   utm_campaign: string | null;
   utm_content: string | null;
+  total_installments: number | null;
+  payment_method: string | null;
+  payment_form: string | null;
   source: string;
   created_at: string;
   client_id: string | null;

@@ -228,6 +228,8 @@ export type Database = {
           invoice_code: string | null
           original_currency: string | null
           original_value: number | null
+          payment_form: string | null
+          payment_method: string | null
           product: string | null
           product_id: string | null
           sale_date: string | null
@@ -235,6 +237,7 @@ export type Database = {
           sale_value: number
           source: string | null
           status: string
+          total_installments: number | null
           user_id: string
           utm_campaign: string | null
           utm_content: string | null
@@ -254,6 +257,8 @@ export type Database = {
           invoice_code?: string | null
           original_currency?: string | null
           original_value?: number | null
+          payment_form?: string | null
+          payment_method?: string | null
           product?: string | null
           product_id?: string | null
           sale_date?: string | null
@@ -261,6 +266,7 @@ export type Database = {
           sale_value?: number
           source?: string | null
           status?: string
+          total_installments?: number | null
           user_id: string
           utm_campaign?: string | null
           utm_content?: string | null
@@ -280,6 +286,8 @@ export type Database = {
           invoice_code?: string | null
           original_currency?: string | null
           original_value?: number | null
+          payment_form?: string | null
+          payment_method?: string | null
           product?: string | null
           product_id?: string | null
           sale_date?: string | null
@@ -287,6 +295,7 @@ export type Database = {
           sale_value?: number
           source?: string | null
           status?: string
+          total_installments?: number | null
           user_id?: string
           utm_campaign?: string | null
           utm_content?: string | null

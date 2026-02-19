@@ -30,7 +30,9 @@ import {
   Code,
   Copy,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  CreditCard,
+  Layers
 } from 'lucide-react';
 import type { EduzzTransaction } from '@/hooks/useEduzzTransactions';
 
@@ -204,6 +206,24 @@ export function EduzzTransactionDetailDialog({
                   label="Data da Venda" 
                   value={transaction.sale_date ? formatDateTimeBR(transaction.sale_date, 'dd/MM/yyyy HH:mm:ss') : null} 
                 />
+                {transaction.total_installments && transaction.total_installments > 1 && (
+                  <>
+                    <Separator className="my-1" />
+                    <InfoRow icon={Layers} label="Parcelas" value={`${transaction.total_installments}x`} />
+                  </>
+                )}
+                {transaction.payment_method && (
+                  <>
+                    <Separator className="my-1" />
+                    <InfoRow icon={CreditCard} label="Forma de Pagamento" value={transaction.payment_method} />
+                  </>
+                )}
+                {transaction.payment_form && (
+                  <>
+                    <Separator className="my-1" />
+                    <InfoRow icon={CreditCard} label="Método de Pagamento" value={transaction.payment_form} />
+                  </>
+                )}
                 <Separator className="my-1" />
                 <div className="flex items-start gap-3 py-2">
                   <Link className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />

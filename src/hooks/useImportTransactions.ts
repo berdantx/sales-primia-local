@@ -375,6 +375,9 @@ export function useImportTransactions() {
         utm_medium: t.utm_medium || null,
         utm_campaign: t.utm_campaign || null,
         utm_content: t.utm_content || null,
+        total_installments: t.total_installments || null,
+        payment_method: t.payment_method || null,
+        payment_form: t.payment_form || null,
         source: 'eduzz',
         client_id: clientId,
       }));
