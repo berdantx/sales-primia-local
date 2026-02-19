@@ -1,51 +1,58 @@
 
 
-# Auditoria Completa para Remocao de Duplicatas
+# Auditoria Completa: Justificativa Obrigatoria + Visibilidade nos Cancelamentos
 
 ## Problema
-Todas as remocoes de transacoes na pagina de Duplicatas acontecem sem pedir justificativa e sem registrar log de auditoria. Isso vale para as 3 plataformas (Hotmart, TMB e Eduzz) e para ambas as abas (por ID e por Email).
+1. Exclusoes na pagina de Duplicatas acontecem sem justificativa e sem log de auditoria
+2. Transacoes Eduzz excluidas via Duplicatas nao aparecem na pagina "Cancelamentos Eduzz" (aba Exclusoes Manuais)
+3. Transacoes TMB excluidas via Duplicatas nao aparecem em nenhum lugar -- a pagina "Cancelamentos TMB" nao tem aba de exclusoes manuais
 
 ## Solucao
 
 ### 1. Criar tabela unificada de logs de exclusao de duplicatas
-Uma nova tabela `duplicate_deletion_logs` para registrar cada exclusao feita na pagina de auditoria, cobrindo todas as plataformas:
+Tabela `duplicate_deletion_logs` para registrar cada exclusao feita na pagina de auditoria:
 
 ```text
 duplicate_deletion_logs:
   - id (uuid, PK)
-  - transaction_id (uuid) -- ID do registro excluido
+  - transaction_id (uuid)
   - platform (text) -- 'hotmart', 'tmb', 'eduzz'
   - transaction_identifier (text) -- transaction_code / order_id / sale_id
   - client_id (uuid)
   - deleted_by (uuid)
   - justification (text, NOT NULL)
-  - transaction_data (jsonb) -- snapshot completo do registro
+  - transaction_data (jsonb)
   - audit_type (text) -- 'id_duplicate' ou 'email_duplicate'
   - created_at (timestamptz)
 ```
 
-Politicas RLS: master pode inserir e visualizar.
+RLS: master pode inserir e visualizar.
 
 ### 2. Criar dialog de justificativa reutilizavel
-Novo componente `DuplicateDeletionDialog` que:
-- Mostra resumo dos registros que serao excluidos (quantidade, plataforma, valor total)
-- Exige campo de justificativa obrigatorio (textarea)
-- Botoes Cancelar / Confirmar Exclusao
+Componente `DuplicateDeletionDialog` com:
+- Resumo dos registros a excluir (quantidade, plataforma, valor)
+- Campo de justificativa obrigatorio
+- Botoes Cancelar / Confirmar
 
-### 3. Alterar fluxo de resolucao nas duas abas
+### 3. Atualizar hooks de resolucao
+`useResolveDuplicate` e `useResolveEmailDuplicate`:
+- Recebem justificativa como parametro
+- Buscam dados completos antes de excluir
+- Inserem logs em `duplicate_deletion_logs`
+- **Para Eduzz:** tambem inserem na tabela `eduzz_transaction_deletion_logs` (para aparecer em Cancelamentos Eduzz)
+- Depois deletam os registros
 
-**Aba por ID** -- Botoes "Manter Webhook" e "Manter CSV" (individual e lote):
-- Em vez de excluir imediatamente, abrem o dialog de justificativa
-- So apos preenchimento e confirmacao, executam a exclusao + log
+### 4. Integrar dialog na pagina DuplicateAudit
+Todos os botoes de resolucao (Manter Webhook, Manter CSV, Manter Mais Recente, Remover Selecionados) abrem o dialog antes de executar.
 
-**Aba por Email** -- Botoes "Manter Mais Recente", "Manter Webhook", "Manter CSV", "Remover Selecionados":
-- Mesmo comportamento: abrem dialog, exigem justificativa, depois executam
+### 5. Adicionar aba "Exclusoes Manuais" na pagina Cancelamentos TMB
+Similar ao que ja existe em Cancelamentos Eduzz:
+- Criar hook `useTmbDeletionLogs` que le de `duplicate_deletion_logs` filtrado por `platform = 'tmb'`
+- Adicionar aba com tabela mostrando produto, cliente, valor, quem excluiu, justificativa e data
+- Atualizar KPIs para incluir contagem de exclusoes manuais
 
-### 4. Atualizar hooks de resolucao
-Alterar `useResolveDuplicate` e `useResolveEmailDuplicate` para:
-1. Buscar os dados completos dos registros antes de excluir
-2. Inserir logs na tabela `duplicate_deletion_logs` com snapshot + justificativa
-3. Somente depois, deletar os registros
+### 6. Atualizar Cancelamentos Eduzz para ler tambem de `duplicate_deletion_logs`
+A aba "Exclusoes Manuais" atualmente so le de `eduzz_transaction_deletion_logs`. Precisa tambem exibir exclusoes feitas via pagina de Duplicatas (da nova tabela `duplicate_deletion_logs` com `platform = 'eduzz'`).
 
 ---
 
@@ -54,15 +61,17 @@ Alterar `useResolveDuplicate` e `useResolveEmailDuplicate` para:
 ### Arquivos a criar
 | Arquivo | Descricao |
 |---|---|
-| `src/components/audit/DuplicateDeletionDialog.tsx` | Dialog reutilizavel com campo de justificativa |
+| `src/components/audit/DuplicateDeletionDialog.tsx` | Dialog reutilizavel com justificativa |
+| `src/hooks/useTmbDeletionLogs.ts` | Hook para ler logs de exclusao TMB |
 
 ### Arquivos a modificar
 | Arquivo | Mudanca |
 |---|---|
-| `src/hooks/useDuplicateAudit.ts` | `useResolveDuplicate` e `useResolveEmailDuplicate` passam a receber justificativa, buscar dados, inserir logs antes de deletar |
-| `src/pages/DuplicateAudit.tsx` | Botoes de resolucao abrem o dialog em vez de executar diretamente |
+| `src/hooks/useDuplicateAudit.ts` | Hooks de resolucao passam a exigir justificativa, inserir logs antes de deletar, e para Eduzz inserir tambem em `eduzz_transaction_deletion_logs` |
+| `src/pages/DuplicateAudit.tsx` | Botoes de resolucao abrem o dialog de justificativa |
+| `src/pages/TmbCancellations.tsx` | Adicionar Tabs com aba "Exclusoes Manuais" + KPI de exclusoes |
+| `src/hooks/useEduzzDeletionLogs.ts` | Tambem buscar registros de `duplicate_deletion_logs` com platform='eduzz' e mesclar |
 
 ### Migracao SQL
-- Criar tabela `duplicate_deletion_logs` com RLS para master
-- Sem foreign keys para tabelas de transacoes (o registro ja foi excluido quando o log e consultado)
+- Criar tabela `duplicate_deletion_logs` com RLS para master (inserir + visualizar)
 
