@@ -1,86 +1,64 @@
 
-# Backup Client-Side (Processamento no Navegador)
 
-## Ideia
-Seguir o mesmo padrao do `useClientSideExport` que ja existe para leads: o navegador busca os dados tabela por tabela, em lotes de 1000, monta o JSON final localmente e faz o download. Sem depender de Edge Function, sem timeout.
+# Corrigir Diagnostico CORS
 
-## Como Funciona Hoje (problema)
-1. Frontend chama Edge Function `export-backup`
-2. Edge Function busca TODAS as tabelas com `service_role`
-3. Monta um JSON enorme na memoria do servidor
-4. Retorna tudo de uma vez
-5. Timeout de 60s estoura antes de terminar
+## Problema
+O teste atual envia `fetch` com `method: 'OPTIONS'` manualmente pelo browser. Isso nao funciona porque:
+1. O browser trata a propria requisicao OPTIONS como cross-origin
+2. A requisicao precisa de um preflight para si mesma (loop impossivel)
+3. Resultado: "Failed to fetch" em todas as funcoes
 
-## Como Vai Funcionar (solucao)
-1. Frontend busca cada tabela diretamente via `supabase.from(tabela).select('*')` com paginacao
-2. O RLS filtra automaticamente (master ve tudo, user ve so seus clientes)
-3. Progresso visual em tempo real (tabela X de Y, registro Z de W)
-4. Monta o JSON no browser e faz download como arquivo
-5. Registra o log no `backup_logs` ao final
+## Solucao
+Substituir o teste OPTIONS manual por requisicoes reais (POST com body vazio) que naturalmente disparam o preflight do browser. Se a requisicao chegar ao servidor e retornar com headers CORS, o teste passa. Se o browser bloquear, e um problema CORS real.
 
-## Detalhes Tecnicos
+## Mudancas
 
-### Novo hook: `src/hooks/useClientSideBackup.ts`
+### Arquivo: `src/pages/CorsDiagnostics.tsx`
 
-Inspirado no `useClientSideExport`, com:
+**Logica do teste (`testFunction`)**:
 
-- Lista de tabelas para exportar (mesma lista do `AVAILABLE_TABLES`)
-- Loop por cada tabela, buscando em lotes de 1000 via `supabase.from(table).select('*').range(offset, offset+999)`
-- Progresso granular: qual tabela esta processando, quantos registros ja buscou
-- Cancelamento a qualquer momento via `useRef`
-- Ao final, monta o objeto JSON com metadados e faz download via `Blob` + `URL.createObjectURL`
-- Registra o resultado em `backup_logs` via insert direto
+1. **Teste real**: Enviar um POST com `Content-Type: application/json` e headers `apikey` + `authorization` (igual ao que a app faz normalmente). O browser fara o preflight automaticamente.
+2. **Verificar resposta**: Se a resposta chegar (qualquer status HTTP), o CORS esta funcionando. Extrair os headers `access-control-*` da resposta.
+3. **Classificar resultado**:
+   - `success` - requisicao completou (CORS OK), independente do status HTTP (401, 400, etc. sao esperados pois nao estamos enviando payload valido)
+   - `cors-error` - browser bloqueou a requisicao (TypeError: Failed to fetch)
+   - `timeout` - demorou mais de 10s
+4. **Exibir info extra**: Mostrar o status HTTP real da resposta (401, 200, etc.) para contexto
 
-Estados de progresso:
-```text
-idle -> counting -> exporting (tabela por tabela) -> generating -> complete
-                                                                -> error
-                                                                -> cancelled
+**Nova coluna na tabela**: Remover coluna "CORS Headers" (nao acessiveis via fetch normal) e manter foco no resultado binario: passou ou nao passou.
+
+**Melhoria visual**: Adicionar card de resumo no topo com contagem de sucesso/falha e explicacao do que o teste faz.
+
+### Detalhes tecnicos da mudanca
+
+Substituir o metodo `testFunction` de:
+```typescript
+// ATUAL - nao funciona
+const preflightRes = await fetch(url, {
+  method: 'OPTIONS',
+  headers: {
+    'Origin': window.location.origin,
+    'Access-Control-Request-Method': 'POST',
+    ...
+  },
+});
 ```
 
-### Atualizar `src/pages/BackupDashboard.tsx`
-
-- Substituir a chamada `supabase.functions.invoke('export-backup')` pelo novo hook `useClientSideBackup`
-- Adicionar barra de progresso mostrando:
-  - Tabela atual (ex: "Exportando transactions... 3/21")
-  - Registros processados na tabela atual
-  - Percentual geral
-- Botao de cancelar durante a exportacao
-- Manter todo o restante (KPIs, historico, health check)
-
-### Edge Function `export-backup`
-
-- Manter como esta (nao remover) para uso futuro ou via API
-- Nenhuma alteracao necessaria
-
-### Fluxo de Dados
-
-```text
-Browser                          Supabase (RLS)
-  |                                   |
-  |-- select * from transactions ---->|
-  |<---- lote 1 (1000 registros) -----|
-  |<---- lote 2 (1000 registros) -----|
-  |<---- lote 3 (909 registros)  -----|
-  |                                   |
-  |-- select * from eduzz_trans ----->|
-  |<---- lote 1 (1000 registros) -----|
-  |<---- ...                     -----|
-  |                                   |
-  | (repete para cada tabela)         |
-  |                                   |
-  |-- insert into backup_logs ------->|
-  |                                   |
-  [download JSON via Blob]
+Para:
+```typescript
+// NOVO - funciona
+const res = await fetch(url, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'apikey': anonKey,
+    'Authorization': `Bearer ${anonKey}`,
+  },
+  body: JSON.stringify({}),
+});
+// Se chegou aqui, CORS esta OK
+// Status 401/400/500 sao esperados (payload invalido)
 ```
 
-### Vantagens
-- Sem timeout (nao depende de Edge Function)
-- Progresso visual em tempo real
-- Pode cancelar a qualquer momento
-- RLS aplicado automaticamente (seguranca mantida)
-- Mesmo padrao ja usado na exportacao de leads
-
-### Arquivos Alterados
-1. **Criar** `src/hooks/useClientSideBackup.ts` - hook com toda a logica de exportacao client-side
-2. **Editar** `src/pages/BackupDashboard.tsx` - usar o novo hook, adicionar barra de progresso e botao cancelar
+### Arquivos alterados
+1. `src/pages/CorsDiagnostics.tsx` - reescrever logica de teste e ajustar tabela de resultados
