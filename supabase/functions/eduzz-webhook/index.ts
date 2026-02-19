@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
   const buyer = body.data?.buyer ?? {};
   const productData = body.data?.product;
 
-  const saleId = String(body.id || body.data?.id || body.sale_id || "unknown");
+  const saleId = String(body.data?.id || body.sale_id || body.id || "unknown");
   const saleStatus = body.data?.status || body.sale_status || body.status || "";
   
   // Determine event type for logging
@@ -506,7 +506,7 @@ Deno.serve(async (req) => {
     const { data: transaction, error: transactionError } = await supabase
       .from("eduzz_transactions")
       .upsert(transactionData, {
-        onConflict: "user_id,sale_id",
+        onConflict: "client_id,sale_id",
         ignoreDuplicates: false,
       })
       .select()
