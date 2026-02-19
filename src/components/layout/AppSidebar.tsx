@@ -35,6 +35,9 @@ import {
   Globe,
   Ban,
   SearchCheck,
+  HardDrive,
+  FlaskConical,
+  Globe as GlobeIcon,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -91,6 +94,9 @@ const menuGroups: MenuGroup[] = [
       { title: 'Clientes', url: '/clients', icon: Building2, roles: ['master'] },
       { title: 'Usuários', url: '/users', icon: Users, roles: ['master'] },
       { title: 'Duplicatas', url: '/duplicate-audit', icon: SearchCheck, roles: ['master', 'admin'] },
+      { title: 'Backup', url: '/backup-dashboard', icon: HardDrive, roles: ['master'] },
+      { title: 'Test Backup', url: '/backup-test', icon: FlaskConical, roles: ['master'] },
+      { title: 'CORS Diag.', url: '/cors-diagnostics', icon: GlobeIcon, roles: ['master'] },
       { title: 'Configurações', url: '/settings', icon: Settings, roles: ['master', 'admin'] },
       { title: 'Landing Page', url: '/landing', icon: Globe, roles: ['master', 'admin'] },
     ]

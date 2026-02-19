@@ -38,6 +38,7 @@ serve(async (req) => {
   }
 
   try {
+    const startTime = Date.now();
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
@@ -150,6 +151,9 @@ serve(async (req) => {
       console.log(`Table ${tableName}: ${allData.length} records`);
     }
 
+    const endTime = Date.now();
+    const durationMs = endTime - startTime;
+
     // Build response
     const response = {
       backup_info: includeMetadata ? {
@@ -163,6 +167,25 @@ serve(async (req) => {
       } : undefined,
       data: backupData,
     };
+
+    // Estimate file size
+    const jsonString = JSON.stringify(response);
+    const fileSizeBytes = new TextEncoder().encode(jsonString).length;
+
+    // Log backup to backup_logs
+    try {
+      await supabaseAdmin.from('backup_logs').insert({
+        user_id: user.id,
+        status: 'success',
+        tables_included: validTables,
+        total_records: totalRecords,
+        file_size_bytes: fileSizeBytes,
+        duration_ms: durationMs,
+        completed_at: new Date().toISOString(),
+      });
+    } catch (logErr) {
+      console.error('Error logging backup:', logErr);
+    }
 
     // Log backup action
     try {
@@ -198,6 +221,19 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error generating backup:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Try to log the failure
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+      await adminClient.from('backup_logs').insert({
+        user_id: '00000000-0000-0000-0000-000000000000',
+        status: 'error',
+        error_message: errorMessage,
+      });
+    } catch (_) { /* ignore */ }
+
     return new Response(
       JSON.stringify({ error: 'Erro ao gerar backup', details: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

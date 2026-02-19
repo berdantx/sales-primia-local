@@ -31,7 +31,9 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LandingPage from "./pages/LandingPage";
 import DuplicateAudit from "./pages/DuplicateAudit";
-
+import BackupDashboard from "./pages/BackupDashboard";
+import BackupTestHarness from "./pages/BackupTestHarness";
+import CorsDiagnostics from "./pages/CorsDiagnostics";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -100,6 +102,21 @@ const App = () => (
             <Route path="/duplicate-audit" element={
               <ProtectedRoute allowedRoles={['master', 'admin']}>
                 <DuplicateAudit />
+              </ProtectedRoute>
+            } />
+            <Route path="/backup-dashboard" element={
+              <ProtectedRoute allowedRoles={['master']}>
+                <BackupDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/backup-test" element={
+              <ProtectedRoute allowedRoles={['master']}>
+                <BackupTestHarness />
+              </ProtectedRoute>
+            } />
+            <Route path="/cors-diagnostics" element={
+              <ProtectedRoute allowedRoles={['master']}>
+                <CorsDiagnostics />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
