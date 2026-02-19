@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Wifi,
   Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -38,7 +37,6 @@ interface TestResult {
   name: string;
   status: 'pending' | 'success' | 'cors-error' | 'error' | 'timeout';
   statusCode?: number;
-  corsHeaders?: Record<string, string>;
   responseTime?: number;
   error?: string;
 }
@@ -56,59 +54,41 @@ export default function CorsDiagnostics() {
     const start = Date.now();
 
     try {
-      // First test OPTIONS preflight
-      const preflightRes = await fetch(url, {
-        method: 'OPTIONS',
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const res = await fetch(url, {
+        method: 'POST',
         headers: {
-          'Origin': window.location.origin,
-          'Access-Control-Request-Method': 'POST',
-          'Access-Control-Request-Headers': 'authorization, content-type, apikey, x-client-info',
+          'Content-Type': 'application/json',
+          'apikey': anonKey,
+          'Authorization': `Bearer ${anonKey}`,
         },
+        body: JSON.stringify({}),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
       const responseTime = Date.now() - start;
-      const corsHeaders: Record<string, string> = {};
-      
-      for (const [key, value] of preflightRes.headers.entries()) {
-        if (key.toLowerCase().startsWith('access-control')) {
-          corsHeaders[key] = value;
-        }
-      }
 
-      const allowHeaders = corsHeaders['access-control-allow-headers'] || '';
-      const hasRequiredHeaders = 
-        allowHeaders.includes('authorization') &&
-        allowHeaders.includes('content-type') &&
-        allowHeaders.includes('apikey');
-
-      if (!hasRequiredHeaders && preflightRes.status !== 204 && preflightRes.status !== 200) {
-        return {
-          name,
-          status: 'cors-error',
-          statusCode: preflightRes.status,
-          corsHeaders,
-          responseTime,
-          error: 'Headers CORS incompletos',
-        };
-      }
-
+      // Any HTTP response means CORS passed (browser allowed the request)
       return {
         name,
         status: 'success',
-        statusCode: preflightRes.status,
-        corsHeaders,
+        statusCode: res.status,
         responseTime,
       };
     } catch (err: any) {
       const responseTime = Date.now() - start;
-      if (responseTime > 10000) {
+      if (err.name === 'AbortError' || responseTime > 10000) {
         return { name, status: 'timeout', responseTime, error: 'Timeout (>10s)' };
       }
+      // TypeError: Failed to fetch = browser blocked by CORS
       return {
         name,
-        status: 'error',
+        status: 'cors-error',
         responseTime,
-        error: err.message || 'Erro de rede',
+        error: 'Bloqueado pelo browser (CORS)',
       };
     }
   };
@@ -214,11 +194,10 @@ export default function CorsDiagnostics() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Função</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>HTTP</TableHead>
+                    <TableHead>CORS</TableHead>
+                    <TableHead>HTTP Status</TableHead>
                     <TableHead>Tempo</TableHead>
-                    <TableHead>CORS Headers</TableHead>
-                    <TableHead>Erro</TableHead>
+                    <TableHead>Detalhes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -233,26 +212,19 @@ export default function CorsDiagnostics() {
                             <CheckCircle2 className="h-3 w-3 mr-1" />OK
                           </Badge>
                         ) : r.status === 'cors-error' ? (
-                          <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />CORS</Badge>
-                        ) : r.status === 'timeout' ? (
-                          <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Timeout</Badge>
+                          <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Bloqueado</Badge>
                         ) : (
-                          <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Erro</Badge>
+                          <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Timeout</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm">{r.statusCode || '-'}</TableCell>
+                      <TableCell className="text-sm font-mono">{r.statusCode || '-'}</TableCell>
                       <TableCell className="text-sm">
                         {r.responseTime ? `${r.responseTime}ms` : '-'}
                       </TableCell>
-                      <TableCell className="text-xs max-w-[200px] truncate">
-                        {r.corsHeaders
-                          ? Object.keys(r.corsHeaders).length > 0
-                            ? `${Object.keys(r.corsHeaders).length} headers`
-                            : 'Nenhum'
-                          : '-'}
-                      </TableCell>
-                      <TableCell className="text-xs text-destructive max-w-[200px] truncate">
-                        {r.error || '-'}
+                      <TableCell className="text-xs text-muted-foreground max-w-[250px] truncate">
+                        {r.status === 'success' && r.statusCode
+                          ? r.statusCode >= 400 ? 'CORS OK (erro esperado sem payload válido)' : 'CORS OK'
+                          : r.error || '-'}
                       </TableCell>
                     </TableRow>
                   ))}
