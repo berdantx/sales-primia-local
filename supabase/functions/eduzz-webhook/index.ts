@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { convertToUSD, needsConversion } from "../_shared/currency-converter.ts";
+import { checkPayloadSize, validateWebhookToken, sanitizeString } from "../_shared/webhook-security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,6 +98,14 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  // Security: validate payload size
+  const sizeError = checkPayloadSize(req);
+  if (sizeError) return sizeError;
+
+  // Security: validate webhook token
+  const tokenError = validateWebhookToken(req);
+  if (tokenError) return tokenError;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
