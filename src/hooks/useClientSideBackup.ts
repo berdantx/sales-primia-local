@@ -37,7 +37,7 @@ export const BACKUP_TABLES = [
 type TableName = typeof BACKUP_TABLES[number];
 
 export interface BackupProgress {
-  status: 'idle' | 'exporting' | 'generating' | 'complete' | 'error' | 'cancelled';
+  status: 'idle' | 'schema' | 'exporting' | 'generating' | 'complete' | 'error' | 'cancelled';
   currentTable: string;
   currentTableIndex: number;
   totalTables: number;
@@ -65,15 +65,33 @@ export function useClientSideBackup() {
     setProgress(prev => ({ ...prev, status: 'cancelled' }));
   }, []);
 
-  const startBackup = useCallback(async (selectedTables?: string[]) => {
+  const startBackup = useCallback(async (selectedTables?: string[], includeSchema?: boolean) => {
     cancelledRef.current = false;
     const startTime = Date.now();
     const tables = selectedTables && selectedTables.length > 0 ? selectedTables : BACKUP_TABLES;
     const backupData: Record<string, any[]> = {};
     const tableStats: Record<string, number> = {};
     let totalRecords = 0;
+    let schemaData: any = null;
 
     try {
+      // Export schema if requested
+      if (includeSchema) {
+        if (cancelledRef.current) return null;
+        setProgress(prev => ({
+          ...prev,
+          status: 'schema',
+          currentTable: 'Estrutura do banco',
+          percentage: 0,
+        }));
+        const { data: schema, error: schemaError } = await supabase.functions.invoke('export-schema');
+        if (schemaError) {
+          console.warn('Erro ao exportar schema:', schemaError);
+        } else {
+          schemaData = schema;
+        }
+      }
+
       for (let i = 0; i < tables.length; i++) {
         if (cancelledRef.current) return null;
 
@@ -141,7 +159,7 @@ export function useClientSideBackup() {
 
       const { data: { user } } = await supabase.auth.getUser();
 
-      const response = {
+      const response: Record<string, any> = {
         backup_info: {
           created_at: new Date().toISOString(),
           created_by: user?.email || 'unknown',
@@ -150,7 +168,9 @@ export function useClientSideBackup() {
           table_stats: tableStats,
           total_records: totalRecords,
           version: '2.0-client',
+          includes_schema: !!schemaData,
         },
+        ...(schemaData ? { schema: schemaData } : {}),
         data: backupData,
       };
 
@@ -224,6 +244,6 @@ export function useClientSideBackup() {
     startBackup,
     cancelBackup,
     reset,
-    isExporting: progress.status === 'exporting' || progress.status === 'generating',
+    isExporting: progress.status === 'schema' || progress.status === 'exporting' || progress.status === 'generating',
   };
 }

@@ -1816,6 +1816,7 @@ export type Database = {
         Args: { p_client_id: string; p_end_date: string; p_start_date: string }
         Returns: Json
       }
+      get_database_schema: { Args: never; Returns: Json }
       get_eduzz_filter_options: {
         Args: { p_client_id?: string }
         Returns: Json
