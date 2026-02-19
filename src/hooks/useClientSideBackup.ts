@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 const BATCH_SIZE = 1000;
 
 // Tables to export - same list as the edge function, but only tables that exist in the typed schema
-const BACKUP_TABLES = [
+export const BACKUP_TABLES = [
   'transactions',
   'eduzz_transactions',
   'tmb_transactions',
@@ -65,10 +65,10 @@ export function useClientSideBackup() {
     setProgress(prev => ({ ...prev, status: 'cancelled' }));
   }, []);
 
-  const startBackup = useCallback(async () => {
+  const startBackup = useCallback(async (selectedTables?: string[]) => {
     cancelledRef.current = false;
     const startTime = Date.now();
-    const tables = BACKUP_TABLES;
+    const tables = selectedTables && selectedTables.length > 0 ? selectedTables : BACKUP_TABLES;
     const backupData: Record<string, any[]> = {};
     const tableStats: Record<string, number> = {};
     let totalRecords = 0;
