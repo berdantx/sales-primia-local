@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, CheckCircle, Filter, RefreshCw, Search } from 'lucide-react';
 import { SearchDuplicateDialog } from '@/components/audit/SearchDuplicateDialog';
 import { useDuplicateAudit, useResolveDuplicate, DuplicateGroup, useEmailDuplicateAudit, useResolveEmailDuplicate, EmailDuplicateGroup, Platform } from '@/hooks/useDuplicateAudit';
+import { useQueryClient } from '@tanstack/react-query';
 import { useFilter } from '@/contexts/FilterContext';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -518,6 +519,30 @@ function EmailDuplicatesTab({ clientId }: { clientId: string | null }) {
 export default function DuplicateAudit() {
   const [searchOpen, setSearchOpen] = useState(false);
   const { clientId } = useFilter();
+  const queryClient = useQueryClient();
+
+  // Realtime: invalidate audit queries when transactions change
+  useEffect(() => {
+    const channel = supabase
+      .channel('duplicate-audit-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'eduzz_transactions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['duplicate-audit'] });
+        queryClient.invalidateQueries({ queryKey: ['email-duplicate-audit'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['duplicate-audit'] });
+        queryClient.invalidateQueries({ queryKey: ['email-duplicate-audit'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tmb_transactions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['duplicate-audit'] });
+        queryClient.invalidateQueries({ queryKey: ['email-duplicate-audit'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   return (
     <MainLayout>
