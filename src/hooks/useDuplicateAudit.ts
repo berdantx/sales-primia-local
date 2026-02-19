@@ -118,8 +118,49 @@ export function useResolveDuplicate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ platform, idsToDelete }: { platform: Platform; idsToDelete: string[] }) => {
+    mutationFn: async ({ platform, idsToDelete, justification, auditType = 'id_duplicate' }: { platform: Platform; idsToDelete: string[]; justification: string; auditType?: string }) => {
       const table = getTable(platform);
+
+      // 1. Fetch full records before deleting
+      const { data: records, error: fetchErr } = await supabase.from(table).select('*').in('id', idsToDelete);
+      if (fetchErr) throw fetchErr;
+
+      // 2. Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // 3. Insert audit logs
+      if (records && records.length > 0) {
+        const identifierKey = platform === 'hotmart' ? 'transaction_code' : platform === 'tmb' ? 'order_id' : 'sale_id';
+        const logs = records.map((r: any) => ({
+          transaction_id: r.id,
+          platform,
+          transaction_identifier: r[identifierKey],
+          client_id: r.client_id,
+          deleted_by: user.id,
+          justification,
+          transaction_data: r,
+          audit_type: auditType,
+        }));
+        const { error: logErr } = await supabase.from('duplicate_deletion_logs').insert(logs);
+        if (logErr) throw logErr;
+
+        // 4. For Eduzz, also insert into eduzz_transaction_deletion_logs
+        if (platform === 'eduzz') {
+          const eduzzLogs = records.map((r: any) => ({
+            transaction_id: r.id,
+            sale_id: r.sale_id,
+            client_id: r.client_id,
+            deleted_by: user.id,
+            justification,
+            transaction_data: r,
+          }));
+          const { error: eduzzLogErr } = await supabase.from('eduzz_transaction_deletion_logs').insert(eduzzLogs);
+          if (eduzzLogErr) throw eduzzLogErr;
+        }
+      }
+
+      // 5. Delete records
       const { error } = await supabase.from(table).delete().in('id', idsToDelete);
       if (error) throw error;
     },
@@ -129,6 +170,8 @@ export function useResolveDuplicate() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['tmb-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['eduzz-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['eduzz-deletion-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['duplicate-deletion-logs'] });
       toast({ title: 'Duplicata resolvida', description: 'Os registros duplicados foram removidos com sucesso.' });
     },
     onError: (error: Error) => {
@@ -276,10 +319,50 @@ export function useResolveEmailDuplicate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (deletions: { platform: Platform; ids: string[] }[]) => {
+    mutationFn: async ({ deletions, justification }: { deletions: { platform: Platform; ids: string[] }[]; justification: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
       for (const { platform, ids } of deletions) {
         if (ids.length === 0) continue;
         const table = getTable(platform);
+
+        // 1. Fetch full records
+        const { data: records, error: fetchErr } = await supabase.from(table).select('*').in('id', ids);
+        if (fetchErr) throw fetchErr;
+
+        // 2. Insert audit logs
+        if (records && records.length > 0) {
+          const identifierKey = platform === 'hotmart' ? 'transaction_code' : platform === 'tmb' ? 'order_id' : 'sale_id';
+          const logs = records.map((r: any) => ({
+            transaction_id: r.id,
+            platform,
+            transaction_identifier: r[identifierKey],
+            client_id: r.client_id,
+            deleted_by: user.id,
+            justification,
+            transaction_data: r,
+            audit_type: 'email_duplicate',
+          }));
+          const { error: logErr } = await supabase.from('duplicate_deletion_logs').insert(logs);
+          if (logErr) throw logErr;
+
+          // For Eduzz, also insert into eduzz_transaction_deletion_logs
+          if (platform === 'eduzz') {
+            const eduzzLogs = records.map((r: any) => ({
+              transaction_id: r.id,
+              sale_id: r.sale_id,
+              client_id: r.client_id,
+              deleted_by: user.id,
+              justification,
+              transaction_data: r,
+            }));
+            const { error: eduzzLogErr } = await supabase.from('eduzz_transaction_deletion_logs').insert(eduzzLogs);
+            if (eduzzLogErr) throw eduzzLogErr;
+          }
+        }
+
+        // 3. Delete records
         const { error } = await supabase.from(table).delete().in('id', ids);
         if (error) throw error;
       }
@@ -290,6 +373,8 @@ export function useResolveEmailDuplicate() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['tmb-transactions'] });
       queryClient.invalidateQueries({ queryKey: ['eduzz-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['eduzz-deletion-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['duplicate-deletion-logs'] });
       toast({ title: 'Duplicatas resolvidas', description: 'Os registros selecionados foram removidos.' });
     },
     onError: (error: Error) => {
