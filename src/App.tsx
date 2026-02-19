@@ -15,6 +15,7 @@ import Transactions from "./pages/Transactions";
 import TmbTransactions from "./pages/TmbTransactions";
 import TmbCancellations from "./pages/TmbCancellations";
 import EduzzTransactions from "./pages/EduzzTransactions";
+import EduzzCancellations from "./pages/EduzzCancellations";
 import ComparativeDashboard from "./pages/ComparativeDashboard";
 import Goals from "./pages/Goals";
 import Settings from "./pages/Settings";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/tmb-transactions" element={<TmbTransactions />} />
             <Route path="/tmb-cancellations" element={<TmbCancellations />} />
+            <Route path="/eduzz-cancellations" element={<EduzzCancellations />} />
             <Route path="/eduzz-transactions" element={<EduzzTransactions />} />
             <Route path="/comparative" element={
               <ProtectedRoute allowedRoles={['master', 'admin']}>
