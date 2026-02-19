@@ -34,15 +34,15 @@ export interface EduzzParseError {
 
 // Eduzz column mappings (Portuguese headers)
 const EDUZZ_COLUMNS = {
-  saleId: ['código da venda', 'codigo da venda', 'id venda', 'sale_id', 'código', 'codigo', 'id', 'id_venda'],
-  invoiceCode: ['código fatura', 'codigo fatura', 'fatura', 'invoice_code', 'nf', 'nota fiscal'],
+  saleId: ['fatura', 'código da venda', 'codigo da venda', 'id venda', 'sale_id', 'código', 'codigo', 'id', 'id_venda'],
+  invoiceCode: ['código fatura', 'codigo fatura', 'invoice_code', 'nf', 'nota fiscal'],
   product: ['produto', 'nome do produto', 'product', 'conteudo', 'conteúdo'],
-  productId: ['id produto', 'product_id', 'id_produto', 'codigo produto'],
-  buyerName: ['nome', 'cliente', 'comprador', 'buyer_name', 'nome do cliente', 'nome completo'],
-  buyerEmail: ['email', 'e-mail', 'buyer_email', 'email do cliente'],
-  buyerPhone: ['telefone', 'phone', 'celular', 'telefone do cliente'],
-  saleValue: ['valor líquido', 'valor liquido', 'valor', 'sale_value', 'valor venda', 'valor final', 'total'],
-  saleDate: ['data da venda', 'data venda', 'sale_date', 'data', 'data compra', 'data da compra'],
+  productId: ['id do produto', 'id produto', 'product_id', 'id_produto', 'codigo produto'],
+  buyerName: ['cliente / nome', 'nome', 'cliente', 'comprador', 'buyer_name', 'nome do cliente', 'nome completo'],
+  buyerEmail: ['cliente / e-mail', 'email', 'e-mail', 'buyer_email', 'email do cliente'],
+  buyerPhone: ['cliente / fones', 'fones', 'telefone', 'phone', 'celular', 'telefone do cliente'],
+  saleValue: ['valor da venda', 'valor líquido', 'valor liquido', 'sale_value', 'valor venda', 'valor final', 'total'],
+  saleDate: ['data de pagamento', 'data do pagamento', 'data da venda', 'data venda', 'sale_date', 'data', 'data compra', 'data da compra'],
   utmSource: ['utm_source', 'source', 'origem'],
   utmMedium: ['utm_medium', 'medium', 'mídia', 'midia'],
   utmCampaign: ['utm_campaign', 'campaign', 'campanha'],
@@ -167,8 +167,8 @@ function parseDate(value: string | number | undefined): Date | null {
 export function parseEduzzData(data: Record<string, unknown>[], headers: string[]): EduzzParseResult {
   const transactions: EduzzTransaction[] = [];
   const errors: EduzzParseError[] = [];
-  const seenSaleIds = new Set<string>();
   const duplicates: string[] = [];
+  
   
   // Find column mappings
   const columnMap = {
@@ -204,6 +204,9 @@ export function parseEduzzData(data: Record<string, unknown>[], headers: string[
     });
   }
   
+  // First pass: parse all rows and group by saleId (keep best per group)
+  const groupedBySaleId = new Map<string, { transaction: EduzzTransaction; rowNum: number }>();
+  
   data.forEach((row, index) => {
     const rowNum = index + 2; // Account for header row
     
@@ -222,13 +225,6 @@ export function parseEduzzData(data: Record<string, unknown>[], headers: string[
         return;
       }
       
-      // Check for duplicates
-      if (seenSaleIds.has(saleId)) {
-        duplicates.push(saleId);
-        return;
-      }
-      seenSaleIds.add(saleId);
-      
       const transaction: EduzzTransaction = {
         sale_id: saleId,
         invoice_code: columnMap.invoiceCode ? String(row[columnMap.invoiceCode] || '').trim() : '',
@@ -240,7 +236,7 @@ export function parseEduzzData(data: Record<string, unknown>[], headers: string[
         sale_value: parseNumber(
           columnMap.saleValue ? row[columnMap.saleValue] as string : undefined
         ),
-        currency: 'BRL', // Eduzz is typically BRL
+        currency: 'BRL',
         sale_date: parseDate(
           columnMap.saleDate ? (row[columnMap.saleDate] as string | number | undefined) : undefined
         ),
@@ -250,7 +246,16 @@ export function parseEduzzData(data: Record<string, unknown>[], headers: string[
         utm_content: columnMap.utmContent ? String(row[columnMap.utmContent] || '').trim() : '',
       };
       
-      transactions.push(transaction);
+      const existing = groupedBySaleId.get(saleId);
+      if (existing) {
+        // Keep the row with the highest sale_value (Produtor > Co-produtor)
+        duplicates.push(saleId);
+        if (transaction.sale_value > existing.transaction.sale_value) {
+          groupedBySaleId.set(saleId, { transaction, rowNum });
+        }
+      } else {
+        groupedBySaleId.set(saleId, { transaction, rowNum });
+      }
     } catch (error) {
       errors.push({
         row: rowNum,
@@ -260,6 +265,11 @@ export function parseEduzzData(data: Record<string, unknown>[], headers: string[
       });
     }
   });
+  
+  // Second pass: collect winning transactions
+  for (const { transaction } of groupedBySaleId.values()) {
+    transactions.push(transaction);
+  }
   
   return {
     transactions,
