@@ -130,3 +130,39 @@ export function useForceLogout() {
     isLoggingOut: forceLogoutMutation.isPending,
   };
 }
+
+export function useDeleteUser() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (targetUserId: string) => {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { target_user_id: targetUserId },
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Usuário excluído',
+        description: data.message || 'O usuário foi excluído permanentemente.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['all-users'] });
+      queryClient.invalidateQueries({ queryKey: ['access-logs'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao excluir usuário',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return {
+    deleteUser: deleteUserMutation.mutate,
+    isDeleting: deleteUserMutation.isPending,
+  };
+}
