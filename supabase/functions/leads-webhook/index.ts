@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkPayloadSize, validateWebhookToken, sanitizeString } from "../_shared/webhook-security.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -481,12 +482,19 @@ serve(async (req) => {
 
   // Only accept POST requests
   if (req.method !== 'POST') {
-    console.log(`Method not allowed: ${req.method}`);
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+
+  // Security: validate payload size
+  const sizeError = checkPayloadSize(req);
+  if (sizeError) return sizeError;
+
+  // Security: validate webhook token
+  const tokenError = validateWebhookToken(req);
+  if (tokenError) return tokenError;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
