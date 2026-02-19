@@ -1,40 +1,76 @@
 
+# Backup da Estrutura do Banco de Dados
 
-# Seletor de Tabelas no Backup
+## Problema
+Atualmente o backup exporta apenas os **dados** das tabelas. Se ocorrer um desastre, nao temos como saber a estrutura das tabelas (colunas, tipos, indexes, politicas RLS, funcoes, triggers) para reconstruir o banco.
 
-## Situacao Atual
-Ao clicar "Novo Backup", todas as 26 tabelas sao exportadas automaticamente. Nao existe nenhuma interface para escolher quais tabelas incluir no backup.
+## Solucao
+Criar uma Edge Function `export-schema` que consulta o `information_schema` e catalogo do PostgreSQL para extrair toda a estrutura do banco. O hook de backup chama essa funcao e inclui o schema no arquivo JSON final.
 
-## O que vai mudar
+## O que sera exportado
 
-### 1. Hook `useClientSideBackup.ts`
-- Exportar a constante `BACKUP_TABLES` para que o dashboard possa usar a lista
-- Alterar `startBackup` para receber um parametro opcional `selectedTables: string[]`
-- Se `selectedTables` for passado, exportar somente essas tabelas; senao, exportar todas (comportamento atual mantido)
-- Atualizar `totalTables` no progresso para refletir a quantidade selecionada
+1. **Tabelas e colunas**: nome, tipo, nullable, valor padrao
+2. **Chaves primarias e estrangeiras**
+3. **Indexes**
+4. **Politicas RLS** (nome, tabela, comando, expressao)
+5. **Funcoes do banco** (nome, argumentos, corpo SQL)
+6. **Triggers**
 
-### 2. Dashboard `BackupDashboard.tsx`
-- Adicionar um card "Selecionar Tabelas" entre o header e o botao de backup
-- Usar checkboxes para cada tabela, agrupadas em categorias:
-  - **Dados principais**: transactions, eduzz_transactions, tmb_transactions, leads
-  - **Configuracao**: clients, profiles, client_users, goals, goal_history, filter_views, app_settings, llm_integrations, external_webhooks
-  - **Importacao/Exportacao**: imports, import_errors, export_jobs, backup_logs
-  - **Convites**: invitations, invitation_history
-  - **Logs/Auditoria**: access_logs, lead_deletion_logs, duplicate_deletion_logs, eduzz_transaction_deletion_logs, permission_audit_logs
-  - **Outros**: known_landing_pages, interest_leads
-- Botao "Selecionar Todas" / "Desmarcar Todas"
-- Badge mostrando "X de 26 tabelas selecionadas"
-- O card fica colapsavel (usando Collapsible) para nao poluir a tela -- inicia expandido na primeira vez, depois o usuario pode fechar
-- Passar as tabelas selecionadas para `startBackup(selectedTables)`
-- Desabilitar o botao "Novo Backup" se nenhuma tabela estiver selecionada
+## Mudancas
 
-### Experiencia do Usuario
-1. Ao abrir /backup-dashboard, ve o card com todas as tabelas ja marcadas por padrao
-2. Pode desmarcar as que nao quer
-3. Clica "Novo Backup" e so as selecionadas sao exportadas
-4. O progresso mostra "Tabela X de Y" considerando apenas as selecionadas
+### 1. Nova Edge Function: `supabase/functions/export-schema/index.ts`
+- Usa `SUPABASE_SERVICE_ROLE_KEY` para consultar catalogo do PostgreSQL
+- Valida autenticacao do usuario (precisa ser admin/master)
+- Consulta:
+  - `information_schema.tables` + `information_schema.columns` (schema public)
+  - `pg_indexes` para indexes
+  - `pg_policies` para RLS
+  - `pg_proc` / `pg_catalog` para funcoes
+  - `information_schema.triggers` para triggers
+  - `information_schema.table_constraints` + `key_column_usage` + `constraint_column_usage` para foreign keys
+- Retorna JSON estruturado com toda a informacao
 
-### Arquivos alterados
-1. `src/hooks/useClientSideBackup.ts` -- exportar BACKUP_TABLES, aceitar parametro selectedTables
-2. `src/pages/BackupDashboard.tsx` -- adicionar UI de selecao com checkboxes agrupados
+### 2. Atualizar `supabase/config.toml`
+- Adicionar entrada `[functions.export-schema]` com `verify_jwt = true`
 
+### 3. Atualizar `src/hooks/useClientSideBackup.ts`
+- Adicionar etapa "Exportando estrutura..." antes da exportacao de dados
+- Chamar `supabase.functions.invoke('export-schema')`
+- Incluir resultado na chave `schema` do JSON final junto com `backup_info` e `data`
+- Adicionar novo status no progresso: mensagem "Exportando estrutura do banco..."
+
+### 4. Atualizar `src/pages/BackupDashboard.tsx`
+- Adicionar checkbox "Incluir estrutura do banco" (marcado por padrao) separado das tabelas de dados
+- Mostrar etapa de schema no progresso quando ativa
+
+## Estrutura do JSON de backup atualizado
+
+```text
+{
+  "backup_info": { ... },
+  "schema": {                          <-- NOVO
+    "exported_at": "2026-02-19T...",
+    "tables": [
+      {
+        "name": "transactions",
+        "columns": [
+          { "name": "id", "type": "uuid", "nullable": false, "default": "gen_random_uuid()" },
+          ...
+        ]
+      }
+    ],
+    "indexes": [...],
+    "rls_policies": [...],
+    "functions": [...],
+    "triggers": [...],
+    "foreign_keys": [...]
+  },
+  "data": { ... }
+}
+```
+
+## Arquivos alterados/criados
+1. `supabase/functions/export-schema/index.ts` -- nova edge function
+2. `supabase/config.toml` -- adicionar config da funcao
+3. `src/hooks/useClientSideBackup.ts` -- chamar export-schema e incluir no JSON
+4. `src/pages/BackupDashboard.tsx` -- checkbox para incluir estrutura
