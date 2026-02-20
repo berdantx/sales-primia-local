@@ -59,20 +59,12 @@ export async function convertToUSD(
         };
       }
     }
-    console.warn(`Frankfurter API returned non-OK for ${currency}: ${resp.status}`);
+    console.warn(`Frankfurter API returned non-OK or missing rate for ${currency}: ${resp.status}`);
   } catch (err) {
     console.warn(`Frankfurter API error for ${currency}:`, err);
   }
 
-  // Fallback to static rates
-  const rate = FALLBACK_RATES_TO_USD[currency];
-  if (rate) {
-    const converted = Number((value * rate).toFixed(2));
-    console.log(`Fallback rate: ${value} ${currency} * ${rate} = ${converted} USD`);
-    return { convertedValue: converted, rate, source: 'fallback' };
-  }
-
-  // Try ExchangeRate API as second fallback
+  // Try ExchangeRate API as second attempt
   try {
     const resp2 = await fetch(
       `https://open.er-api.com/v6/latest/${currency}`
@@ -90,8 +82,16 @@ export async function convertToUSD(
     console.warn(`ExchangeRate API error for ${currency}:`, err2);
   }
 
-  // Unknown currency - log error and mark as UNKNOWN to avoid polluting KPIs
-  console.error(`CRITICAL: No conversion rate available for ${currency}. Value ${value} will be marked as UNKNOWN.`);
+  // Final fallback: static rates (always checked after ALL APIs fail)
+  const rate = FALLBACK_RATES_TO_USD[currency];
+  if (rate) {
+    const converted = Number((value * rate).toFixed(2));
+    console.warn(`FALLBACK STATIC RATE used: ${value} ${currency} * ${rate} = ${converted} USD (both APIs failed)`);
+    return { convertedValue: converted, rate, source: 'fallback' };
+  }
+
+  // Unknown currency - log critical error
+  console.error(`CRITICAL: No conversion rate available for ${currency}. Value ${value} returned unconverted. This WILL pollute KPIs.`);
   return { convertedValue: value, rate: 1, source: 'fallback' };
 }
 
