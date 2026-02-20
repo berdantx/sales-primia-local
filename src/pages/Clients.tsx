@@ -7,6 +7,7 @@ import { ClientsTable } from '@/components/clients/ClientsTable';
 import { ClientFormDialog } from '@/components/clients/ClientFormDialog';
 import { ClientUsersDialog } from '@/components/clients/ClientUsersDialog';
 import { ClientWebhookDialog } from '@/components/clients/ClientWebhookDialog';
+import { ClientCoproducersDialog } from '@/components/clients/ClientCoproducersDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,8 @@ function Clients() {
   const [managingUsersClient, setManagingUsersClient] = useState<Client | null>(null);
   const [webhookDialogOpen, setWebhookDialogOpen] = useState(false);
   const [webhookClient, setWebhookClient] = useState<Client | null>(null);
+  const [coproducersDialogOpen, setCoproducersDialogOpen] = useState(false);
+  const [coproducersClient, setCoproducersClient] = useState<Client | null>(null);
 
   const { data: clients, isLoading } = useClients();
   const { createClient, updateClient, toggleClientStatus } = useClientManagement();
@@ -48,6 +51,11 @@ function Clients() {
   const handleShowWebhook = (client: Client) => {
     setWebhookClient(client);
     setWebhookDialogOpen(true);
+  };
+
+  const handleManageCoproducers = (client: Client) => {
+    setCoproducersClient(client);
+    setCoproducersDialogOpen(true);
   };
 
   const handleSubmit = async (data: { name: string; slug: string; logo_url?: string }) => {
@@ -139,6 +147,7 @@ function Clients() {
               onToggleStatus={handleToggleStatus}
               onManageUsers={handleManageUsers}
               onShowWebhook={handleShowWebhook}
+              onManageCoproducers={handleManageCoproducers}
               isToggling={toggleClientStatus.isPending}
             />
           </CardContent>
@@ -172,6 +181,15 @@ function Clients() {
           if (!open) setWebhookClient(null);
         }}
         client={webhookClient}
+      />
+
+      <ClientCoproducersDialog
+        open={coproducersDialogOpen}
+        onOpenChange={(open) => {
+          setCoproducersDialogOpen(open);
+          if (!open) setCoproducersClient(null);
+        }}
+        client={coproducersClient}
       />
     </MainLayout>
   );

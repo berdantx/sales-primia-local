@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Copy, Pencil, Power, PowerOff, Users, Webhook } from 'lucide-react';
+import { Copy, Handshake, Pencil, Power, PowerOff, Users, Webhook } from 'lucide-react';
 import { Client } from '@/hooks/useClients';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,10 +29,11 @@ interface ClientsTableProps {
   onToggleStatus: (client: Client) => void;
   onManageUsers?: (client: Client) => void;
   onShowWebhook?: (client: Client) => void;
+  onManageCoproducers?: (client: Client) => void;
   isToggling?: boolean;
 }
 
-export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, onShowWebhook, isToggling }: ClientsTableProps) {
+export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, onShowWebhook, onManageCoproducers, isToggling }: ClientsTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -98,6 +99,16 @@ export function ClientsTable({ clients, onEdit, onToggleStatus, onManageUsers, o
                     title="Ver webhook"
                   >
                     <Webhook className="h-4 w-4" />
+                  </Button>
+                )}
+                {onManageCoproducers && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onManageCoproducers(client)}
+                    title="Coprodutores"
+                  >
+                    <Handshake className="h-4 w-4" />
                   </Button>
                 )}
                 {onManageUsers && (
