@@ -181,6 +181,60 @@ export type Database = {
         }
         Relationships: []
       }
+      currency_conversion_alerts: {
+        Row: {
+          alert_type: string
+          client_id: string | null
+          conversion_rate: number
+          conversion_source: string
+          converted_value: number
+          created_at: string
+          id: string
+          original_currency: string
+          original_value: number
+          platform: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          sale_id: string | null
+          transaction_id: string
+        }
+        Insert: {
+          alert_type: string
+          client_id?: string | null
+          conversion_rate?: number
+          conversion_source?: string
+          converted_value: number
+          created_at?: string
+          id?: string
+          original_currency: string
+          original_value: number
+          platform: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sale_id?: string | null
+          transaction_id: string
+        }
+        Update: {
+          alert_type?: string
+          client_id?: string | null
+          conversion_rate?: number
+          conversion_source?: string
+          converted_value?: number
+          created_at?: string
+          id?: string
+          original_currency?: string
+          original_value?: number
+          platform?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sale_id?: string | null
+          transaction_id?: string
+        }
+        Relationships: []
+      }
       duplicate_deletion_logs: {
         Row: {
           audit_type: string

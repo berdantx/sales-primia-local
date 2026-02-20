@@ -29,6 +29,7 @@ interface ConversionResult {
   convertedValue: number;
   rate: number;
   source: 'frankfurter' | 'fallback';
+  alertType: 'none' | 'fallback_used' | 'failed_conversion' | 'unknown_currency';
 }
 
 export async function convertToUSD(
@@ -39,7 +40,7 @@ export async function convertToUSD(
 
   // No conversion needed
   if (currency === 'USD') {
-    return { convertedValue: value, rate: 1, source: 'fallback' };
+    return { convertedValue: value, rate: 1, source: 'fallback', alertType: 'none' };
   }
 
   // Try Frankfurter API first
@@ -56,6 +57,7 @@ export async function convertToUSD(
           convertedValue: Number(data.rates.USD.toFixed(2)),
           rate: data.rates.USD / value,
           source: 'frankfurter',
+          alertType: 'none',
         };
       }
     }
@@ -74,7 +76,7 @@ export async function convertToUSD(
       if (data2.rates?.USD) {
         const converted = Number((value * data2.rates.USD).toFixed(2));
         console.log(`ExchangeRate API: ${value} ${currency} * ${data2.rates.USD} = ${converted} USD`);
-        return { convertedValue: converted, rate: data2.rates.USD, source: 'frankfurter' };
+        return { convertedValue: converted, rate: data2.rates.USD, source: 'frankfurter', alertType: 'none' };
       }
     }
     console.warn(`ExchangeRate API returned non-OK for ${currency}: ${resp2.status}`);
@@ -87,12 +89,12 @@ export async function convertToUSD(
   if (rate) {
     const converted = Number((value * rate).toFixed(2));
     console.warn(`FALLBACK STATIC RATE used: ${value} ${currency} * ${rate} = ${converted} USD (both APIs failed)`);
-    return { convertedValue: converted, rate, source: 'fallback' };
+    return { convertedValue: converted, rate, source: 'fallback', alertType: 'fallback_used' as const };
   }
 
   // Unknown currency - log critical error
   console.error(`CRITICAL: No conversion rate available for ${currency}. Value ${value} returned unconverted. This WILL pollute KPIs.`);
-  return { convertedValue: value, rate: 1, source: 'fallback' };
+  return { convertedValue: value, rate: 1, source: 'fallback', alertType: 'unknown_currency' as const };
 }
 
 /**
