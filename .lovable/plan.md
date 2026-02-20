@@ -1,65 +1,68 @@
 
-# Painel de Coprodução para Master: Seletor de Coprodutor
+# Correcao: Comissoes do Coprodutor com valores incorretos
 
-## Resumo
+## Problema
 
-Quando o usuario logado tiver role `master`, a pagina `/coproduction` deixa de mostrar apenas as coproducoes do proprio usuario e passa a listar **todos os coprodutores do sistema**, com um seletor (dropdown) para escolher qual coprodutor visualizar. Isso permite ao master acompanhar as comissoes de qualquer coprodutor.
+As queries no hook `useCoproducerCommissions` buscam **todas as linhas individuais** das tabelas de transacoes para somar no frontend. Porem, o cliente Supabase tem um **limite padrao de 1.000 linhas** por query.
 
----
+Dados reais do coprodutor `bvazeua@gmail.com` para a cliente "Camila Vieira":
+- Hotmart: **3.893 linhas** (so 1.000 retornadas)
+- TMB: **1.241 linhas** (so 1.000 retornadas)
 
-## Comportamento
+Isso causa uma perda significativa nos calculos. O valor correto seria ~R$ 1.870.206 (30% de R$ 6.234.020), mas o sistema mostra R$ 1.582.300.
 
-- **Usuario master**: Ve um dropdown no topo da pagina com todos os coprodutores cadastrados. Ao selecionar um, a pagina exibe as comissoes daquele coprodutor (mesma tabela por cliente/produto/plataforma que ja existe).
-- **Usuario comum (coprodutor)**: Comportamento atual permanece inalterado -- ve apenas suas proprias coproducoes.
+## Solucao
 
----
-
-## Layout (apenas para master)
-
-```text
-+------------------------------------------------------+
-| Coproducoes                                           |
-| Visualize comissoes por coprodutor                    |
-+------------------------------------------------------+
-| Coprodutor: [v Bruno Vaz (berdantx@gmail.com)   ]    |
-+------------------------------------------------------+
-| Periodo: [1d | 7d | 30d | 90d | 1 ano | Tudo]       |
-+------------------------------------------------------+
-| [KPI Total] ...                                       |
-| [Tabelas por cliente/produto] ...                     |
-+------------------------------------------------------+
-```
-
----
+Criar uma **funcao RPC no PostgreSQL** que faz a agregacao (`SUM`) direto no banco, retornando apenas os totais por produto e plataforma. Isso elimina o limite de 1.000 linhas e tambem melhora a performance (menos dados trafegados).
 
 ## Detalhes Tecnicos
 
-### Novo hook: `useAllCoproducers()`
+### 1. Nova funcao RPC: `get_coproducer_commissions`
 
-Busca todos os coprodutores ativos do sistema (apenas para masters). Retorna lista com `userId`, `userName`, `userEmail` para popular o dropdown.
+Parametros:
+- `p_coproducer_ids` (uuid[]) - IDs dos coprodutores
+- `p_date_from` (timestamptz, opcional) - filtro de periodo
 
-Query: busca `client_coproducers` (todos, sem filtro de user_id) + join com `profiles` para nomes. Agrupado por `user_id` para evitar duplicatas (um usuario pode ser coprodutor de varios clientes).
+Logica:
+1. Busca os `coproducer_product_rates` para os IDs fornecidos
+2. Para cada coprodutor/produto, faz `SUM` nas 3 tabelas (transactions, tmb_transactions, eduzz_transactions) com os filtros corretos
+3. Aplica `rate_percent` no SQL
+4. Retorna JSON com a estrutura: `{ coproducer_id, client_id, client_name, product_name, rate_percent, hotmart_total, tmb_total, eduzz_total, commission }`
 
-RLS ja permite isso: masters tem policy `FOR ALL` na tabela `client_coproducers`.
+```sql
+-- Exemplo simplificado da logica
+SELECT 
+  cp.id as coproducer_id,
+  cp.client_id,
+  c.name as client_name,
+  r.product_name,
+  r.rate_percent,
+  COALESCE((SELECT SUM(computed_value) FROM transactions 
+            WHERE client_id = cp.client_id AND product = r.product_name
+            AND (p_date_from IS NULL OR purchase_date >= p_date_from)), 0) as hotmart_total,
+  COALESCE((SELECT SUM(ticket_value) FROM tmb_transactions 
+            WHERE client_id = cp.client_id AND product = r.product_name
+            AND cancelled_at IS NULL
+            AND (p_date_from IS NULL OR effective_date >= p_date_from)), 0) as tmb_total,
+  COALESCE((SELECT SUM(sale_value) FROM eduzz_transactions 
+            WHERE client_id = cp.client_id AND product = r.product_name
+            AND status = 'paid'
+            AND (p_date_from IS NULL OR sale_date >= p_date_from)), 0) as eduzz_total
+FROM client_coproducers cp
+JOIN clients c ON c.id = cp.client_id
+JOIN coproducer_product_rates r ON r.coproducer_id = cp.id
+WHERE cp.id = ANY(p_coproducer_ids)
+```
 
-### Novo hook: `useAllCoproductionsForUser(userId)`
+### 2. Atualizar `useCoproducerCommissions` em `src/hooks/useCoproducerCommissions.ts`
 
-Variante do `useMyCoproductions` existente, mas recebe um `userId` como parametro em vez de usar o usuario logado. Busca coproducoes de qualquer usuario (para uso pelo master).
+Substituir as 3 queries separadas (que trazem linhas individuais) por uma unica chamada `supabase.rpc('get_coproducer_commissions', ...)`. O processamento no frontend se limita a agrupar o resultado por cliente para montar a estrutura de `ClientCommissions[]`.
 
-### Alteracoes em `src/pages/Coproduction.tsx`
+### 3. Pagina `Coproduction.tsx`
 
-1. Importar `useUserRole` para detectar se e master
-2. Se master: renderizar um `Select` (dropdown) com os coprodutores disponveis
-3. Estado `selectedUserId`: quando master, usa o coprodutor selecionado no dropdown; quando usuario comum, usa `user.id`
-4. Passar `selectedUserId` para os hooks de coproducao
-5. Titulo e descricao adaptados: "Coproducoes" (sem "Minhas") quando master
+Nenhuma alteracao necessaria -- a interface do hook permanece a mesma (`{ clients: ClientCommissions[]; grandTotal: number }`).
 
-### Alteracoes em `src/hooks/useCoproducerCommissions.ts`
+### Arquivos alterados
 
-1. Adicionar `useAllCoproducers()` -- lista todos os coprodutores distintos (user_id + nome + email)
-2. Adicionar `useAllCoproductionsForUser(userId)` -- igual a `useMyCoproductions` mas sem depender de `auth.uid()`
-
-### Arquivos editados
-
-- `src/pages/Coproduction.tsx` -- Adicionar seletor de coprodutor e logica condicional por role
-- `src/hooks/useCoproducerCommissions.ts` -- Adicionar hooks `useAllCoproducers` e `useAllCoproductionsForUser`
+- **Nova migration SQL**: Criar funcao `get_coproducer_commissions`
+- **`src/hooks/useCoproducerCommissions.ts`**: Reescrever `useCoproducerCommissions` para usar RPC
