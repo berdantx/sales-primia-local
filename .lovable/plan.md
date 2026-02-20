@@ -1,61 +1,50 @@
 
 
-# Correção dos dados históricos - 670 transações Eduzz
+# Correção da transação Eduzz 97139146 - Falha na conversão DOP para USD
 
-## Status atual
-- O webhook ja foi atualizado e novas transacoes usarao `price.value` corretamente.
-- Faltam corrigir **670 transacoes existentes** no banco que foram salvas com `price.paid.value`.
+## Problema identificado
 
-## O que sera feito
+A transação `97139146` foi recebida com valor em **DOP (Peso Dominicano)** mas a conversão para USD falhou silenciosamente no momento do processamento pelo webhook. O resultado:
 
-Executar um UPDATE no banco de dados que:
+- **Valor salvo:** 12.260,21 USD (errado)
+- **Valor original:** 12.260,21 DOP
+- **Valor correto:** ~203,52 USD (usando taxa DOP 0.0166)
 
-1. Cruza `eduzz_transactions` com `webhook_logs` para encontrar o `price.value` correto do payload original
-2. Atualiza o `sale_value` de cada transacao para o valor correto
-3. Para transacoes com conversao de moeda (`original_currency` preenchido), recalcula o valor convertido proporcionalmente
+O sistema possui a taxa de fallback para DOP (0.0166) no conversor de moedas, mas no momento da ingestão deste webhook, a conversão provavelmente falhou nas APIs externas (Frankfurter e ExchangeRate) e caiu no caso final da funcao `convertToUSD` que retorna o valor original sem conversao quando nenhuma taxa esta disponivel (linha 95 do conversor).
 
-### Query de correcao
+## Solucao
+
+### 1. Corrigir o valor desta transacao no banco
+
+Executar um UPDATE simples recalculando o valor com a taxa de fallback DOP (0.0166):
 
 ```sql
-WITH corrections AS (
-  SELECT DISTINCT ON (et.id)
-    et.id,
-    et.sale_value as old_value,
-    (wl.payload::jsonb->'data'->'price'->'value')::text::numeric as correct_value,
-    et.original_currency,
-    et.original_value
-  FROM eduzz_transactions et
-  JOIN webhook_logs wl ON wl.transaction_code = et.sale_id 
-    AND wl.event_type LIKE 'EDUZZ%' 
-    AND wl.status = 'processed'
-  WHERE wl.payload::jsonb->'data'->'price'->'value' IS NOT NULL
-    AND wl.payload::jsonb->'data'->'price'->'paid'->'value' IS NOT NULL
-    AND (wl.payload::jsonb->'data'->'price'->'value')::text::numeric 
-      != (wl.payload::jsonb->'data'->'price'->'paid'->'value')::text::numeric
-    AND et.source = 'webhook'
-  ORDER BY et.id, wl.created_at DESC
-)
-UPDATE eduzz_transactions et
-SET 
-  sale_value = CASE 
-    WHEN c.original_currency IS NOT NULL AND c.old_value != 0 
-    THEN ROUND(et.sale_value * (c.correct_value / c.old_value), 2)
-    ELSE c.correct_value
-  END,
-  original_value = CASE 
-    WHEN c.original_currency IS NOT NULL 
-    THEN c.correct_value
-    ELSE et.original_value
-  END
-FROM corrections c
-WHERE et.id = c.id;
+UPDATE eduzz_transactions
+SET sale_value = ROUND(12260.21 * 0.0166, 2)
+WHERE sale_id = '97139146';
 ```
 
-### Impacto estimado
-- **Camila Vieira 2026 (BRL):** 231 transacoes, reducao de ~R$ 63.709
-- **Paulo Vieira (BRL):** 436 transacoes, reducao de ~R$ 66.846
-- **USD:** 3 transacoes com ajustes menores
+Resultado esperado: `sale_value` passa de 12.260,21 para **203,52 USD**.
 
-### Arquivos editados
-Nenhum arquivo sera editado - apenas operacao de UPDATE no banco de dados.
+### 2. Melhorar o conversor de moedas para evitar recorrencia
+
+Ajustar `supabase/functions/_shared/currency-converter.ts` para que, quando todas as APIs falham, o fallback com taxas estaticas seja tentado **antes** de retornar o valor sem conversao. Atualmente, o fallback estatico so funciona quando a API Frankfurter falha, mas se a moeda nao e suportada pela Frankfurter e a ExchangeRate tambem falha, o codigo pula o fallback estatico e retorna o valor cru.
+
+**Correcao:** mover a verificacao de `FALLBACK_RATES_TO_USD` para **depois** de todas as tentativas de API, garantindo que sempre sera usado como ultima opcao antes de retornar sem conversao.
+
+Na verdade, revisando o codigo, o fluxo atual ja e:
+1. Tenta Frankfurter
+2. Usa fallback estatico se disponivel
+3. Tenta ExchangeRate API
+4. Retorna sem conversao
+
+O fallback estatico (passo 2) ja cobre DOP. Entao o problema foi provavelmente um caso raro onde a Frankfurter retornou OK mas sem a taxa DOP, e o fallback nao foi acionado corretamente. Para prevenir isso, podemos adicionar um log de alerta quando o valor retornado e igual ao original (indicando falha de conversao).
+
+## Detalhes tecnicos
+
+### Arquivo editado
+- `supabase/functions/_shared/currency-converter.ts` - Adicionar validacao extra e log de alerta
+
+### Operacao de banco
+- UPDATE simples em 1 registro: `eduzz_transactions` onde `sale_id = '97139146'`
 
