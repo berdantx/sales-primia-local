@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
       const utmData = body.data?.utm;
       const productName = itemsData?.[0]?.name || productData?.name || body.product_name || body.product || null;
       const productId = itemsData?.[0]?.productId || (productData?.id ? String(productData.id) : null) || (body.product_id ? String(body.product_id) : null);
-      const saleValue = priceData?.paid?.value || priceData?.value || body.data?.value || body.sale_amount || body.sale_value || body.value || 0;
+      const saleValue = priceData?.value || priceData?.paid?.value || body.data?.value || body.sale_amount || body.sale_value || body.value || 0;
       const currency = priceData?.currency || body.data?.currency || "BRL";
       const saleDate = body.data?.createdAt || body.data?.created_at || body.sale_date || body.created_at || new Date().toISOString();
       const buyerEmail = buyer.email || body.client_email || body.buyer_email || null;
@@ -452,7 +452,7 @@ Deno.serve(async (req) => {
     const productName = itemsData?.[0]?.name || productData?.name || body.product_name || body.product || null;
     const productId = itemsData?.[0]?.productId || (productData?.id ? String(productData.id) : null) || (body.product_id ? String(body.product_id) : null);
     
-    const saleValue = priceData?.paid?.value || priceData?.value || body.data?.value || body.sale_amount || body.sale_value || body.value || 0;
+    const saleValue = priceData?.value || priceData?.paid?.value || body.data?.value || body.sale_amount || body.sale_value || body.value || 0;
     const currency = priceData?.currency || body.data?.currency || "BRL";
     
     const utmSource = utmData?.source || body.data?.utm_source || body.utm_source || null;
