@@ -156,97 +156,46 @@ export function useCoproducerCommissions(
       if (!coproductions?.length) return { clients: [], grandTotal: 0 };
 
       const dateFrom = getDateFrom(period);
-      const results: ClientCommissions[] = [];
+      const coproducerIds = coproductions.map(c => c.coproducerId);
 
-      for (const coprod of coproductions) {
-        if (!coprod.rates.length) continue;
+      const { data, error } = await supabase.rpc('get_coproducer_commissions', {
+        p_coproducer_ids: coproducerIds,
+        p_date_from: dateFrom,
+      });
 
-        const productNames = coprod.rates.map(r => r.product_name);
+      if (error) throw error;
 
-        // Build queries for each platform
-        let hotmartQuery = supabase
-          .from('transactions')
-          .select('product, computed_value')
-          .eq('client_id', coprod.clientId)
-          .in('product', productNames);
+      // Group by client
+      const clientMap = new Map<string, ClientCommissions>();
 
-        let tmbQuery = supabase
-          .from('tmb_transactions')
-          .select('product, ticket_value')
-          .eq('client_id', coprod.clientId)
-          .in('product', productNames)
-          .is('cancelled_at', null);
+      for (const row of (data || []) as any[]) {
+        const pct = Number(row.rate_percent) / 100;
+        const h = Number(row.hotmart_total) * pct;
+        const t = Number(row.tmb_total) * pct;
+        const e = Number(row.eduzz_total) * pct;
 
-        let eduzzQuery = supabase
-          .from('eduzz_transactions')
-          .select('product, sale_value')
-          .eq('client_id', coprod.clientId)
-          .in('product', productNames)
-          .eq('status', 'paid');
-
-        if (dateFrom) {
-          hotmartQuery = hotmartQuery.gte('purchase_date', dateFrom);
-          tmbQuery = tmbQuery.gte('effective_date', dateFrom);
-          eduzzQuery = eduzzQuery.gte('sale_date', dateFrom);
+        if (!clientMap.has(row.client_id)) {
+          clientMap.set(row.client_id, {
+            clientId: row.client_id,
+            clientName: row.client_name,
+            products: [],
+            subtotal: 0,
+          });
         }
 
-        const [{ data: hotmart }, { data: tmb }, { data: eduzz }] = await Promise.all([
-          hotmartQuery,
-          tmbQuery,
-          eduzzQuery,
-        ]);
-
-        // Aggregate sales by product per platform
-        const salesMap = new Map<string, { hotmart: number; tmb: number; eduzz: number }>();
-        productNames.forEach(p => salesMap.set(p, { hotmart: 0, tmb: 0, eduzz: 0 }));
-
-        hotmart?.forEach(t => {
-          if (t.product) {
-            const s = salesMap.get(t.product);
-            if (s) s.hotmart += Number(t.computed_value) || 0;
-          }
+        const client = clientMap.get(row.client_id)!;
+        client.products.push({
+          productName: row.product_name,
+          ratePercent: Number(row.rate_percent),
+          hotmart: h,
+          tmb: t,
+          eduzz: e,
+          total: h + t + e,
         });
-
-        tmb?.forEach(t => {
-          if (t.product) {
-            const s = salesMap.get(t.product);
-            if (s) s.tmb += Number(t.ticket_value) || 0;
-          }
-        });
-
-        eduzz?.forEach(t => {
-          if (t.product) {
-            const s = salesMap.get(t.product);
-            if (s) s.eduzz += Number(t.sale_value) || 0;
-          }
-        });
-
-        const products: ProductCommission[] = coprod.rates.map(rate => {
-          const sales = salesMap.get(rate.product_name) || { hotmart: 0, tmb: 0, eduzz: 0 };
-          const pct = rate.rate_percent / 100;
-          const h = sales.hotmart * pct;
-          const t = sales.tmb * pct;
-          const e = sales.eduzz * pct;
-          return {
-            productName: rate.product_name,
-            ratePercent: rate.rate_percent,
-            hotmart: h,
-            tmb: t,
-            eduzz: e,
-            total: h + t + e,
-          };
-        });
-
-        const subtotal = products.reduce((sum, p) => sum + p.total, 0);
-
-        results.push({
-          clientId: coprod.clientId,
-          clientName: coprod.clientName,
-          products,
-          subtotal,
-        });
+        client.subtotal += h + t + e;
       }
 
+      const results = Array.from(clientMap.values());
       const grandTotal = results.reduce((sum, c) => sum + c.subtotal, 0);
       return { clients: results, grandTotal };
     },

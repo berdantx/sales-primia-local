@@ -1937,6 +1937,19 @@ export type Database = {
         Args: { p_client_id: string; p_end_date: string; p_start_date: string }
         Returns: Json
       }
+      get_coproducer_commissions: {
+        Args: { p_coproducer_ids: string[]; p_date_from?: string }
+        Returns: {
+          client_id: string
+          client_name: string
+          coproducer_id: string
+          eduzz_total: number
+          hotmart_total: number
+          product_name: string
+          rate_percent: number
+          tmb_total: number
+        }[]
+      }
       get_database_schema: { Args: never; Returns: Json }
       get_eduzz_filter_options: {
         Args: { p_client_id?: string }
