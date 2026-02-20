@@ -25,6 +25,7 @@ import {
   Wallet,
   CreditCard,
   GitCompare,
+  Handshake,
   Webhook,
   Users,
   Send,
@@ -59,6 +60,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: 'Dashboard', url: '/', icon: LayoutDashboard, roles: ['master', 'admin', 'user'] },
       { title: 'Comparativo', url: '/comparative', icon: GitCompare, roles: ['master', 'admin'] },
+      { title: 'Coprodução', url: '/coproduction', icon: Handshake, roles: ['master', 'admin', 'user'] },
     ]
   },
   {
