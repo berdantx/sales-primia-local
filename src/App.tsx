@@ -34,6 +34,7 @@ import DuplicateAudit from "./pages/DuplicateAudit";
 import BackupDashboard from "./pages/BackupDashboard";
 import BackupTestHarness from "./pages/BackupTestHarness";
 import CorsDiagnostics from "./pages/CorsDiagnostics";
+import Coproduction from "./pages/Coproduction";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -94,6 +95,7 @@ const App = () => (
                 <WebhookDocs />
               </ProtectedRoute>
             } />
+            <Route path="/coproduction" element={<Coproduction />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/leads/funnel" element={<LeadsFunnel />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
