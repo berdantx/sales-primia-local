@@ -19,6 +19,7 @@ import { SalesBreakdownDialog } from '@/components/dashboard/SalesBreakdownDialo
 import { DashboardSalesAnalytics } from '@/components/dashboard/DashboardSalesAnalytics';
 import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
 import { ProductDrilldownCard } from '@/components/dashboard/ProductDrilldownCard';
+import { CoproducerEarningsCard } from '@/components/dashboard/CoproducerEarningsCard';
 
 import { TopCustomers } from '@/components/dashboard/TopCustomers';
 
@@ -602,6 +603,24 @@ export default function Dashboard() {
                 dollarRate={dollarRate?.rate}
               />
             )}
+
+            {/* Coproducer Earnings Card */}
+            {combinedTransactions.length > 0 && (() => {
+              const productTotals: Record<string, number> = {};
+              combinedTransactions.forEach((t: any) => {
+                const product = t.product;
+                const value = t.computed_value || t.sale_value || t.ticket_value || 0;
+                if (product) {
+                  productTotals[product] = (productTotals[product] || 0) + value;
+                }
+              });
+              return (
+                <CoproducerEarningsCard
+                  clientId={clientId}
+                  productTotals={productTotals}
+                />
+              );
+            })()}
           </>
         )}
       </div>

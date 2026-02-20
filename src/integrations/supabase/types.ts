@@ -116,6 +116,38 @@ export type Database = {
         }
         Relationships: []
       }
+      client_coproducers: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_coproducers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_users: {
         Row: {
           can_view_financials: boolean | null
@@ -180,6 +212,41 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      coproducer_product_rates: {
+        Row: {
+          coproducer_id: string
+          created_at: string
+          id: string
+          product_name: string
+          rate_percent: number
+          updated_at: string
+        }
+        Insert: {
+          coproducer_id: string
+          created_at?: string
+          id?: string
+          product_name: string
+          rate_percent: number
+          updated_at?: string
+        }
+        Update: {
+          coproducer_id?: string
+          created_at?: string
+          id?: string
+          product_name?: string
+          rate_percent?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coproducer_product_rates_coproducer_id_fkey"
+            columns: ["coproducer_id"]
+            isOneToOne: false
+            referencedRelation: "client_coproducers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       currency_conversion_alerts: {
         Row: {
