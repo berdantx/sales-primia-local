@@ -1,109 +1,67 @@
 
-# Alertas de Conversao Suspeita + Painel de Moedas
+# Melhorar UX da Pagina de Configuracoes
 
-## Resumo
+## Problema Atual
 
-Implementar dois recursos complementares para monitoramento automatico de conversoes de moeda:
+A pagina de Settings e uma lista longa de cards empilhados verticalmente (ate 9 cards para um usuario master). Nao ha agrupamento logico, navegacao rapida, nem indicacao visual de qual secao o usuario esta vendo. Isso dificulta encontrar configuracoes especificas.
 
-1. **Alertas de Conversao Suspeita** - Deteccao automatica no webhook quando uma transacao entra sem conversao adequada
-2. **Painel de Moedas no Dashboard** - Card visual mostrando todas as moedas detectadas, taxas aplicadas e totais
+## Solucao Proposta: Navegacao por Abas + Agrupamento por Categorias
 
----
+Reorganizar a pagina usando o componente `Tabs` (ja disponivel no projeto via Radix UI) para dividir as configuracoes em categorias logicas com navegacao horizontal.
 
-## Parte 1: Alertas de Conversao Suspeita (Backend)
+### Categorias propostas
 
-### O que muda
+| Aba | Conteudo | Visivel para |
+|-----|----------|--------------|
+| **Conta** | Perfil (email, membro desde) + Alterar Senha | Todos |
+| **Aparencia** | Branding (logo, cores, nome do app) | Master |
+| **Sistema** | Cadastro (signup settings) + Backup + Auditoria de Transacoes | Admin/Master |
+| **Moedas** | Moedas Detectadas + Alertas de Conversao | Admin/Master |
+| **Integracoes** | LLM Integrations | Admin/Master |
+| **Sobre** | Versao, template, moedas suportadas | Todos |
 
-No momento da ingestao via webhook (eduzz-webhook, hotmart-webhook), apos a conversao, o sistema vai verificar se o valor convertido parece suspeito. Criterios:
+### Comportamento
 
-- Moeda original diferente de USD/BRL, mas valor final igual ao original (indica conversao que falhou silenciosamente)
-- Taxa de conversao utilizada foi "fallback" estatica (alerta informativo, nao critico)
-- Moeda desconhecida sem taxa disponivel
+- As abas sao filtradas por role (usuario comum ve apenas "Conta" e "Sobre")
+- A aba ativa e salva na URL via query param (`?tab=sistema`) para permitir links diretos
+- A aba "Moedas" mostra um badge de contagem se houver alertas pendentes (reutiliza `useCurrencyAlerts`)
+- Layout responsivo: em mobile, as abas viram um menu dropdown ou scroll horizontal
 
-### Implementacao
+### Melhorias adicionais
 
-**Tabela `currency_conversion_alerts`** (nova):
-- `id`, `transaction_id`, `platform` (hotmart/eduzz/tmb), `sale_id`, `original_currency`, `original_value`, `converted_value`, `conversion_rate`, `conversion_source`, `alert_type` (failed_conversion | fallback_used | unknown_currency), `resolved`, `resolved_by`, `resolved_at`, `created_at`, `client_id`
-
-**Alteracoes nos webhooks:**
-- `currency-converter.ts`: retornar um campo `suspicious: boolean` no resultado quando a conversao cair no caso final (rate=1, moeda desconhecida)
-- `eduzz-webhook/index.ts` e `hotmart-webhook/index.ts`: apos converter, inserir alerta na tabela se resultado for suspeito ou fallback
-
----
-
-## Parte 2: Painel de Moedas no Dashboard (Frontend)
-
-### Card "Moedas Detectadas"
-
-Um novo componente `CurrencyOverviewCard` exibido na pagina de Settings (visivel para master/admin) com:
-
-- Lista de todas as moedas originais encontradas nas transacoes (EUR, CHF, GBP, DOP, etc.)
-- Quantidade de transacoes por moeda
-- Total convertido em USD
-- Fonte da taxa utilizada (API ao vivo vs fallback estatica)
-- Indicador visual: verde (API), amarelo (fallback), vermelho (sem conversao)
-
-### Card "Alertas de Conversao"
-
-Componente `CurrencyAlertsCard` no Settings mostrando:
-
-- Transacoes com alertas pendentes (nao resolvidos)
-- Botao para marcar como resolvido apos correcao manual
-- Contagem de alertas por tipo
+1. **Header com resumo rapido**: Mostrar o nome do usuario e role como badge ao lado do titulo
+2. **Scroll suave**: Ao trocar de aba, o conteudo aparece com animacao suave (ja usa framer-motion)
+3. **Indicador de alertas**: Badge vermelho na aba "Moedas" quando ha alertas pendentes, para chamar atencao
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivos novos
-- `src/components/settings/CurrencyOverviewCard.tsx` - Painel de moedas
-- `src/components/settings/CurrencyAlertsCard.tsx` - Card de alertas
-- `src/hooks/useCurrencyOverview.ts` - Hook para buscar dados agregados de moedas
-- `src/hooks/useCurrencyAlerts.ts` - Hook para buscar/resolver alertas
+### Arquivo editado: `src/pages/Settings.tsx`
 
-### Arquivos editados
-- `supabase/functions/_shared/currency-converter.ts` - Adicionar campo `suspicious` ao resultado
-- `supabase/functions/eduzz-webhook/index.ts` - Inserir alertas na tabela apos conversao
-- `supabase/functions/hotmart-webhook/index.ts` - Inserir alertas na tabela apos conversao
-- `src/pages/Settings.tsx` - Adicionar os dois novos cards (visivel para master/admin)
+Refatorar para usar `Tabs` do Radix UI com as seguintes mudancas:
 
-### Migracao SQL
-```sql
-CREATE TABLE currency_conversion_alerts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  transaction_id text NOT NULL,
-  platform text NOT NULL,
-  sale_id text,
-  original_currency text NOT NULL,
-  original_value numeric NOT NULL,
-  converted_value numeric NOT NULL,
-  conversion_rate numeric NOT NULL DEFAULT 1,
-  conversion_source text NOT NULL DEFAULT 'none',
-  alert_type text NOT NULL,
-  resolved boolean NOT NULL DEFAULT false,
-  resolved_by uuid,
-  resolved_at timestamptz,
-  client_id uuid,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+- Importar `Tabs, TabsContent, TabsList, TabsTrigger` de `@/components/ui/tabs`
+- Criar array de abas filtrado por role
+- Usar `searchParams` do react-router para persistir a aba ativa na URL
+- Mover cada grupo de cards para dentro do respectivo `TabsContent`
+- Adicionar badge de contagem na aba "Moedas" usando o hook `useCurrencyAlerts`
 
-ALTER TABLE currency_conversion_alerts ENABLE ROW LEVEL SECURITY;
+### Estrutura resultante (simplificada)
 
-CREATE POLICY "Masters and admins can view alerts"
-  ON currency_conversion_alerts FOR SELECT
-  USING (has_role(auth.uid(), 'master') OR has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Masters can update alerts"
-  ON currency_conversion_alerts FOR UPDATE
-  USING (has_role(auth.uid(), 'master'));
-
-CREATE POLICY "System can insert alerts"
-  ON currency_conversion_alerts FOR INSERT
-  WITH CHECK (true);
+```text
++------------------------------------------------------+
+| Configuracoes                                         |
+| Gerencie sua conta e preferencias    [Admin badge]    |
++------------------------------------------------------+
+| [Conta] [Aparencia] [Sistema] [Moedas (3)] [Integr.] |
++------------------------------------------------------+
+|                                                       |
+|   (Conteudo da aba selecionada)                       |
+|                                                       |
++------------------------------------------------------+
 ```
 
-### Fluxo de dados
+### Nenhum arquivo novo necessario
 
-O hook `useCurrencyOverview` faz queries agregadas diretas nas tabelas `transactions` e `eduzz_transactions`, agrupando por `original_currency` e contando totais. Nao precisa de tabela nova para isso.
-
-O hook `useCurrencyAlerts` busca da tabela `currency_conversion_alerts` os alertas pendentes e permite resolve-los via mutation.
+Toda a mudanca acontece em `src/pages/Settings.tsx`, reorganizando os componentes existentes dentro da estrutura de abas. Os cards individuais (`BrandingSettingsCard`, `BackupCard`, etc.) permanecem inalterados.
