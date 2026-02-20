@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +86,14 @@ export function EduzzTransactionDetailDialog({
   const [showWebhook, setShowWebhook] = useState(false);
   const { role } = useUserRole();
   const isMaster = role === 'master';
+
+  // Reset webhook state when transaction changes
+  useEffect(() => {
+    setWebhookPayload(null);
+    setWebhookLoading(false);
+    setWebhookLoaded(false);
+    setShowWebhook(false);
+  }, [transaction?.sale_id]);
 
   const sanitizePayload = (payload: Record<string, unknown>) => {
     const sensitiveKeys = ['user_id', 'client_id', 'id'];
