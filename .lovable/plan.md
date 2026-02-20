@@ -1,27 +1,34 @@
 
-# Exportar Apenas o Schema do Banco
+# Correção: Webhook carregando dados da transação anterior
 
-## Problema Atual
-O botao "Novo Backup" fica desabilitado quando nenhuma tabela esta selecionada, e o hook sempre exporta dados de tabelas mesmo quando voce so quer a estrutura do banco.
+## Problema
+No dialog de detalhes da transação Eduzz, os estados `webhookPayload`, `webhookLoaded` e `showWebhook` são mantidos entre transações diferentes. Ao abrir a transação A e carregar o webhook, depois abrir a transação B, o webhook exibido ainda é o da transação A.
 
-## Solucao
-Adicionar um botao "Exportar Schema" dedicado e ajustar o hook para permitir exportacao sem dados.
+## Solução
+Adicionar um `useEffect` que reseta os estados do webhook sempre que a `transaction` mudar (ou quando o dialog fechar).
 
-### Mudancas
+## Mudança
 
-**1. `src/hooks/useClientSideBackup.ts`**
-- Quando `selectedTables` for um array vazio E `includeSchema` for `true`, pular o loop de exportacao de tabelas e gerar o JSON apenas com o bloco `schema`
-- Remover o fallback que substitui array vazio por todas as tabelas (atualmente na linha que faz `selectedTables || BACKUP_TABLES`)
+**`src/components/eduzz/EduzzTransactionDetailDialog.tsx`**
 
-**2. `src/pages/BackupDashboard.tsx`**
-- Adicionar botao "Exportar Schema" ao lado do botao "Novo Backup"
-- Ao clicar, chama `startBackup([], true)` -- nenhuma tabela, apenas schema
-- Manter o botao "Novo Backup" para backup completo (dados + schema opcional)
+Adicionar após a linha 88 (`const isMaster = ...`):
 
-### Experiencia do usuario
-- Clicou em "Exportar Schema": baixa um JSON so com a estrutura (tabelas, indices, RLS, funcoes, triggers, foreign keys)
-- Clicou em "Novo Backup": comportamento atual, exporta dados das tabelas selecionadas + schema se marcado
+```typescript
+// Reset webhook state when transaction changes
+useEffect(() => {
+  setWebhookPayload(null);
+  setWebhookLoading(false);
+  setWebhookLoaded(false);
+  setShowWebhook(false);
+}, [transaction?.sale_id]);
+```
 
-### Arquivos editados
-1. `src/hooks/useClientSideBackup.ts` -- permitir backup sem dados
-2. `src/pages/BackupDashboard.tsx` -- adicionar botao dedicado
+Importar `useEffect` junto do `useState` na linha 1.
+
+## Verificação adicional
+O mesmo bug pode existir nos dialogs de Hotmart (`HotmartTransactionDetailDialog.tsx`) e TMB (`TmbTransactionDetailDialog.tsx`). Vou verificar e aplicar a mesma correção se necessário.
+
+## Arquivos editados
+1. `src/components/eduzz/EduzzTransactionDetailDialog.tsx`
+2. `src/components/hotmart/HotmartTransactionDetailDialog.tsx` (se aplicável)
+3. `src/components/tmb/TmbTransactionDetailDialog.tsx` (se aplicável)
