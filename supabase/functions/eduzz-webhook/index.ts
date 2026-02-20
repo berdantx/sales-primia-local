@@ -476,6 +476,27 @@ Deno.serve(async (req) => {
       finalValue = conversion.convertedValue;
       finalCurrency = 'USD';
       console.log(`Converted: ${saleValue} ${currency} -> ${finalValue} USD (rate: ${conversion.rate}, source: ${conversion.source})`);
+
+      // Insert currency alert if suspicious
+      if (conversion.alertType !== 'none') {
+        try {
+          await supabase.from('currency_conversion_alerts').insert({
+            transaction_id: saleId,
+            platform: 'eduzz',
+            sale_id: saleId,
+            original_currency: currency,
+            original_value: saleValue,
+            converted_value: finalValue,
+            conversion_rate: conversion.rate,
+            conversion_source: conversion.source,
+            alert_type: conversion.alertType,
+            client_id: webhookClientId || null,
+          });
+          console.log(`Currency alert inserted: ${conversion.alertType} for ${currency}`);
+        } catch (alertErr) {
+          console.error('Failed to insert currency alert:', alertErr);
+        }
+      }
     }
 
     const transactionData = {

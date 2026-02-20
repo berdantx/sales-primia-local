@@ -541,6 +541,27 @@ serve(async (req) => {
             finalProjectedValue = Number((projectedValue * (conversion.convertedValue / computedValue)).toFixed(2));
           }
           console.log(`Converted: ${computedValue} ${rawCurrency} -> ${finalComputedValue} USD (source: ${conversion.source})`);
+
+          // Insert currency alert if suspicious
+          if (conversion.alertType !== 'none') {
+            try {
+              await supabase.from('currency_conversion_alerts').insert({
+                transaction_id: purchase.transaction || 'unknown',
+                platform: 'hotmart',
+                sale_id: purchase.transaction || null,
+                original_currency: rawCurrency,
+                original_value: computedValue,
+                converted_value: finalComputedValue,
+                conversion_rate: conversion.rate,
+                conversion_source: conversion.source,
+                alert_type: conversion.alertType,
+                client_id: webhookClientId || null,
+              });
+              console.log(`Currency alert inserted: ${conversion.alertType} for ${rawCurrency}`);
+            } catch (alertErr) {
+              console.error('Failed to insert currency alert:', alertErr);
+            }
+          }
         }
 
         // Prepare transaction record with CORRECTED field mapping

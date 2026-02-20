@@ -15,6 +15,8 @@ import { BrandingSettingsCard } from '@/components/settings/BrandingSettingsCard
 import { SignupSettingsCard } from '@/components/settings/SignupSettingsCard';
 import { BackupCard } from '@/components/settings/BackupCard';
 import { TransactionAuditCard } from '@/components/audit/TransactionAuditCard';
+import { CurrencyOverviewCard } from '@/components/settings/CurrencyOverviewCard';
+import { CurrencyAlertsCard } from '@/components/settings/CurrencyAlertsCard';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -47,6 +49,10 @@ export default function Settings() {
 
         {/* Transaction Audit - Only for Admin/Master */}
         {isMasterOrAdmin && <TransactionAuditCard />}
+
+        {/* Currency Monitoring - Only for Admin/Master */}
+        {isMasterOrAdmin && <CurrencyOverviewCard />}
+        {isMasterOrAdmin && <CurrencyAlertsCard />}
 
         {/* Profile Card */}
         <motion.div
