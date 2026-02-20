@@ -1,34 +1,45 @@
 
-# Correção: Webhook carregando dados da transação anterior
 
-## Problema
-No dialog de detalhes da transação Eduzz, os estados `webhookPayload`, `webhookLoaded` e `showWebhook` são mantidos entre transações diferentes. Ao abrir a transação A e carregar o webhook, depois abrir a transação B, o webhook exibido ainda é o da transação A.
+# Correção: Usar price.value ao invés de paid.value nas transações Eduzz
 
-## Solução
-Adicionar um `useEffect` que reseta os estados do webhook sempre que a `transaction` mudar (ou quando o dialog fechar).
+## Resumo
+Inverter a prioridade no webhook da Eduzz para usar `price.value` (valor do produto/recebido) ao invés de `price.paid.value` (valor pago pelo cliente). Corrigir as 671 transações existentes no banco.
 
-## Mudança
+## Impacto estimado
+- **Camila Vieira 2026 (BRL):** 231 transações, redução de R$ 63.709,33
+- **Camila Vieira 2026 (USD):** 1 transação, +$0,01 (desprezível)
+- **Paulo Vieira (BRL):** 436 transações, redução de R$ 66.846,07
+- **Paulo Vieira (USD):** 2 transações, +$12.056,69 (investigar se necessário)
 
-**`src/components/eduzz/EduzzTransactionDetailDialog.tsx`**
+## Mudanças
 
-Adicionar após a linha 88 (`const isMaster = ...`):
+### 1. Webhook - `supabase/functions/eduzz-webhook/index.ts`
 
+Inverter prioridade em 2 locais:
+
+**Fluxo de cancelamento (~linha 221):**
 ```typescript
-// Reset webhook state when transaction changes
-useEffect(() => {
-  setWebhookPayload(null);
-  setWebhookLoading(false);
-  setWebhookLoaded(false);
-  setShowWebhook(false);
-}, [transaction?.sale_id]);
+// De:
+const saleValue = priceData?.paid?.value || priceData?.value || ...
+// Para:
+const saleValue = priceData?.value || priceData?.paid?.value || ...
 ```
 
-Importar `useEffect` junto do `useState` na linha 1.
+**Fluxo de venda aprovada (~linha 455):**
+```typescript
+// De:
+const saleValue = priceData?.paid?.value || priceData?.value || ...
+// Para:
+const saleValue = priceData?.value || priceData?.paid?.value || ...
+```
 
-## Verificação adicional
-O mesmo bug pode existir nos dialogs de Hotmart (`HotmartTransactionDetailDialog.tsx`) e TMB (`TmbTransactionDetailDialog.tsx`). Vou verificar e aplicar a mesma correção se necessário.
+### 2. Correção de dados existentes
 
-## Arquivos editados
-1. `src/components/eduzz/EduzzTransactionDetailDialog.tsx`
-2. `src/components/hotmart/HotmartTransactionDetailDialog.tsx` (se aplicável)
-3. `src/components/tmb/TmbTransactionDetailDialog.tsx` (se aplicável)
+Executar UPDATE no banco cruzando `eduzz_transactions` com `webhook_logs` para extrair o `price.value` correto do payload original e atualizar o `sale_value` das 671 transações afetadas. Transações com conversão de moeda (original_currency preenchido) terão o valor recalculado proporcionalmente.
+
+### Arquivos editados
+1. `supabase/functions/eduzz-webhook/index.ts`
+
+### Operação de banco
+- UPDATE em `eduzz_transactions` via dados do `webhook_logs`
+
