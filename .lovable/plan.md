@@ -1,67 +1,182 @@
 
-# Melhorar UX da Pagina de Configuracoes
 
-## Problema Atual
+# Coprodutores: Porcentagem por Produto por Cliente
 
-A pagina de Settings e uma lista longa de cards empilhados verticalmente (ate 9 cards para um usuario master). Nao ha agrupamento logico, navegacao rapida, nem indicacao visual de qual secao o usuario esta vendo. Isso dificulta encontrar configuracoes especificas.
+## Resumo
 
-## Solucao Proposta: Navegacao por Abas + Agrupamento por Categorias
+Permitir que cada cliente tenha um ou mais coprodutores, cada um com porcentagens configuradas por produto. O coprodutor logado vera no Dashboard um resumo dos seus ganhos de coprodução.
 
-Reorganizar a pagina usando o componente `Tabs` (ja disponivel no projeto via Radix UI) para dividir as configuracoes em categorias logicas com navegacao horizontal.
+---
 
-### Categorias propostas
+## Parte 1: Banco de Dados
 
-| Aba | Conteudo | Visivel para |
-|-----|----------|--------------|
-| **Conta** | Perfil (email, membro desde) + Alterar Senha | Todos |
-| **Aparencia** | Branding (logo, cores, nome do app) | Master |
-| **Sistema** | Cadastro (signup settings) + Backup + Auditoria de Transacoes | Admin/Master |
-| **Moedas** | Moedas Detectadas + Alertas de Conversao | Admin/Master |
-| **Integracoes** | LLM Integrations | Admin/Master |
-| **Sobre** | Versao, template, moedas suportadas | Todos |
+### Nova tabela `client_coproducers`
 
-### Comportamento
+Armazena quais usuarios sao coprodutores de quais clientes.
 
-- As abas sao filtradas por role (usuario comum ve apenas "Conta" e "Sobre")
-- A aba ativa e salva na URL via query param (`?tab=sistema`) para permitir links diretos
-- A aba "Moedas" mostra um badge de contagem se houver alertas pendentes (reutiliza `useCurrencyAlerts`)
-- Layout responsivo: em mobile, as abas viram um menu dropdown ou scroll horizontal
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| id | uuid PK | Identificador |
+| client_id | uuid NOT NULL | Cliente |
+| user_id | uuid NOT NULL | Usuario coprodutor |
+| is_active | boolean DEFAULT true | Ativo/inativo |
+| created_at | timestamptz | Data de criacao |
+| UNIQUE(client_id, user_id) | | Evita duplicatas |
 
-### Melhorias adicionais
+### Nova tabela `coproducer_product_rates`
 
-1. **Header com resumo rapido**: Mostrar o nome do usuario e role como badge ao lado do titulo
-2. **Scroll suave**: Ao trocar de aba, o conteudo aparece com animacao suave (ja usa framer-motion)
-3. **Indicador de alertas**: Badge vermelho na aba "Moedas" quando ha alertas pendentes, para chamar atencao
+Armazena a porcentagem de cada coprodutor por produto.
+
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| id | uuid PK | Identificador |
+| coproducer_id | uuid NOT NULL FK | Referencia `client_coproducers.id` |
+| product_name | text NOT NULL | Nome do produto (conforme aparece nas transacoes) |
+| rate_percent | numeric NOT NULL | Porcentagem (ex: 30 = 30%) |
+| created_at | timestamptz | Data de criacao |
+| updated_at | timestamptz | Data de atualizacao |
+| UNIQUE(coproducer_id, product_name) | | Uma taxa por produto por coprodutor |
+
+### RLS
+
+- Masters podem CRUD ambas as tabelas
+- Usuarios podem ver seus proprios registros de coproducao (SELECT onde user_id = auth.uid())
+
+---
+
+## Parte 2: Interface de Gestao (Pagina de Clientes)
+
+### Novo componente `ClientCoproducersDialog`
+
+Acessivel via botao na tabela de clientes (ao lado do botao "Gerenciar Usuarios"). Funcionalidades:
+
+1. **Adicionar coprodutor**: Selecionar usuario existente do sistema
+2. **Configurar taxas por produto**: Para cada coprodutor, listar os produtos do cliente (extraidos das transacoes existentes) e permitir definir a porcentagem
+3. **Ativar/desativar coprodutor**: Toggle sem excluir historico
+4. **Remover coprodutor**: Com confirmacao
+
+### Layout do dialog
+
+```text
++------------------------------------------+
+| Coprodutores de [Nome do Cliente]        |
++------------------------------------------+
+| [+ Adicionar Coprodutor]                 |
+|                                          |
+| Bruno Vaz                    [Ativo]     |
+|   Produto A ................ 30%         |
+|   Produto B ................ 20%         |
+|   [+ Adicionar produto]                 |
+|                                          |
+| Maria Silva                  [Ativo]     |
+|   Produto A ................ 15%         |
+|   [+ Adicionar produto]                 |
++------------------------------------------+
+```
+
+### Alteracoes na tabela de clientes
+
+- Novo botao com icone de "Handshake" ou "Users" na coluna de acoes
+- Badge na tabela indicando quantidade de coprodutores ativos
+
+---
+
+## Parte 3: Dashboard do Coprodutor
+
+Quando um usuario coprodutor acessa o Dashboard de um cliente onde ele e coprodutor, um card adicional aparece mostrando:
+
+- **Minha Coprodução**: Valor total que o coprodutor ganha no periodo selecionado
+- Breakdown por produto com porcentagem e valor calculado
+- Calculo: para cada transacao do cliente no periodo, multiplicar o valor da venda pela porcentagem do coprodutor para aquele produto
+
+### Logica de calculo
+
+1. Buscar todos os registros de `coproducer_product_rates` do usuario logado para o cliente ativo
+2. Buscar transacoes do periodo agrupadas por produto
+3. Para cada produto, multiplicar o total pela taxa do coprodutor
+4. Somar tudo para o total de coprodução
 
 ---
 
 ## Detalhes Tecnicos
 
-### Arquivo editado: `src/pages/Settings.tsx`
+### Arquivos novos
 
-Refatorar para usar `Tabs` do Radix UI com as seguintes mudancas:
+- `src/components/clients/ClientCoproducersDialog.tsx` - Dialog de gestao de coprodutores
+- `src/hooks/useCoproducers.ts` - CRUD de coprodutores e taxas por produto
+- `src/components/dashboard/CoproducerEarningsCard.tsx` - Card de ganhos no dashboard
 
-- Importar `Tabs, TabsContent, TabsList, TabsTrigger` de `@/components/ui/tabs`
-- Criar array de abas filtrado por role
-- Usar `searchParams` do react-router para persistir a aba ativa na URL
-- Mover cada grupo de cards para dentro do respectivo `TabsContent`
-- Adicionar badge de contagem na aba "Moedas" usando o hook `useCurrencyAlerts`
+### Arquivos editados
 
-### Estrutura resultante (simplificada)
+- `src/pages/Clients.tsx` - Adicionar botao e dialog de coprodutores
+- `src/components/clients/ClientsTable.tsx` - Adicionar coluna/botao de coprodutores
+- `src/pages/Dashboard.tsx` - Renderizar card de coprodução quando usuario for coprodutor
 
-```text
-+------------------------------------------------------+
-| Configuracoes                                         |
-| Gerencie sua conta e preferencias    [Admin badge]    |
-+------------------------------------------------------+
-| [Conta] [Aparencia] [Sistema] [Moedas (3)] [Integr.] |
-+------------------------------------------------------+
-|                                                       |
-|   (Conteudo da aba selecionada)                       |
-|                                                       |
-+------------------------------------------------------+
+### Migracao SQL
+
+```sql
+-- Tabela de coprodutores
+CREATE TABLE client_coproducers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(client_id, user_id)
+);
+
+ALTER TABLE client_coproducers ENABLE ROW LEVEL SECURITY;
+
+-- Tabela de taxas por produto
+CREATE TABLE coproducer_product_rates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  coproducer_id uuid NOT NULL REFERENCES client_coproducers(id) ON DELETE CASCADE,
+  product_name text NOT NULL,
+  rate_percent numeric NOT NULL CHECK (rate_percent > 0 AND rate_percent <= 100),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(coproducer_id, product_name)
+);
+
+ALTER TABLE coproducer_product_rates ENABLE ROW LEVEL SECURITY;
+
+-- RLS: Masters gerenciam tudo
+CREATE POLICY "Masters can manage coproducers"
+  ON client_coproducers FOR ALL
+  USING (has_role(auth.uid(), 'master'));
+
+CREATE POLICY "Users can view own coproducer records"
+  ON client_coproducers FOR SELECT
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Masters can manage rates"
+  ON coproducer_product_rates FOR ALL
+  USING (has_role(auth.uid(), 'master'));
+
+CREATE POLICY "Users can view rates of own coproductions"
+  ON coproducer_product_rates FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM client_coproducers
+    WHERE client_coproducers.id = coproducer_product_rates.coproducer_id
+    AND client_coproducers.user_id = auth.uid()
+  ));
 ```
 
-### Nenhum arquivo novo necessario
+### Hook `useCoproducers`
 
-Toda a mudanca acontece em `src/pages/Settings.tsx`, reorganizando os componentes existentes dentro da estrutura de abas. Os cards individuais (`BrandingSettingsCard`, `BackupCard`, etc.) permanecem inalterados.
+- `useCoproducers(clientId)` - Lista coprodutores de um cliente com suas taxas
+- `useAddCoproducer()` - Mutation para adicionar coprodutor
+- `useRemoveCoproducer()` - Mutation para remover
+- `useToggleCoproducer()` - Ativar/desativar
+- `useSetProductRate()` - Definir/atualizar porcentagem de um produto
+- `useRemoveProductRate()` - Remover taxa de um produto
+- `useMyCoproduction(clientId)` - Para o usuario logado, busca suas taxas e calcula ganhos
+
+### Hook para Dashboard
+
+O `useMyCoproduction(clientId)` faz:
+1. Verifica se o usuario logado e coprodutor do cliente
+2. Busca as taxas por produto
+3. Busca totais de vendas por produto do cliente no periodo
+4. Calcula o valor de coprodução por produto e total
+
