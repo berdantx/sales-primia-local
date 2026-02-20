@@ -1,50 +1,109 @@
 
+# Alertas de Conversao Suspeita + Painel de Moedas
 
-# Correção da transação Eduzz 97139146 - Falha na conversão DOP para USD
+## Resumo
 
-## Problema identificado
+Implementar dois recursos complementares para monitoramento automatico de conversoes de moeda:
 
-A transação `97139146` foi recebida com valor em **DOP (Peso Dominicano)** mas a conversão para USD falhou silenciosamente no momento do processamento pelo webhook. O resultado:
+1. **Alertas de Conversao Suspeita** - Deteccao automatica no webhook quando uma transacao entra sem conversao adequada
+2. **Painel de Moedas no Dashboard** - Card visual mostrando todas as moedas detectadas, taxas aplicadas e totais
 
-- **Valor salvo:** 12.260,21 USD (errado)
-- **Valor original:** 12.260,21 DOP
-- **Valor correto:** ~203,52 USD (usando taxa DOP 0.0166)
+---
 
-O sistema possui a taxa de fallback para DOP (0.0166) no conversor de moedas, mas no momento da ingestão deste webhook, a conversão provavelmente falhou nas APIs externas (Frankfurter e ExchangeRate) e caiu no caso final da funcao `convertToUSD` que retorna o valor original sem conversao quando nenhuma taxa esta disponivel (linha 95 do conversor).
+## Parte 1: Alertas de Conversao Suspeita (Backend)
 
-## Solucao
+### O que muda
 
-### 1. Corrigir o valor desta transacao no banco
+No momento da ingestao via webhook (eduzz-webhook, hotmart-webhook), apos a conversao, o sistema vai verificar se o valor convertido parece suspeito. Criterios:
 
-Executar um UPDATE simples recalculando o valor com a taxa de fallback DOP (0.0166):
+- Moeda original diferente de USD/BRL, mas valor final igual ao original (indica conversao que falhou silenciosamente)
+- Taxa de conversao utilizada foi "fallback" estatica (alerta informativo, nao critico)
+- Moeda desconhecida sem taxa disponivel
 
+### Implementacao
+
+**Tabela `currency_conversion_alerts`** (nova):
+- `id`, `transaction_id`, `platform` (hotmart/eduzz/tmb), `sale_id`, `original_currency`, `original_value`, `converted_value`, `conversion_rate`, `conversion_source`, `alert_type` (failed_conversion | fallback_used | unknown_currency), `resolved`, `resolved_by`, `resolved_at`, `created_at`, `client_id`
+
+**Alteracoes nos webhooks:**
+- `currency-converter.ts`: retornar um campo `suspicious: boolean` no resultado quando a conversao cair no caso final (rate=1, moeda desconhecida)
+- `eduzz-webhook/index.ts` e `hotmart-webhook/index.ts`: apos converter, inserir alerta na tabela se resultado for suspeito ou fallback
+
+---
+
+## Parte 2: Painel de Moedas no Dashboard (Frontend)
+
+### Card "Moedas Detectadas"
+
+Um novo componente `CurrencyOverviewCard` exibido na pagina de Settings (visivel para master/admin) com:
+
+- Lista de todas as moedas originais encontradas nas transacoes (EUR, CHF, GBP, DOP, etc.)
+- Quantidade de transacoes por moeda
+- Total convertido em USD
+- Fonte da taxa utilizada (API ao vivo vs fallback estatica)
+- Indicador visual: verde (API), amarelo (fallback), vermelho (sem conversao)
+
+### Card "Alertas de Conversao"
+
+Componente `CurrencyAlertsCard` no Settings mostrando:
+
+- Transacoes com alertas pendentes (nao resolvidos)
+- Botao para marcar como resolvido apos correcao manual
+- Contagem de alertas por tipo
+
+---
+
+## Detalhes Tecnicos
+
+### Arquivos novos
+- `src/components/settings/CurrencyOverviewCard.tsx` - Painel de moedas
+- `src/components/settings/CurrencyAlertsCard.tsx` - Card de alertas
+- `src/hooks/useCurrencyOverview.ts` - Hook para buscar dados agregados de moedas
+- `src/hooks/useCurrencyAlerts.ts` - Hook para buscar/resolver alertas
+
+### Arquivos editados
+- `supabase/functions/_shared/currency-converter.ts` - Adicionar campo `suspicious` ao resultado
+- `supabase/functions/eduzz-webhook/index.ts` - Inserir alertas na tabela apos conversao
+- `supabase/functions/hotmart-webhook/index.ts` - Inserir alertas na tabela apos conversao
+- `src/pages/Settings.tsx` - Adicionar os dois novos cards (visivel para master/admin)
+
+### Migracao SQL
 ```sql
-UPDATE eduzz_transactions
-SET sale_value = ROUND(12260.21 * 0.0166, 2)
-WHERE sale_id = '97139146';
+CREATE TABLE currency_conversion_alerts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_id text NOT NULL,
+  platform text NOT NULL,
+  sale_id text,
+  original_currency text NOT NULL,
+  original_value numeric NOT NULL,
+  converted_value numeric NOT NULL,
+  conversion_rate numeric NOT NULL DEFAULT 1,
+  conversion_source text NOT NULL DEFAULT 'none',
+  alert_type text NOT NULL,
+  resolved boolean NOT NULL DEFAULT false,
+  resolved_by uuid,
+  resolved_at timestamptz,
+  client_id uuid,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE currency_conversion_alerts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Masters and admins can view alerts"
+  ON currency_conversion_alerts FOR SELECT
+  USING (has_role(auth.uid(), 'master') OR has_role(auth.uid(), 'admin'));
+
+CREATE POLICY "Masters can update alerts"
+  ON currency_conversion_alerts FOR UPDATE
+  USING (has_role(auth.uid(), 'master'));
+
+CREATE POLICY "System can insert alerts"
+  ON currency_conversion_alerts FOR INSERT
+  WITH CHECK (true);
 ```
 
-Resultado esperado: `sale_value` passa de 12.260,21 para **203,52 USD**.
+### Fluxo de dados
 
-### 2. Melhorar o conversor de moedas para evitar recorrencia
+O hook `useCurrencyOverview` faz queries agregadas diretas nas tabelas `transactions` e `eduzz_transactions`, agrupando por `original_currency` e contando totais. Nao precisa de tabela nova para isso.
 
-Ajustar `supabase/functions/_shared/currency-converter.ts` para que, quando todas as APIs falham, o fallback com taxas estaticas seja tentado **antes** de retornar o valor sem conversao. Atualmente, o fallback estatico so funciona quando a API Frankfurter falha, mas se a moeda nao e suportada pela Frankfurter e a ExchangeRate tambem falha, o codigo pula o fallback estatico e retorna o valor cru.
-
-**Correcao:** mover a verificacao de `FALLBACK_RATES_TO_USD` para **depois** de todas as tentativas de API, garantindo que sempre sera usado como ultima opcao antes de retornar sem conversao.
-
-Na verdade, revisando o codigo, o fluxo atual ja e:
-1. Tenta Frankfurter
-2. Usa fallback estatico se disponivel
-3. Tenta ExchangeRate API
-4. Retorna sem conversao
-
-O fallback estatico (passo 2) ja cobre DOP. Entao o problema foi provavelmente um caso raro onde a Frankfurter retornou OK mas sem a taxa DOP, e o fallback nao foi acionado corretamente. Para prevenir isso, podemos adicionar um log de alerta quando o valor retornado e igual ao original (indicando falha de conversao).
-
-## Detalhes tecnicos
-
-### Arquivo editado
-- `supabase/functions/_shared/currency-converter.ts` - Adicionar validacao extra e log de alerta
-
-### Operacao de banco
-- UPDATE simples em 1 registro: `eduzz_transactions` onde `sale_id = '97139146'`
-
+O hook `useCurrencyAlerts` busca da tabela `currency_conversion_alerts` os alertas pendentes e permite resolve-los via mutation.
