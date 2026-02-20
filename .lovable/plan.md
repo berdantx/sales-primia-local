@@ -1,90 +1,65 @@
 
-
-# Painel do Coprodutor
+# Painel de Coprodução para Master: Seletor de Coprodutor
 
 ## Resumo
 
-Criar uma pagina dedicada `/coproduction` acessivel a qualquer usuario que seja coprodutor de pelo menos um cliente. A pagina mostra todas as comissoes do usuario logado, detalhadas por produto e por canal de venda (Hotmart, TMB, Eduzz).
+Quando o usuario logado tiver role `master`, a pagina `/coproduction` deixa de mostrar apenas as coproducoes do proprio usuario e passa a listar **todos os coprodutores do sistema**, com um seletor (dropdown) para escolher qual coprodutor visualizar. Isso permite ao master acompanhar as comissoes de qualquer coprodutor.
 
 ---
 
-## Layout da Pagina
+## Comportamento
+
+- **Usuario master**: Ve um dropdown no topo da pagina com todos os coprodutores cadastrados. Ao selecionar um, a pagina exibe as comissoes daquele coprodutor (mesma tabela por cliente/produto/plataforma que ja existe).
+- **Usuario comum (coprodutor)**: Comportamento atual permanece inalterado -- ve apenas suas proprias coproducoes.
+
+---
+
+## Layout (apenas para master)
 
 ```text
 +------------------------------------------------------+
-| Minhas Coproducoes                                    |
-| Acompanhe suas comissoes por produto e canal          |
+| Coproducoes                                           |
+| Visualize comissoes por coprodutor                    |
 +------------------------------------------------------+
-| Periodo: [Ultimo dia | 7d | 30d | 90d | Tudo]       |
+| Coprodutor: [v Bruno Vaz (berdantx@gmail.com)   ]    |
 +------------------------------------------------------+
-|                                                       |
-| [Card Total] Total de comissoes no periodo: R$ X.XXX  |
-|                                                       |
+| Periodo: [1d | 7d | 30d | 90d | 1 ano | Tudo]       |
 +------------------------------------------------------+
-| Cliente: Paulo Vieira                                 |
-|   Taxa   | Produto        | Hotmart | TMB  | Eduzz   |
-|   30%    | Curso X        | R$ 900  | R$300| R$ 0    |
-|   20%    | Mentoria Y     | R$ 400  | R$ 0 | R$200   |
-|   Subtotal Paulo Vieira:  R$ 1.800                    |
-+------------------------------------------------------+
-| Cliente: Maria Silva                                  |
-|   15%    | Produto A      | R$ 150  | R$ 0 | R$ 0    |
-|   Subtotal Maria Silva:  R$ 150                       |
+| [KPI Total] ...                                       |
+| [Tabelas por cliente/produto] ...                     |
 +------------------------------------------------------+
 ```
 
 ---
 
-## Funcionalidades
-
-1. **Filtro de periodo**: Mesmo seletor usado no Dashboard (1d, 7d, 30d, 90d, 365d, tudo, personalizado)
-2. **Agrupamento por cliente**: Um accordion/card por cliente onde o usuario e coprodutor
-3. **Tabela por produto**: Para cada cliente, mostra cada produto com a taxa e o valor de comissao separado por plataforma (Hotmart, TMB, Eduzz)
-4. **KPI total**: Card no topo com o total geral de comissoes no periodo
-5. **Indicador por plataforma**: Colunas separadas para cada canal de venda
-
----
-
 ## Detalhes Tecnicos
 
-### Novo arquivo: `src/pages/Coproduction.tsx`
+### Novo hook: `useAllCoproducers()`
 
-Pagina principal do painel. Usa:
-- `useMyCoproductions()` (novo hook) para buscar TODAS as coproducoes do usuario logado (em todos os clientes)
-- Para cada coproducao, busca transacoes agrupadas por produto E por plataforma
-- Calcula comissao = valor_vendas * (taxa / 100)
+Busca todos os coprodutores ativos do sistema (apenas para masters). Retorna lista com `userId`, `userName`, `userEmail` para popular o dropdown.
 
-### Novo hook: `useMyCoproductions()` (sem clientId)
+Query: busca `client_coproducers` (todos, sem filtro de user_id) + join com `profiles` para nomes. Agrupado por `user_id` para evitar duplicatas (um usuario pode ser coprodutor de varios clientes).
 
-Diferente do `useMyCoproduction(clientId)` existente que filtra por um cliente, este novo hook:
-1. Busca todos os registros de `client_coproducers` do usuario logado (ativos)
-2. Busca todas as `coproducer_product_rates` associadas
-3. Busca o nome do cliente via join/lookup em `clients`
-4. Retorna array de `{ clientId, clientName, rates[] }`
+RLS ja permite isso: masters tem policy `FOR ALL` na tabela `client_coproducers`.
 
-### Novo hook: `useCoproducerCommissions(coproductions, filters)`
+### Novo hook: `useAllCoproductionsForUser(userId)`
 
-Recebe as coproducoes e filtros de periodo. Para cada cliente:
-1. Busca transacoes de Hotmart, TMB e Eduzz no periodo
-2. Agrupa por produto
-3. Calcula comissao por produto por plataforma
+Variante do `useMyCoproductions` existente, mas recebe um `userId` como parametro em vez de usar o usuario logado. Busca coproducoes de qualquer usuario (para uso pelo master).
 
-### Alteracoes no sidebar (`AppSidebar.tsx`)
+### Alteracoes em `src/pages/Coproduction.tsx`
 
-Adicionar item "Coprodução" no grupo "Visao Geral" com icone `Handshake`, visivel para roles `['master', 'admin', 'user']`.
+1. Importar `useUserRole` para detectar se e master
+2. Se master: renderizar um `Select` (dropdown) com os coprodutores disponveis
+3. Estado `selectedUserId`: quando master, usa o coprodutor selecionado no dropdown; quando usuario comum, usa `user.id`
+4. Passar `selectedUserId` para os hooks de coproducao
+5. Titulo e descricao adaptados: "Coproducoes" (sem "Minhas") quando master
 
-### Alteracoes no router (`App.tsx`)
+### Alteracoes em `src/hooks/useCoproducerCommissions.ts`
 
-Adicionar rota `/coproduction` apontando para a nova pagina. Nao precisa de `ProtectedRoute` com role especifico pois qualquer usuario pode ser coprodutor - a pagina mostra estado vazio se nao houver coproducoes.
-
-### Arquivos criados
-
-- `src/pages/Coproduction.tsx` - Pagina do painel
-- `src/hooks/useCoproducerCommissions.ts` - Hook de calculo de comissoes por produto e plataforma
+1. Adicionar `useAllCoproducers()` -- lista todos os coprodutores distintos (user_id + nome + email)
+2. Adicionar `useAllCoproductionsForUser(userId)` -- igual a `useMyCoproductions` mas sem depender de `auth.uid()`
 
 ### Arquivos editados
 
-- `src/hooks/useCoproducers.ts` - Adicionar `useMyCoproductions()` (busca todos os clientes)
-- `src/components/layout/AppSidebar.tsx` - Adicionar item de menu "Coprodução"
-- `src/App.tsx` - Adicionar rota `/coproduction`
-
+- `src/pages/Coproduction.tsx` -- Adicionar seletor de coprodutor e logica condicional por role
+- `src/hooks/useCoproducerCommissions.ts` -- Adicionar hooks `useAllCoproducers` e `useAllCoproductionsForUser`
