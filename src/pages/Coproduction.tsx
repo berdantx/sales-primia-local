@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { Handshake, DollarSign, TrendingUp } from 'lucide-react';
+import { Handshake, DollarSign, TrendingUp, Users } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
-import { useMyCoproductions, useCoproducerCommissions } from '@/hooks/useCoproducerCommissions';
+import { useUserRole } from '@/hooks/useUserRole';
+import {
+  useMyCoproductions,
+  useCoproducerCommissions,
+  useAllCoproducers,
+  useAllCoproductionsForUser,
+} from '@/hooks/useCoproducerCommissions';
 
 type PeriodKey = '1d' | '7d' | '30d' | '90d' | '365d' | 'all';
 
@@ -26,9 +33,27 @@ const fmt = (v: number) =>
 
 export default function Coproduction() {
   const { user } = useAuth();
+  const { isMaster } = useUserRole();
   const [period, setPeriod] = useState<PeriodKey>('30d');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const { data: coproductions, isLoading: loadingCoprod } = useMyCoproductions(user?.id ?? null);
+  // Master: load all coproducers for the dropdown
+  const { data: allCoproducers, isLoading: loadingAll } = useAllCoproducers(isMaster);
+
+  // Determine which userId drives the data
+  const effectiveUserId = isMaster ? selectedUserId : (user?.id ?? null);
+
+  // Data hooks — master uses useAllCoproductionsForUser, regular user uses useMyCoproductions
+  const { data: masterCoproductions, isLoading: loadingMasterCoprod } = useAllCoproductionsForUser(
+    isMaster ? effectiveUserId : null
+  );
+  const { data: myCoproductions, isLoading: loadingMyCoprod } = useMyCoproductions(
+    isMaster ? null : (user?.id ?? null)
+  );
+
+  const coproductions = isMaster ? masterCoproductions : myCoproductions;
+  const loadingCoprod = isMaster ? loadingMasterCoprod : loadingMyCoprod;
+
   const { data: commissions, isLoading: loadingComm } = useCoproducerCommissions(coproductions, period);
 
   const isLoading = loadingCoprod || loadingComm;
@@ -40,12 +65,49 @@ export default function Coproduction() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Handshake className="h-6 w-6 text-primary" />
-            Minhas Coproduções
+            {isMaster ? 'Coproduções' : 'Minhas Coproduções'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Acompanhe suas comissões por produto e canal de venda
+            {isMaster
+              ? 'Visualize comissões por coprodutor'
+              : 'Acompanhe suas comissões por produto e canal de venda'}
           </p>
         </div>
+
+        {/* Master: coproducer selector */}
+        {isMaster && (
+          <Card>
+            <CardContent className="flex items-center gap-4 py-4">
+              <div className="rounded-full bg-primary/10 p-2">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 max-w-sm">
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
+                  Coprodutor
+                </label>
+                {loadingAll ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select
+                    value={selectedUserId ?? ''}
+                    onValueChange={(v) => setSelectedUserId(v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um coprodutor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allCoproducers?.map((c) => (
+                        <SelectItem key={c.userId} value={c.userId}>
+                          {c.userName}{c.userEmail ? ` (${c.userEmail})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Period filter */}
         <div className="flex flex-wrap gap-2">
@@ -62,43 +124,57 @@ export default function Coproduction() {
         </div>
 
         {/* KPI Total */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="flex items-center gap-4 py-6">
-            <div className="rounded-full bg-primary/10 p-3">
-              <DollarSign className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total de comissões no período</p>
-              {isLoading ? (
-                <Skeleton className="h-8 w-40 mt-1" />
-              ) : (
-                <p className="text-2xl font-bold">{fmt(commissions?.grandTotal ?? 0)}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {(effectiveUserId || !isMaster) && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="flex items-center gap-4 py-6">
+              <div className="rounded-full bg-primary/10 p-3">
+                <DollarSign className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total de comissões no período</p>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-40 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold">{fmt(commissions?.grandTotal ?? 0)}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Master without selection */}
+        {isMaster && !selectedUserId && !loadingAll && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                Selecione um coprodutor acima para visualizar suas comissões.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Empty state */}
-        {!isLoading && (!coproductions?.length || !commissions?.clients?.length) && (
+        {!isLoading && effectiveUserId && (!coproductions?.length || !commissions?.clients?.length) && (
           <Card>
             <CardContent className="py-12 text-center">
               <Handshake className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">
-                Você não possui coproduções ativas no momento.
+                {isMaster
+                  ? 'Este coprodutor não possui coproduções ativas no momento.'
+                  : 'Você não possui coproduções ativas no momento.'}
               </p>
             </CardContent>
           </Card>
         )}
 
         {/* Loading state */}
-        {isLoading && (
+        {isLoading && effectiveUserId && (
           <div className="space-y-4">
             {[1, 2].map(i => (
               <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-48" />
-                </CardHeader>
-                <CardContent>
+                <CardContent className="py-6">
+                  <Skeleton className="h-6 w-48 mb-4" />
                   <Skeleton className="h-24 w-full" />
                 </CardContent>
               </Card>
