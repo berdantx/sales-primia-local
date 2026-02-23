@@ -62,7 +62,7 @@ export function LeadsSummaryDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Users className="h-5 w-5 text-primary" />
-            Captação de Leads: {clientName || 'Todos'} - {year}
+            Captação de Leads: {clientName || 'Todos'}
           </DialogTitle>
         </DialogHeader>
 
