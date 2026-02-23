@@ -202,7 +202,7 @@ export default function Dashboard() {
     const usdConvertedToBRL = dollarRate ? hotmartUSD * dollarRate.rate : 0;
     
     return {
-      projectionValueForGoal: combinedProjectedBRL + usdConvertedToBRL,
+      projectionValueForGoal: Math.max(combinedProjectedBRL + usdConvertedToBRL, primaryGoalSales),
       platformBreakdown: {
         hotmartBRL: hotmartRealBRL,
         hotmartPendingBRL,
@@ -212,7 +212,7 @@ export default function Dashboard() {
         usdConvertedBRL: usdConvertedToBRL,
       },
     };
-  }, [primaryGoal, projectionStats, hotmartStats, tmbStats, eduzzStats, dollarRate]);
+  }, [primaryGoal, projectionStats, hotmartStats, tmbStats, eduzzStats, dollarRate, primaryGoalSales]);
 
   // Calculate transaction counts by platform
   const transactionCounts = useMemo(() => ({
