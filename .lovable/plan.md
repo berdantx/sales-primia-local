@@ -1,72 +1,35 @@
 
-# Modal de Resumo na Pagina de Leads
+# Filtro de Data no Modal de Resumo de Leads
 
-## Resumo
+## Problema Atual
 
-Ao acessar a pagina `/leads`, um modal (Dialog) sera exibido automaticamente com um resumo rapido da captacao de leads, incluindo:
+O modal de resumo usa os dados filtrados pela pagina (ultimos 30 dias por padrao). O usuario quer que o modal tenha seu proprio filtro de data, com padrao "todo o periodo" (sem restricao de datas).
 
-1. **Titulo dinamico**: "Captacao de Leads: [Nome do Cliente] - [Ano]"
-2. **Resumo por tipo de trafego**: Pago, Organico e Direto com quantidade e porcentagem
-3. **Top 5 anuncios que mais convertem** (usando o RPC `get_top_ads_by_conversion` ja existente)
+## Solucao
 
-O modal aparece uma vez ao carregar a pagina. O usuario fecha clicando em "Fechar" ou no X.
-
----
-
-## Layout do Modal
-
-```text
-+--------------------------------------------------+
-| Captacao de Leads: Camila Vieira - 2026      [X]  |
-+--------------------------------------------------+
-|                                                    |
-| Trafego Pago:      71.313  (86.4%)                |
-| Trafego Organico:  11.269  (13.6%)                |
-| Trafego Direto:         1  (0.0%)                 |
-|                                                    |
-| ------------------------------------------------- |
-|                                                    |
-| Top 5 - Anuncios que mais convertem                |
-|                                                    |
-| 1. [nome do anuncio] - X convertidos (Y%)         |
-| 2. [nome do anuncio] - X convertidos (Y%)         |
-| 3. [nome do anuncio] - X convertidos (Y%)         |
-| 4. [nome do anuncio] - X convertidos (Y%)         |
-| 5. [nome do anuncio] - X convertidos (Y%)         |
-|                                                    |
-|                              [Fechar]              |
-+--------------------------------------------------+
-```
-
----
+Adicionar um `DateRangePicker` dentro do `LeadsSummaryDialog` com estado local proprio. Por padrao, o range fica `undefined` (todo o periodo). O dialog passa a buscar seus proprios dados internamente em vez de receber via props.
 
 ## Detalhes Tecnicos
 
-### Novo componente: `src/components/leads/LeadsSummaryDialog.tsx`
+### 1. Refatorar `LeadsSummaryDialog.tsx`
 
-Props:
-- `open: boolean`
-- `onOpenChange: (open: boolean) => void`
-- `stats: LeadStatsOptimized | undefined` (dados de trafego ja carregados)
-- `clientName: string` (nome do cliente selecionado)
-- `topConversionAds: ConversionAdItem[]` (top 5 anuncios por conversao)
-- `isLoadingAds: boolean`
+- Adicionar estado local `dateRange` (default: `undefined` = todo periodo)
+- Importar e renderizar o `DateRangePicker` abaixo do titulo
+- Mover as chamadas de dados para dentro do componente:
+  - `useLeadStatsOptimized({ clientId, startDate, endDate })` para dados de trafego
+  - `useTopAdsByConversion({ clientId, startDate, endDate, limit: 5 })` para top 5 anuncios
+- Atualizar o titulo para mostrar o periodo selecionado ou "Todo o Periodo"
 
-O componente usa o `Dialog` do shadcn/ui e renderiza:
-1. Titulo com nome do cliente + ano atual
-2. Tres linhas com trafego pago/organico/direto (extraidas de `stats.byTrafficType`)
-3. Separador
-4. Lista dos top 5 anuncios por conversao com nome, quantidade de convertidos e taxa
+Props simplificadas:
+- `open`, `onOpenChange`, `clientId`, `clientName`
 
-### Alteracoes em `src/pages/Leads.tsx`
+### 2. Atualizar `Leads.tsx`
 
-1. Adicionar estado `const [showSummary, setShowSummary] = useState(true)`
-2. Buscar o nome do cliente selecionado a partir de `useClients()` + `clientId`
-3. Chamar `useTopAdsByConversion` com `limit: 5` para o modal (ja existe o hook)
-4. Renderizar `<LeadsSummaryDialog>` passando os dados
-5. O modal abre automaticamente quando os dados de stats carregam (`isLoadingStats === false`)
+- Remover as props `stats`, `topConversionAds`, `isLoadingAds` do componente
+- Remover o hook `useTopAdsByConversion` que era usado exclusivamente para o modal
+- Passar apenas `clientId` e `clientName` para o dialog
 
-### Arquivos
+### Arquivos alterados
 
-- **Novo**: `src/components/leads/LeadsSummaryDialog.tsx`
-- **Editado**: `src/pages/Leads.tsx` (adicionar estado, importar componente, renderizar modal)
+- `src/components/leads/LeadsSummaryDialog.tsx` — refatorar para buscar dados internamente + adicionar DateRangePicker
+- `src/pages/Leads.tsx` — simplificar props passadas ao dialog
