@@ -95,7 +95,7 @@ export default function Coproduction() {
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um coprodutor" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background border z-50">
                       {allCoproducers?.map((c) => (
                         <SelectItem key={c.userId} value={c.userId}>
                           {c.userName}{c.userEmail ? ` (${c.userEmail})` : ''}
