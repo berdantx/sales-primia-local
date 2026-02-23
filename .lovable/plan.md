@@ -1,21 +1,31 @@
 
-# Corrigir Layout do Modal de Resumo de Leads
+# Corrigir Projeção de Faturamento menor que Faturamento Atual
 
-## Problemas identificados no print
-1. O conteudo do modal ultrapassa a altura da tela sem scroll, empurrando o botao "Fechar" para fora da area visivel
-2. Os numeros de trafego (ex: "71.31") estao sendo cortados por falta de espaco
-3. Os nomes longos dos anuncios ocupam muito espaco horizontal
+## Problema
+O card "Projeção Faturamento" (R$ 1.188.723,50) esta mostrando um valor menor que "Faturamento Atual" (R$ 1.227.716,09). Isso nao faz sentido logicamente, pois a projecao inclui recorrencias futuras e deveria ser sempre maior ou igual ao faturamento real.
+
+## Causa Raiz
+A projecao de faturamento e calculada usando uma funcao de banco de dados (`get_transaction_stats_with_projection`) que:
+1. Soma `projected_value` apenas da tabela `transactions` (Hotmart), sem aplicar a mesma logica de deduplicacao "Recuperador Inteligente" usada no calculo de faturamento atual
+2. O faturamento atual usa uma logica diferente de agregacao (com deduplicacao), o que pode resultar em valores ligeiramente diferentes
+
+Essa discrepancia entre as duas formulas de calculo permite que a projecao fique abaixo do real em certos cenarios.
 
 ## Solucao
+Aplicar uma regra simples de seguranca: **a projecao nunca pode ser menor que o faturamento atual**. Se o valor projetado calculado for inferior ao total vendido, usamos o total vendido como piso.
 
-### Arquivo: `src/components/leads/LeadsSummaryDialog.tsx`
+### Arquivo: `src/pages/Dashboard.tsx`
 
-1. Adicionar `max-h-[80vh]` e `overflow-y-auto` no `DialogContent` para que o conteudo role quando ultrapassar a altura da tela
-2. Usar `flex-shrink-0` nos numeros de trafego para evitar que sejam cortados
-3. Garantir que os nomes dos anuncios usem `truncate` corretamente (ja esta, mas o container precisa de `overflow-hidden`)
-4. Manter o `DialogFooter` fixo na parte inferior
+Na linha onde `projectionValueForGoal` e calculado (linha ~205), adicionar um `Math.max` para garantir que o valor de projecao nunca seja menor que `primaryGoalSales`:
+
+```
+projectionValueForGoal: Math.max(combinedProjectedBRL + usdConvertedToBRL, primaryGoalSales)
+```
+
+Como `primaryGoalSales` e calculado antes de `projectionValueForGoal`, sera necessario reestruturar levemente o `useMemo` para ter acesso a esse valor, ou incluir a mesma logica de calculo do total vendido dentro do memo de projecao.
 
 ### Detalhes tecnicos
-- Adicionar classe `max-h-[80vh] overflow-y-auto` ao `DialogContent`
-- Nos itens de trafego, adicionar `whitespace-nowrap` e `flex-shrink-0` no span dos numeros para evitar quebra
+- Mover o calculo de `primaryGoalSales` para antes do memo de projecao (ja esta assim)
+- Adicionar `primaryGoalSales` como dependencia do `useMemo` de projecao
+- Usar `Math.max(projectionCalculated, primaryGoalSales)` como valor final
 - Nenhuma alteracao de banco de dados necessaria
