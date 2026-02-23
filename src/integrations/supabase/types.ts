@@ -2011,6 +2011,14 @@ export type Database = {
         }
         Returns: Json
       }
+      get_lead_summary_stats: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
       get_leads_paginated: {
         Args: {
           p_client_id?: string
