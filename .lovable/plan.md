@@ -1,35 +1,38 @@
 
-# Filtro de Data no Modal de Resumo de Leads
+# Carregar Leads de Todo o Periodo no Modal de Resumo
 
-## Problema Atual
+## Problema
 
-O modal de resumo usa os dados filtrados pela pagina (ultimos 30 dias por padrao). O usuario quer que o modal tenha seu proprio filtro de data, com padrao "todo o periodo" (sem restricao de datas).
+A RPC `get_lead_stats` faz **12 varreduras separadas** na tabela `leads` (136k registros), causando **timeout** quando nao ha filtro de data. O modal de resumo so precisa de `total` e `by_traffic_type`, mas esta chamando a RPC pesada completa.
 
 ## Solucao
 
-Adicionar um `DateRangePicker` dentro do `LeadsSummaryDialog` com estado local proprio. Por padrao, o range fica `undefined` (todo o periodo). O dialog passa a buscar seus proprios dados internamente em vez de receber via props.
+1. Criar uma nova RPC leve (`get_lead_summary_stats`) que retorna apenas o total e a distribuicao por tipo de trafego em uma unica varredura
+2. Criar um hook dedicado (`useLeadSummaryStats`) para o modal
+3. Atualizar o `LeadsSummaryDialog` para usar o hook leve em vez do pesado
 
 ## Detalhes Tecnicos
 
-### 1. Refatorar `LeadsSummaryDialog.tsx`
+### 1. Nova RPC: `get_lead_summary_stats` (Migration SQL)
 
-- Adicionar estado local `dateRange` (default: `undefined` = todo periodo)
-- Importar e renderizar o `DateRangePicker` abaixo do titulo
-- Mover as chamadas de dados para dentro do componente:
-  - `useLeadStatsOptimized({ clientId, startDate, endDate })` para dados de trafego
-  - `useTopAdsByConversion({ clientId, startDate, endDate, limit: 5 })` para top 5 anuncios
-- Atualizar o titulo para mostrar o periodo selecionado ou "Todo o Periodo"
+Uma funcao otimizada que faz **uma unica varredura** na tabela, retornando apenas:
+- `total`: contagem total de leads
+- `by_traffic_type`: contagem agrupada por tipo de trafego (paid, organic, direct)
 
-Props simplificadas:
-- `open`, `onOpenChange`, `clientId`, `clientName`
+Aproveita o indice existente `idx_leads_client_date_range (client_id, created_at)`.
 
-### 2. Atualizar `Leads.tsx`
+### 2. Novo hook: `src/hooks/useLeadSummaryStats.ts`
 
-- Remover as props `stats`, `topConversionAds`, `isLoadingAds` do componente
-- Remover o hook `useTopAdsByConversion` que era usado exclusivamente para o modal
-- Passar apenas `clientId` e `clientName` para o dialog
+Hook leve que chama a RPC `get_lead_summary_stats` e retorna `{ total, byTrafficType }`. Usado exclusivamente pelo modal de resumo.
 
-### Arquivos alterados
+### 3. Atualizar `src/components/leads/LeadsSummaryDialog.tsx`
 
-- `src/components/leads/LeadsSummaryDialog.tsx` — refatorar para buscar dados internamente + adicionar DateRangePicker
-- `src/pages/Leads.tsx` — simplificar props passadas ao dialog
+- Substituir `useLeadStatsOptimized` por `useLeadSummaryStats` (mais leve)
+- Manter o `DateRangePicker` e o filtro opcional
+- Manter `useTopAdsByConversion` para a secao de top 5 anuncios
+
+### Arquivos
+
+- **Nova migration**: Criar RPC `get_lead_summary_stats`
+- **Novo**: `src/hooks/useLeadSummaryStats.ts`
+- **Editado**: `src/components/leads/LeadsSummaryDialog.tsx` (trocar hook)
