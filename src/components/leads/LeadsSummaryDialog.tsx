@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, Megaphone, Users, TrendingUp } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { useLeadStatsOptimized } from '@/hooks/useLeadStatsOptimized';
+import { useLeadSummaryStats } from '@/hooks/useLeadSummaryStats';
 import { useTopAdsByConversion } from '@/hooks/useTopAdsByConversion';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 
@@ -39,7 +39,7 @@ export function LeadsSummaryDialog({
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const year = new Date().getFullYear();
 
-  const { data: stats, isLoading: isLoadingStats } = useLeadStatsOptimized(open ? {
+  const { data: stats, isLoading: isLoadingStats } = useLeadSummaryStats(open ? {
     clientId,
     startDate: dateRange?.from,
     endDate: dateRange?.to,
