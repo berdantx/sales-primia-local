@@ -1,18 +1,19 @@
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy, Megaphone, Users, TrendingUp } from 'lucide-react';
-import { LeadStatsOptimized } from '@/hooks/useLeadStatsOptimized';
-import { ConversionAdItem } from '@/hooks/useTopAdsByConversion';
+import { DateRange } from 'react-day-picker';
+import { useLeadStatsOptimized } from '@/hooks/useLeadStatsOptimized';
+import { useTopAdsByConversion } from '@/hooks/useTopAdsByConversion';
+import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 
 interface LeadsSummaryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  stats: LeadStatsOptimized | undefined;
+  clientId: string | null | undefined;
   clientName: string;
-  topConversionAds: ConversionAdItem[];
-  isLoadingAds: boolean;
 }
 
 const formatNumber = (n: number) =>
@@ -32,12 +33,25 @@ const trafficOrder = ['paid', 'organic', 'direct'];
 export function LeadsSummaryDialog({
   open,
   onOpenChange,
-  stats,
+  clientId,
   clientName,
-  topConversionAds,
-  isLoadingAds,
 }: LeadsSummaryDialogProps) {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const year = new Date().getFullYear();
+
+  const { data: stats, isLoading: isLoadingStats } = useLeadStatsOptimized(open ? {
+    clientId,
+    startDate: dateRange?.from,
+    endDate: dateRange?.to,
+  } : undefined);
+
+  const { data: topConversionAds = [], isLoading: isLoadingAds } = useTopAdsByConversion(open ? {
+    clientId,
+    startDate: dateRange?.from,
+    endDate: dateRange?.to,
+    limit: 5,
+  } : undefined);
+
   const total = stats?.total || 0;
   const byTrafficType = stats?.byTrafficType || {};
 
@@ -51,40 +65,62 @@ export function LeadsSummaryDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Traffic breakdown */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-            <Megaphone className="h-4 w-4" />
-            Resumo por Tráfego
-          </h3>
-          <div className="space-y-2">
-            {trafficOrder.map((key) => {
-              const count = byTrafficType[key] || 0;
-              const pct = formatPercent(count, total);
-              const barWidth = total > 0 ? (count / total) * 100 : 0;
-              return (
-                <div key={key} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{trafficLabels[key]}</span>
-                    <span className="tabular-nums">
-                      {formatNumber(count)}{' '}
-                      <span className="text-muted-foreground">({pct}%)</span>
-                    </span>
-                  </div>
-                  <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${barWidth}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground text-right">
-            Total: {formatNumber(total)} leads
-          </p>
+        {/* Date filter */}
+        <div className="flex items-center gap-2">
+          <DateRangePicker
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
+            className="flex-1"
+          />
+          {dateRange && (
+            <Button variant="ghost" size="sm" onClick={() => setDateRange(undefined)}>
+              Limpar
+            </Button>
+          )}
         </div>
+
+        {/* Traffic breakdown */}
+        {isLoadingStats ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+              <Megaphone className="h-4 w-4" />
+              Resumo por Tráfego
+            </h3>
+            <div className="space-y-2">
+              {trafficOrder.map((key) => {
+                const count = byTrafficType[key] || 0;
+                const pct = formatPercent(count, total);
+                const barWidth = total > 0 ? (count / total) * 100 : 0;
+                return (
+                  <div key={key} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{trafficLabels[key]}</span>
+                      <span className="tabular-nums">
+                        {formatNumber(count)}{' '}
+                        <span className="text-muted-foreground">({pct}%)</span>
+                      </span>
+                    </div>
+                    <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all"
+                        style={{ width: `${barWidth}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground text-right">
+              Total: {formatNumber(total)} leads
+            </p>
+          </div>
+        )}
 
         <Separator />
 
