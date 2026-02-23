@@ -1,38 +1,42 @@
 
-# Carregar Leads de Todo o Periodo no Modal de Resumo
 
-## Problema
+# Corrigir Modal de Leads - Criar RPC Leve para Evitar Timeout
 
-A RPC `get_lead_stats` faz **12 varreduras separadas** na tabela `leads` (136k registros), causando **timeout** quando nao ha filtro de data. O modal de resumo so precisa de `total` e `by_traffic_type`, mas esta chamando a RPC pesada completa.
+## Problema Confirmado
 
-## Solucao
+A RPC `get_lead_stats` esta dando **timeout** (erro 57014) ao tentar varrer 136k+ leads sem filtro de data. O modal nao carrega porque depende dessa RPC pesada.
 
-1. Criar uma nova RPC leve (`get_lead_summary_stats`) que retorna apenas o total e a distribuicao por tipo de trafego em uma unica varredura
-2. Criar um hook dedicado (`useLeadSummaryStats`) para o modal
-3. Atualizar o `LeadsSummaryDialog` para usar o hook leve em vez do pesado
+## Solucao (3 passos)
 
-## Detalhes Tecnicos
+### 1. Criar RPC leve no banco: `get_lead_summary_stats`
 
-### 1. Nova RPC: `get_lead_summary_stats` (Migration SQL)
-
-Uma funcao otimizada que faz **uma unica varredura** na tabela, retornando apenas:
+Nova funcao PostgreSQL que faz **uma unica varredura** retornando apenas:
 - `total`: contagem total de leads
-- `by_traffic_type`: contagem agrupada por tipo de trafego (paid, organic, direct)
+- `by_traffic_type`: contagem por tipo de trafego (paid, organic, direct)
 
-Aproveita o indice existente `idx_leads_client_date_range (client_id, created_at)`.
+```sql
+CREATE OR REPLACE FUNCTION get_lead_summary_stats(
+  p_client_id uuid DEFAULT NULL,
+  p_start_date timestamptz DEFAULT NULL,
+  p_end_date timestamptz DEFAULT NULL
+) RETURNS jsonb AS $$
+  -- single pass: COUNT + GROUP BY traffic_type
+  -- usa indice idx_leads_client_date_range
+$$
+```
 
 ### 2. Novo hook: `src/hooks/useLeadSummaryStats.ts`
 
-Hook leve que chama a RPC `get_lead_summary_stats` e retorna `{ total, byTrafficType }`. Usado exclusivamente pelo modal de resumo.
+Hook dedicado que chama `get_lead_summary_stats` em vez de `get_lead_stats`. Retorna `{ total, byTrafficType }`.
 
 ### 3. Atualizar `src/components/leads/LeadsSummaryDialog.tsx`
 
-- Substituir `useLeadStatsOptimized` por `useLeadSummaryStats` (mais leve)
-- Manter o `DateRangePicker` e o filtro opcional
-- Manter `useTopAdsByConversion` para a secao de top 5 anuncios
+- Trocar `useLeadStatsOptimized` por `useLeadSummaryStats`
+- Manter `DateRangePicker` e `useTopAdsByConversion` sem alteracao
 
-### Arquivos
+## Arquivos
 
-- **Nova migration**: Criar RPC `get_lead_summary_stats`
+- **Migration SQL**: criar funcao `get_lead_summary_stats`
 - **Novo**: `src/hooks/useLeadSummaryStats.ts`
-- **Editado**: `src/components/leads/LeadsSummaryDialog.tsx` (trocar hook)
+- **Editado**: `src/components/leads/LeadsSummaryDialog.tsx` (trocar o hook)
+
