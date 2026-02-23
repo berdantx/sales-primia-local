@@ -3,10 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy, Megaphone, Users, TrendingUp } from 'lucide-react';
+import { Trophy, Megaphone, Users } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { useLeadSummaryStats } from '@/hooks/useLeadSummaryStats';
-import { useTopAdsByConversion } from '@/hooks/useTopAdsByConversion';
+import { useTopAdsOptimized } from '@/hooks/useTopAdsOptimized';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 
 interface LeadsSummaryDialogProps {
@@ -45,12 +45,13 @@ export function LeadsSummaryDialog({
     endDate: dateRange?.to,
   } : undefined);
 
-  const { data: topConversionAds = [], isLoading: isLoadingAds } = useTopAdsByConversion(open ? {
+  const { data: topAdsData, isLoading: isLoadingAds } = useTopAdsOptimized(open ? {
     clientId,
     startDate: dateRange?.from,
     endDate: dateRange?.to,
     limit: 5,
   } : undefined);
+  const topAds = topAdsData?.items || [];
 
   const total = stats?.total || 0;
   const byTrafficType = stats?.byTrafficType || {};
@@ -128,7 +129,7 @@ export function LeadsSummaryDialog({
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
             <Trophy className="h-4 w-4 text-yellow-500" />
-            Top 5 — Anúncios que mais convertem
+            Top 5 — Anúncios que mais trouxeram leads
           </h3>
 
           {isLoadingAds ? (
@@ -137,13 +138,13 @@ export function LeadsSummaryDialog({
                 <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>
-          ) : topConversionAds.length === 0 ? (
+          ) : topAds.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhum anúncio com conversões no período.
+              Nenhum anúncio encontrado no período.
             </p>
           ) : (
             <div className="space-y-2">
-              {topConversionAds.slice(0, 5).map((ad, index) => (
+              {topAds.map((ad, index) => (
                 <div
                   key={ad.name}
                   className="flex items-start gap-3 p-2.5 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
@@ -170,14 +171,10 @@ export function LeadsSummaryDialog({
                       {ad.name}
                     </p>
                     <div className="flex gap-3 text-xs text-muted-foreground mt-0.5">
-                      <span>{ad.totalLeads} leads</span>
                       <span className="font-semibold text-primary">
-                        {ad.convertedLeads} convertidos
+                        {formatNumber(ad.count)} leads
                       </span>
-                      <span className="flex items-center gap-0.5">
-                        <TrendingUp className="h-3 w-3" />
-                        {ad.conversionRate}%
-                      </span>
+                      <span>{ad.percentage.toFixed(1)}%</span>
                     </div>
                   </div>
                 </div>
