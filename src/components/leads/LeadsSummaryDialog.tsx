@@ -58,7 +58,7 @@ export function LeadsSummaryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Users className="h-5 w-5 text-primary" />
@@ -102,7 +102,7 @@ export function LeadsSummaryDialog({
                   <div key={key} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{trafficLabels[key]}</span>
-                      <span className="tabular-nums">
+                      <span className="tabular-nums whitespace-nowrap flex-shrink-0">
                         {formatNumber(count)}{' '}
                         <span className="text-muted-foreground">({pct}%)</span>
                       </span>
