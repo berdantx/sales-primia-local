@@ -1,42 +1,38 @@
 
+# Corrigir Porcentagem no Modal de Resumo de Leads
 
-# Corrigir Modal de Leads - Criar RPC Leve para Evitar Timeout
+## Problema
 
-## Problema Confirmado
+A RPC `get_lead_summary_stats` tem um bug no calculo do total. O `COUNT(*)` na query externa conta o **numero de linhas do subquery** (ou seja, o numero de grupos de trafego = 3), em vez da soma real dos leads.
 
-A RPC `get_lead_stats` esta dando **timeout** (erro 57014) ao tentar varrer 136k+ leads sem filtro de data. O modal nao carrega porque depende dessa RPC pesada.
+Resultado: `total = 3`, e a porcentagem e calculada como `46725 / 3 * 100 = 1557500%`.
 
-## Solucao (3 passos)
+## Solucao
 
-### 1. Criar RPC leve no banco: `get_lead_summary_stats`
-
-Nova funcao PostgreSQL que faz **uma unica varredura** retornando apenas:
-- `total`: contagem total de leads
-- `by_traffic_type`: contagem por tipo de trafego (paid, organic, direct)
+Corrigir a query para usar `SUM(cnt)` em vez de `COUNT(*)` na query externa:
 
 ```sql
-CREATE OR REPLACE FUNCTION get_lead_summary_stats(
-  p_client_id uuid DEFAULT NULL,
-  p_start_date timestamptz DEFAULT NULL,
-  p_end_date timestamptz DEFAULT NULL
-) RETURNS jsonb AS $$
-  -- single pass: COUNT + GROUP BY traffic_type
-  -- usa indice idx_leads_client_date_range
-$$
+SELECT
+  COALESCE(SUM(cnt), 0)::bigint,   -- era COUNT(*)
+  COALESCE(jsonb_object_agg(tt, cnt) FILTER (WHERE tt IS NOT NULL), '{}'::jsonb)
+INTO v_total, v_by_traffic
+FROM (
+  SELECT
+    COALESCE(l.traffic_type, 'direct') AS tt,
+    COUNT(*) AS cnt
+  FROM leads l
+  WHERE ...
+  GROUP BY COALESCE(l.traffic_type, 'direct')
+) sub;
 ```
 
-### 2. Novo hook: `src/hooks/useLeadSummaryStats.ts`
+## Detalhes Tecnicos
 
-Hook dedicado que chama `get_lead_summary_stats` em vez de `get_lead_stats`. Retorna `{ total, byTrafficType }`.
+### Migration SQL
 
-### 3. Atualizar `src/components/leads/LeadsSummaryDialog.tsx`
+Recriar a funcao `get_lead_summary_stats` com `SUM(cnt)` no lugar de `COUNT(*)`.
 
-- Trocar `useLeadStatsOptimized` por `useLeadSummaryStats`
-- Manter `DateRangePicker` e `useTopAdsByConversion` sem alteracao
+### Arquivos
 
-## Arquivos
-
-- **Migration SQL**: criar funcao `get_lead_summary_stats`
-- **Novo**: `src/hooks/useLeadSummaryStats.ts`
-- **Editado**: `src/components/leads/LeadsSummaryDialog.tsx` (trocar o hook)
-
+- **Nova migration SQL**: corrigir a funcao `get_lead_summary_stats` (trocar `COUNT(*)` por `SUM(cnt)`)
+- Nenhuma alteracao em arquivos frontend (o calculo de porcentagem no componente esta correto)
