@@ -6,6 +6,9 @@ import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useLeadsPaginated } from '@/hooks/useLeadsPaginated';
 import { useLeadStatsOptimized } from '@/hooks/useLeadStatsOptimized';
 import { useTopAdsOptimized } from '@/hooks/useTopAdsOptimized';
+import { useTopAdsByConversion } from '@/hooks/useTopAdsByConversion';
+import { useClients } from '@/hooks/useClients';
+import { LeadsSummaryDialog } from '@/components/leads/LeadsSummaryDialog';
 import { useLandingPageStats } from '@/hooks/useLandingPageStats';
 import { useLandingPageConversion } from '@/hooks/useLandingPageConversion';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
@@ -92,10 +95,24 @@ function Leads() {
   const [qualifiedFilter, setQualifiedFilter] = useState<string>('all');
   const [showCharts, setShowCharts] = useState(false);
   const [hideUnidentifiedGeo, setHideUnidentifiedGeo] = useState(false);
-  
+  const [showSummary, setShowSummary] = useState(true);
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
-  
+
+  // Data for summary dialog
+  const { data: clients } = useClients();
+  const clientName = useMemo(() => {
+    if (!clientId || !clients) return '';
+    return clients.find(c => c.id === clientId)?.name || '';
+  }, [clientId, clients]);
+
+  const { data: topConversionAds = [], isLoading: isLoadingConversionAds } = useTopAdsByConversion(isReady ? {
+    clientId,
+    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
+    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
+    limit: 5,
+  } : undefined);
+
 
   // Lazy load charts after initial render
   useEffect(() => {
@@ -360,6 +377,14 @@ function Leads() {
 
   return (
     <MainLayout>
+      <LeadsSummaryDialog
+        open={showSummary}
+        onOpenChange={setShowSummary}
+        stats={stats}
+        clientName={clientName}
+        topConversionAds={topConversionAds}
+        isLoadingAds={isLoadingConversionAds}
+      />
       <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <motion.div
