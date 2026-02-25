@@ -71,6 +71,7 @@ const menuGroups: MenuGroup[] = [
       { title: 'Cancelamentos TMB', url: '/tmb-cancellations', icon: Ban, roles: ['master', 'admin', 'user'] },
       { title: 'Eduzz', url: '/eduzz-transactions', icon: CreditCard, roles: ['master', 'admin', 'user'] },
       { title: 'Cancelamentos Eduzz', url: '/eduzz-cancellations', icon: Ban, roles: ['master', 'admin', 'user'] },
+      { title: 'Internacional', url: '/international-sales', icon: Globe, roles: ['master', 'admin', 'user'] },
     ]
   },
   {

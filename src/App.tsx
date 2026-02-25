@@ -35,6 +35,7 @@ import BackupDashboard from "./pages/BackupDashboard";
 import BackupTestHarness from "./pages/BackupTestHarness";
 import CorsDiagnostics from "./pages/CorsDiagnostics";
 import Coproduction from "./pages/Coproduction";
+import InternationalSales from "./pages/InternationalSales";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -96,6 +97,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/coproduction" element={<Coproduction />} />
+            <Route path="/international-sales" element={<InternationalSales />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/leads/funnel" element={<LeadsFunnel />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
