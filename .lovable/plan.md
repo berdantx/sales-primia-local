@@ -1,31 +1,84 @@
 
-# Corrigir Projeção de Faturamento menor que Faturamento Atual
 
-## Problema
-O card "Projeção Faturamento" (R$ 1.188.723,50) esta mostrando um valor menor que "Faturamento Atual" (R$ 1.227.716,09). Isso nao faz sentido logicamente, pois a projecao inclui recorrencias futuras e deveria ser sempre maior ou igual ao faturamento real.
+# Vendas Internacionais + Exportacao de Clientes Compradores
 
-## Causa Raiz
-A projecao de faturamento e calculada usando uma funcao de banco de dados (`get_transaction_stats_with_projection`) que:
-1. Soma `projected_value` apenas da tabela `transactions` (Hotmart), sem aplicar a mesma logica de deduplicacao "Recuperador Inteligente" usada no calculo de faturamento atual
-2. O faturamento atual usa uma logica diferente de agregacao (com deduplicacao), o que pode resultar em valores ligeiramente diferentes
+## Resumo
 
-Essa discrepancia entre as duas formulas de calculo permite que a projecao fique abaixo do real em certos cenarios.
+Criar uma nova pagina dedicada a vendas internacionais (fora do Brasil) com visualizacao por pais, moeda e produto, alem de opcoes de exportacao dos clientes compradores em PDF e Excel.
 
-## Solucao
-Aplicar uma regra simples de seguranca: **a projecao nunca pode ser menor que o faturamento atual**. Se o valor projetado calculado for inferior ao total vendido, usamos o total vendido como piso.
+## O que sera construido
 
-### Arquivo: `src/pages/Dashboard.tsx`
+### 1. Nova pagina: `/international-sales`
 
-Na linha onde `projectionValueForGoal` e calculado (linha ~205), adicionar um `Math.max` para garantir que o valor de projecao nunca seja menor que `primaryGoalSales`:
+Uma pagina completa com:
 
+- **KPI Cards no topo**: Total vendas internacionais (USD), numero de paises, total de transacoes internacionais, ticket medio
+- **Tabela de vendas por pais**: Pais, quantidade de vendas, valor total, moeda, % do total
+- **Tabela de clientes compradores internacionais**: Nome, email, pais, produto, valor, data — com paginacao e busca
+- **Filtros**: Periodo (DateRangePicker), cliente (ClientSelector), plataforma (Hotmart/TMB/Eduzz/Todas)
+- **Grafico**: Distribuicao de vendas por pais (barra horizontal ou pie chart com Recharts)
+
+### 2. Exportacao de clientes compradores
+
+Dois formatos de exportacao, acessiveis via botoes na pagina:
+
+- **PDF** (usando jspdf + html2canvas, ja instalados): Relatorio formatado com cabecalho, periodo, tabela de compradores por pais
+- **Excel** (usando xlsx, ja instalado): Planilha com todas as colunas dos compradores internacionais
+
+### 3. Integracao no menu lateral
+
+Adicionar o item "Internacional" no grupo "Vendas" do `AppSidebar.tsx` com o icone `Globe`.
+
+### 4. Rota no App.tsx
+
+Adicionar `/international-sales` com acesso para `master`, `admin` e `user`.
+
+## Detalhes tecnicos
+
+### Dados disponiveis
+
+A tabela `transactions` (Hotmart) possui a coluna `country` com dados de pais. As tabelas `tmb_transactions` e `eduzz_transactions` nao possuem essa coluna — a pagina filtrara apenas transacoes com `country IS NOT NULL AND country != 'Brasil'`.
+
+Nota: Existem paises duplicados no banco (ex: "Estados Unidos" e "United States", "Alemanha" e "Germany"). A pagina incluira normalizacao client-side para agrupar esses nomes.
+
+### Arquivos a criar
+
+- `src/pages/InternationalSales.tsx` — pagina principal
+- `src/components/international/InternationalBuyersTable.tsx` — tabela de compradores com busca e paginacao
+- `src/components/international/CountrySalesChart.tsx` — grafico de vendas por pais
+- `src/components/international/ExportBuyersDialog.tsx` — modal de exportacao com opcoes PDF/Excel
+- `src/lib/export/generateBuyersPdf.ts` — gerador do PDF
+- `src/lib/export/generateBuyersExcel.ts` — gerador do Excel
+
+### Arquivos a editar
+
+- `src/components/layout/AppSidebar.tsx` — adicionar item "Internacional" no grupo Vendas
+- `src/App.tsx` — adicionar rota `/international-sales`
+
+### Hook de dados
+
+Reutilizara `useCombinedTransactions` com filtro client-side para `country != 'Brasil'` e `country IS NOT NULL`. A interface `UnifiedTransaction` ja possui `country`, `buyer_name`, `buyer_email`, `currency`, `value`, `platform`, `product`.
+
+### Normalizacao de paises
+
+Mapa de normalizacao client-side:
+```text
+"United States" -> "Estados Unidos"
+"Germany"       -> "Alemanha"
+"Switzerland"   -> "Suíça"
+"Australia"     -> "Austrália"
 ```
-projectionValueForGoal: Math.max(combinedProjectedBRL + usdConvertedToBRL, primaryGoalSales)
-```
 
-Como `primaryGoalSales` e calculado antes de `projectionValueForGoal`, sera necessario reestruturar levemente o `useMemo` para ter acesso a esse valor, ou incluir a mesma logica de calculo do total vendido dentro do memo de projecao.
+### Exportacao PDF
 
-### Detalhes tecnicos
-- Mover o calculo de `primaryGoalSales` para antes do memo de projecao (ja esta assim)
-- Adicionar `primaryGoalSales` como dependencia do `useMemo` de projecao
-- Usar `Math.max(projectionCalculated, primaryGoalSales)` como valor final
-- Nenhuma alteracao de banco de dados necessaria
+Usara `jspdf` para gerar tabela formatada com:
+- Cabecalho com titulo e periodo
+- Tabela de compradores: Nome, Email, Pais, Produto, Valor, Data
+- Resumo por pais no rodape
+
+### Exportacao Excel
+
+Usara `xlsx` com duas abas:
+- "Resumo por País" — pais, qtd vendas, valor total
+- "Compradores" — todas as colunas dos compradores internacionais
+
