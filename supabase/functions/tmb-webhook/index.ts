@@ -154,23 +154,25 @@ Deno.serve(async (req) => {
     if (isCancelado) {
       console.log(`Processing cancellation for order ${orderId}`);
 
-      // Try to update existing transaction
-      const { data: existing, error: findError } = await supabase
+      // Try to find existing transactions (may return multiple due to duplicates)
+      const { data: existingRows, error: findError } = await supabase
         .from("tmb_transactions")
         .select("id")
-        .eq("order_id", orderId)
-        .maybeSingle();
+        .eq("order_id", orderId);
 
       if (findError) {
         console.error("Error finding transaction for cancellation:", findError);
       }
 
-      if (existing) {
-        // Update existing transaction to cancelled
+      if (existingRows && existingRows.length > 0) {
+        // Update ALL existing transactions to cancelled (handles duplicates)
+        const ids = existingRows.map(r => r.id);
+        console.log(`Found ${ids.length} transaction(s) for order ${orderId}, cancelling all`);
+        
         const { error: updateError } = await supabase
           .from("tmb_transactions")
           .update({ status: "cancelado", cancelled_at: new Date().toISOString() })
-          .eq("id", existing.id);
+          .in("id", ids);
 
         if (updateError) {
           console.error("Error updating transaction to cancelled:", updateError);
@@ -189,12 +191,12 @@ Deno.serve(async (req) => {
           });
         }
 
-        console.log(`Transaction ${orderId} marked as cancelled`);
+        console.log(`Transaction(s) ${orderId} marked as cancelled`);
       } else {
-        // Insert new transaction with cancelled status
+        // Upsert new transaction with cancelled status (prevents constraint violation)
         const { error: insertError } = await supabase
           .from("tmb_transactions")
-          .insert({
+          .upsert({
             user_id: webhookUserId,
             client_id: finalClientId || null,
             order_id: orderId,
@@ -212,10 +214,13 @@ Deno.serve(async (req) => {
             source: "webhook",
             status: "cancelado",
             cancelled_at: new Date().toISOString(),
+          }, {
+            onConflict: "user_id,order_id",
+            ignoreDuplicates: false,
           });
 
         if (insertError) {
-          console.error("Error inserting cancelled transaction:", insertError);
+          console.error("Error upserting cancelled transaction:", insertError);
           await supabase.from("webhook_logs").insert({
             user_id: webhookUserId,
             client_id: finalClientId || null,
@@ -231,7 +236,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        console.log(`New cancelled transaction inserted for order ${orderId}`);
+        console.log(`Cancelled transaction upserted for order ${orderId}`);
       }
 
       await supabase.from("webhook_logs").insert({
@@ -265,7 +270,8 @@ Deno.serve(async (req) => {
       existingQuery.eq("client_id", finalClientId);
     }
 
-    const { data: existingTx } = await existingQuery.maybeSingle();
+    const { data: existingTxRows } = await existingQuery;
+    const existingTx = existingTxRows?.[0];
 
     if (existingTx) {
       console.log(`Duplicate detected for order ${orderId} (existing id: ${existingTx.id}, source: ${existingTx.source}) - skipping`);
