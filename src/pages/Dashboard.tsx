@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { ExportReportDialog } from '@/components/export/ExportReportDialog';
 import { parseISO } from 'date-fns';
 import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC } from '@/lib/dateUtils';
 import {
@@ -299,6 +300,10 @@ export default function Dashboard() {
                 />
               </div>
             )}
+            
+            <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
+            
+            <ExportReportDialog defaultClientId={clientId} />
           </div>
           
         </motion.div>
