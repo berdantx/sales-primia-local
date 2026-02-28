@@ -1,55 +1,31 @@
 
 
-# Corrigir Bugs no Webhook TMB
+# Adicionar Exportação de Relatório de Vendas ao Dashboard Principal
 
-## Problemas
-Os logs confirmam dois bugs ativos no `tmb-webhook`:
+## Situacao atual
 
-1. **PGRST116**: `.maybeSingle()` falha quando existem 2+ registros com mesmo `order_id` (duplicatas no banco)
-2. **23505**: Fallback de `.insert()` falha por constraint `(user_id, order_id)` quando a transacao ja existe
+O componente `ExportReportDialog` ja existe em `src/components/export/ExportReportDialog.tsx` com suporte completo a:
+- Selecao de cliente (masters)
+- Filtro por periodo (predefinido ou personalizado)
+- Formato Excel ou CSV
+- Selecao de plataformas (Hotmart, TMB, Eduzz, Consolidado)
+- Resumo de KPIs
 
-## Correções no arquivo `supabase/functions/tmb-webhook/index.ts`
+Porem, ele so e usado na pagina `ComparativeDashboard`. O Dashboard principal (`/dashboard`) nao tem nenhum botao de exportacao.
 
-### Correção 1: Busca de cancelamento (linhas ~158-162)
-Trocar `.maybeSingle()` por query sem limit, pegando array de resultados:
+## O que sera feito
 
-```typescript
-const { data: existingRows, error: findError } = await supabase
-  .from("tmb_transactions")
-  .select("id")
-  .eq("order_id", orderId);
+### 1. Adicionar botao "Exportar Relatorio" no Dashboard principal
 
-const existing = existingRows?.[0];
-```
+No header do `src/pages/Dashboard.tsx`, ao lado dos filtros existentes, adicionar o `ExportReportDialog` passando o `clientId` atual como `defaultClientId`.
 
-### Correção 2: Atualizar TODAS as duplicatas encontradas
-Quando multiplas linhas existem para o mesmo `order_id`, atualizar todas para `cancelado`:
+### 2. Adicionar item no menu lateral
 
-```typescript
-if (existingRows && existingRows.length > 0) {
-  const ids = existingRows.map(r => r.id);
-  await supabase
-    .from("tmb_transactions")
-    .update({ status: "cancelado", cancelled_at: new Date().toISOString() })
-    .in("id", ids);
-}
-```
+Adicionar um item "Exportar Relatorio" no `AppSidebar.tsx` ou, alternativamente, tornar o botao mais visivel no Dashboard — a abordagem mais natural e adicionar o botao diretamente no header do Dashboard, sem precisar de pagina nova.
 
-### Correção 3: Fallback insert → upsert
-Quando nenhuma transacao existente e encontrada mas a constraint impede insert, usar `upsert`:
+## Arquivo a editar
 
-```typescript
-const { error: insertError } = await supabase
-  .from("tmb_transactions")
-  .upsert({
-    ...transactionData,
-    status: "cancelado",
-    cancelled_at: new Date().toISOString(),
-  }, {
-    onConflict: "user_id,order_id",
-    ignoreDuplicates: false,
-  });
-```
+- `src/pages/Dashboard.tsx` — importar `ExportReportDialog` e renderizar no header, ao lado dos filtros de periodo/plataforma, passando o `clientId` do filtro ativo.
 
-Nenhuma alteracao de banco necessaria. Apenas o edge function precisa ser atualizado e redeployado.
+Alteracao minima: ~5 linhas (1 import + 1 componente no JSX).
 
