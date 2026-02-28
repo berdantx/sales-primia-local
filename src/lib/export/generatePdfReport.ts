@@ -28,6 +28,18 @@ interface TmbTransaction {
   utm_campaign: string | null;
 }
 
+interface EduzzTransaction {
+  sale_id: string;
+  product: string | null;
+  buyer_name: string | null;
+  buyer_email: string | null;
+  sale_value: number;
+  sale_date: string | null;
+  status: string;
+  payment_method: string | null;
+  currency: string | null;
+}
+
 interface PdfExportOptions {
   includeHotmart: boolean;
   includeTmb: boolean;
@@ -41,8 +53,10 @@ interface PdfExportOptions {
 interface PdfExportData {
   hotmartTransactions: HotmartTransaction[];
   tmbTransactions: TmbTransaction[];
+  eduzzTransactions: EduzzTransaction[];
   hotmartStats: { totalBRL: number; totalUSD: number; totalTransactions: number };
   tmbStats: { totalBRL: number; totalTransactions: number };
+  eduzzStats: { totalBRL: number; totalTransactions: number };
 }
 
 function formatCurrencyBR(value: number): string {
@@ -55,7 +69,6 @@ function truncate(str: string, max: number): string {
 
 export function generatePdfReport(data: PdfExportData, options: PdfExportOptions): void {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
   let y = 20;
 
@@ -135,29 +148,32 @@ export function generatePdfReport(data: PdfExportData, options: PdfExportOptions
     const hotmartAvg = data.hotmartStats.totalTransactions > 0
       ? data.hotmartStats.totalBRL / data.hotmartStats.totalTransactions : 0;
     drawTableRow([
-      'Hotmart',
-      formatCurrencyBR(data.hotmartStats.totalBRL),
+      'Hotmart', formatCurrencyBR(data.hotmartStats.totalBRL),
       `US$ ${data.hotmartStats.totalUSD.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      String(data.hotmartStats.totalTransactions),
-      formatCurrencyBR(hotmartAvg),
+      String(data.hotmartStats.totalTransactions), formatCurrencyBR(hotmartAvg),
     ], summaryColWidths, false);
 
     const tmbAvg = data.tmbStats.totalTransactions > 0
       ? data.tmbStats.totalBRL / data.tmbStats.totalTransactions : 0;
     drawTableRow([
-      'TMB',
-      formatCurrencyBR(data.tmbStats.totalBRL),
-      '-',
-      String(data.tmbStats.totalTransactions),
-      formatCurrencyBR(tmbAvg),
+      'TMB', formatCurrencyBR(data.tmbStats.totalBRL), '-',
+      String(data.tmbStats.totalTransactions), formatCurrencyBR(tmbAvg),
     ], summaryColWidths, false);
 
-    // Totals
+    const eduzzAvg = data.eduzzStats.totalTransactions > 0
+      ? data.eduzzStats.totalBRL / data.eduzzStats.totalTransactions : 0;
+    drawTableRow([
+      'Eduzz', formatCurrencyBR(data.eduzzStats.totalBRL), '-',
+      String(data.eduzzStats.totalTransactions), formatCurrencyBR(eduzzAvg),
+    ], summaryColWidths, false);
+
     y += 3;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Total BRL: ${formatCurrencyBR(data.hotmartStats.totalBRL + data.tmbStats.totalBRL)}`, margin, y);
-    doc.text(`Total Transações: ${data.hotmartStats.totalTransactions + data.tmbStats.totalTransactions}`, margin + 90, y);
+    const totalBRL = data.hotmartStats.totalBRL + data.tmbStats.totalBRL + data.eduzzStats.totalBRL;
+    const totalTx = data.hotmartStats.totalTransactions + data.tmbStats.totalTransactions + data.eduzzStats.totalTransactions;
+    doc.text(`Total BRL: ${formatCurrencyBR(totalBRL)}`, margin, y);
+    doc.text(`Total Transações: ${totalTx}`, margin + 90, y);
     y += 10;
   }
 
@@ -174,17 +190,12 @@ export function generatePdfReport(data: PdfExportData, options: PdfExportOptions
 
     data.hotmartTransactions.forEach((t) => {
       drawTableRow([
-        t.transaction_code || '',
-        t.product || '',
-        t.buyer_name || '',
-        t.buyer_email || '',
-        t.currency || '',
-        formatCurrencyBR(t.computed_value),
+        t.transaction_code || '', t.product || '', t.buyer_name || '', t.buyer_email || '',
+        t.currency || '', formatCurrencyBR(t.computed_value),
         t.purchase_date ? formatDateTimeBR(t.purchase_date, 'dd/MM/yy') : '',
         t.billing_type || '',
       ], colWidths, false);
     });
-
     y += 8;
   }
 
@@ -201,16 +212,34 @@ export function generatePdfReport(data: PdfExportData, options: PdfExportOptions
 
     data.tmbTransactions.forEach((t) => {
       drawTableRow([
-        t.order_id || '',
-        t.product || '',
-        t.buyer_name || '',
-        t.buyer_email || '',
+        t.order_id || '', t.product || '', t.buyer_name || '', t.buyer_email || '',
         formatCurrencyBR(t.ticket_value),
         t.effective_date ? formatDateTimeBR(t.effective_date, 'dd/MM/yy') : '',
         t.utm_source || '',
       ], colWidths, false);
     });
+    y += 8;
+  }
 
+  // Eduzz transactions
+  if (options.includeEduzz && data.eduzzTransactions.length > 0) {
+    checkNewPage(20);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Transações Eduzz (${data.eduzzTransactions.length})`, margin, y);
+    y += 7;
+
+    const colWidths = [30, 50, 40, 55, 30, 30, 30];
+    drawTableRow(['ID Venda', 'Produto', 'Cliente', 'Email', 'Valor', 'Data', 'Status'], colWidths, true);
+
+    data.eduzzTransactions.forEach((t) => {
+      drawTableRow([
+        t.sale_id || '', t.product || '', t.buyer_name || '', t.buyer_email || '',
+        formatCurrencyBR(t.sale_value),
+        t.sale_date ? formatDateTimeBR(t.sale_date, 'dd/MM/yy') : '',
+        t.status || '',
+      ], colWidths, false);
+    });
     y += 8;
   }
 
