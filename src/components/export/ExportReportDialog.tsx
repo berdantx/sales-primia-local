@@ -19,9 +19,10 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Download, FileSpreadsheet, FileText, Loader2, CalendarIcon, Building2 } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Loader2, CalendarIcon, Building2, FileDown } from 'lucide-react';
 import { generateExcelReport } from '@/lib/export/generateExcelReport';
 import { generateCsvReport } from '@/lib/export/generateCsvReport';
+import { generatePdfReport } from '@/lib/export/generatePdfReport';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useTmbTransactions } from '@/hooks/useTmbTransactions';
 import { useEduzzTransactions } from '@/hooks/useEduzzTransactions';
@@ -42,7 +43,7 @@ interface ExportReportDialogProps {
 }
 
 type PeriodOption = 'all' | '7days' | '30days' | '90days' | '1year' | 'custom';
-type ExportFormat = 'excel' | 'csv';
+type ExportFormat = 'excel' | 'csv' | 'pdf';
 
 const PERIOD_OPTIONS = [
   { value: 'all', label: 'Todo o período' },
@@ -148,6 +149,8 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
 
       if (exportFormat === 'excel') {
         generateExcelReport(exportData, exportOptions);
+      } else if (exportFormat === 'pdf') {
+        generatePdfReport(exportData, exportOptions);
       } else {
         generateCsvReport(exportData, exportOptions);
       }
@@ -313,6 +316,13 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
                   CSV
                 </Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="pdf" id="format-pdf" />
+                <Label htmlFor="format-pdf" className="flex items-center gap-2 cursor-pointer">
+                  <FileDown className="h-4 w-4 text-red-600" />
+                  PDF
+                </Label>
+              </div>
             </RadioGroup>
           </div>
 
@@ -402,7 +412,7 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
             ) : (
               <>
                 <Download className="h-4 w-4 mr-2" />
-                Baixar Relatório {exportFormat === 'excel' ? 'Excel' : 'CSV'}
+                Baixar Relatório {exportFormat === 'excel' ? 'Excel' : exportFormat === 'pdf' ? 'PDF' : 'CSV'}
               </>
             )}
           </Button>
