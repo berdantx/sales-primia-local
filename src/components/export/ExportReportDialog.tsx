@@ -130,6 +130,7 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
       const exportData = {
         hotmartTransactions: hotmartTransactions || [],
         tmbTransactions: tmbTransactions || [],
+        eduzzTransactions: eduzzTransactions || [],
         hotmartStats: {
           totalBRL: hotmartStats?.totalByCurrency?.BRL || 0,
           totalUSD: hotmartStats?.totalByCurrency?.USD || 0,
@@ -138,6 +139,10 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
         tmbStats: {
           totalBRL: tmbStats?.totalBRL || 0,
           totalTransactions: tmbStats?.totalTransactions || 0,
+        },
+        eduzzStats: {
+          totalBRL: eduzzStats?.totalBRL || 0,
+          totalTransactions: eduzzStats?.totalTransactions || 0,
         },
       };
 
