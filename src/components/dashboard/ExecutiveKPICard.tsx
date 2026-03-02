@@ -58,15 +58,15 @@ export function ExecutiveKPICard({
       )}
       onClick={onClick}
     >
-      <div className="flex items-center gap-2 mb-3">
-        {Icon && (
-          <div className={cn("p-1.5 rounded-lg flex-shrink-0", iconClassName)}>
-            <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
-          </div>
+      <div className="mb-3">
+        {microLabel && (
+          <span className="text-[10px] tracking-wide uppercase text-muted-foreground block mb-1">{microLabel}</span>
         )}
-        <div className="min-w-0">
-          {microLabel && (
-            <span className="text-[10px] tracking-wide uppercase text-muted-foreground block mb-0.5">{microLabel}</span>
+        <div className="flex items-center gap-2">
+          {Icon && (
+            <div className={cn("p-1.5 rounded-lg flex-shrink-0", iconClassName)}>
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+            </div>
           )}
           <span className="text-sm text-foreground font-semibold">{label}</span>
         </div>
