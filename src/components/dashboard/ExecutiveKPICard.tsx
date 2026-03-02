@@ -49,7 +49,7 @@ export function ExecutiveKPICard({
   const cardContent = (
     <div
       className={cn(
-        'bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]',
+        'bg-card border border-border/80 rounded-xl p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]',
         accentColor && 'border-t-[3px]',
         accentColor,
         onClick && 'cursor-pointer',
@@ -71,7 +71,7 @@ export function ExecutiveKPICard({
           <span className="text-sm text-foreground font-semibold">{label}</span>
         </div>
       </div>
-      <p className={cn("text-2xl font-bold tracking-tight text-foreground leading-none mb-1", valueClassName)}>
+      <p className={cn("text-2xl font-extrabold tracking-tight text-foreground leading-none mb-1", valueClassName)}>
         {value}
       </p>
       {subtitle && (

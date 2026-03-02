@@ -153,23 +153,26 @@ export function DashboardControlBar({
           {/* ZONA 3 — STATUS + AÇÃO (right side) */}
           <div className="flex items-center gap-3 flex-shrink-0">
             {rhythmStatus && riskLabel && (
-              <div className={`hidden md:flex items-center gap-3 px-5 py-3 rounded-xl border ${
+              <div className={`hidden md:flex items-center gap-4 px-6 py-4 rounded-xl border ${
                 riskLabel.color === 'bg-emerald-500' 
-                  ? 'bg-emerald-50/60 border-emerald-200/60' 
+                  ? 'bg-emerald-50/50 border-emerald-200/50' 
                   : riskLabel.color === 'bg-amber-500' 
-                    ? 'bg-amber-50/60 border-amber-200/60' 
-                    : 'bg-red-50/60 border-red-200/60'
+                    ? 'bg-amber-50/50 border-amber-200/50' 
+                    : 'bg-red-50/50 border-red-200/50'
               }`}>
-                <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${riskLabel.color} ring-2 ring-offset-1 ring-offset-background ${
-                  riskLabel.color === 'bg-emerald-500' ? 'ring-emerald-500/30' : 
-                  riskLabel.color === 'bg-amber-500' ? 'ring-amber-500/30' : 'ring-red-500/30'
+                <span className={`h-3 w-3 rounded-full shrink-0 ${riskLabel.color} ring-[3px] ring-offset-2 ring-offset-background ${
+                  riskLabel.color === 'bg-emerald-500' ? 'ring-emerald-500/20' : 
+                  riskLabel.color === 'bg-amber-500' ? 'ring-amber-500/20' : 'ring-red-500/20'
                 }`} />
                 <div className="flex flex-col leading-tight">
-                  <span className="text-sm font-bold text-foreground">{riskLabel.text}</span>
-                  <span className="text-sm font-bold text-foreground">
-                    {rhythmStatus.rhythmPercent.toFixed(0)}% do ritmo
-                  </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-sm font-bold text-foreground tracking-tight">{riskLabel.text}</span>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-lg font-extrabold text-foreground tracking-tight">
+                      {rhythmStatus.rhythmPercent.toFixed(0)}%
+                    </span>
+                    <span className="text-xs text-muted-foreground font-medium">do ritmo</span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground/70 mt-0.5">
                     {rhythmStatus.periodPercent}% do período decorrido
                   </span>
                 </div>
