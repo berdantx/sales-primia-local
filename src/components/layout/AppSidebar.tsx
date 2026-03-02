@@ -68,7 +68,6 @@ interface SubGroup {
 
 interface MenuGroup {
   label: string;
-  badge?: { text: string; color: string };
   items: MenuItem[];
   subGroups?: SubGroup[];
 }
@@ -76,7 +75,7 @@ interface MenuGroup {
 const menuGroups: MenuGroup[] = [
   {
     label: 'CORE',
-    badge: { text: 'CORE', color: 'text-blue-600 bg-blue-50 border-blue-100' },
+    
     items: [
       { title: 'Painel', url: '/', icon: LayoutDashboard, roles: ['master', 'admin', 'user'] },
     ],
@@ -106,7 +105,7 @@ const menuGroups: MenuGroup[] = [
   },
   {
     label: 'OPERAÇÃO',
-    badge: { text: 'OP', color: 'text-muted-foreground bg-muted border-border' },
+    
     items: [
       { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin'] },
       { title: 'Coprodução', url: '/coproduction', icon: Wallet, roles: ['master', 'user'] },
@@ -117,7 +116,7 @@ const menuGroups: MenuGroup[] = [
   },
   {
     label: 'ADMIN',
-    badge: { text: 'ADM', color: 'text-red-500 bg-red-50 border-red-100' },
+    
     items: [
       { title: 'Equipe', url: '/users', icon: Users, roles: ['master', 'admin'] },
       { title: 'Clientes', url: '/clients', icon: Database, roles: ['master'] },
@@ -179,13 +178,8 @@ export function AppSidebar() {
 
           return (
             <SidebarGroup key={group.label} className="pb-1">
-              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase flex items-center gap-2">
+              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
                 {group.label}
-                {group.badge && !collapsed && (
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${group.badge.color}`}>
-                    {group.badge.text}
-                  </span>
-                )}
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
