@@ -84,7 +84,7 @@ export function DashboardControlBar({
           {/* ZONA 1 — CONTEXTO */}
            <div className="min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight whitespace-nowrap">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight whitespace-nowrap">
                 Centro de Comando
               </h1>
 
@@ -96,7 +96,7 @@ export function DashboardControlBar({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-auto p-0 text-primary hover:text-primary/80 hover:bg-transparent font-bold gap-1.5 text-lg sm:text-xl"
+                        className="h-auto p-0 text-primary hover:text-primary/80 hover:bg-transparent font-bold gap-1.5 text-xl sm:text-2xl"
                       >
                         {displayName}
                         <motion.span
@@ -145,7 +145,7 @@ export function DashboardControlBar({
                 </>
               )}
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground/80 mt-1 font-medium tracking-wide">
+            <p className="text-sm sm:text-base text-muted-foreground/80 mt-1 font-medium tracking-wide">
               Infraestrutura estratégica para decisões de alto impacto
             </p>
           </div>
@@ -165,14 +165,14 @@ export function DashboardControlBar({
                   riskLabel.color === 'bg-amber-500' ? 'ring-amber-500/20' : 'ring-red-500/20'
                 }`} />
                 <div className="flex flex-col leading-tight">
-                  <span className="text-xs font-bold text-foreground">{riskLabel.text}</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-extrabold text-foreground tracking-tight">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-sm font-bold text-foreground">{riskLabel.text}</span>
+                    <span className="text-base font-extrabold text-foreground tracking-tight">
                       {rhythmStatus.rhythmPercent.toFixed(0)}%
                     </span>
                     <span className="text-[11px] text-muted-foreground">do ritmo</span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground/60">
+                  <span className="text-[10px] text-muted-foreground/60 mt-0.5">
                     {rhythmStatus.periodPercent}% do período decorrido
                   </span>
                 </div>
