@@ -78,7 +78,7 @@ export function ExecutiveKPICard({
           )}
         </div>
       </div>
-      <p className={cn("text-3xl font-bold tracking-tight text-foreground leading-none mb-1", valueClassName)}>
+      <p className={cn("text-2xl font-bold tracking-tight text-foreground leading-none mb-1", valueClassName)}>
         {value}
       </p>
       {subtitle && (
