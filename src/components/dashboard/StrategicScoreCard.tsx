@@ -80,7 +80,7 @@ export function StrategicScoreCard({
         <Activity className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
         <div>
           <h3 className="text-[13px] font-extrabold text-foreground tracking-tight uppercase">IGPL</h3>
-          <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wide">Índice Global de Performance de Lançamento</p>
+          <p className="text-[11px] text-muted-foreground/60 font-medium tracking-wide">Índice Global de Performance de Lançamento</p>
         </div>
       </div>
 
