@@ -99,7 +99,9 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
               <p className={`text-sm ${isRitmoAlinhado ? 'text-emerald-700/70 dark:text-emerald-400/70' : 'text-amber-700/70 dark:text-amber-400/70'}`}>
                 O ritmo atual está{' '}
                 <span className="font-semibold tabular-nums">{gapFormatted}%</span>{' '}
-                {isRitmoAlinhado ? 'acima' : 'abaixo'} do exigido.
+                {isRitmoAlinhado ? 'acima' : 'abaixo'} do exigido, com{' '}
+                <span className="font-semibold tabular-nums">{totalDays > 0 ? Math.round((daysElapsed / totalDays) * 100) : 0}%</span>{' '}
+                do período já decorrido.
               </p>
               {/* Mini gap bar */}
               <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wide flex-shrink-0 hidden sm:inline">Performance relativa</span>
