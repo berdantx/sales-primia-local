@@ -1,8 +1,8 @@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { DollarSign, Layers, SplitSquareVertical, CircleDollarSign } from 'lucide-react';
+import { DollarSign, Layers, CircleDollarSign } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-export type CurrencyView = 'combined' | 'brl-only' | 'usd-only' | 'separated';
+export type CurrencyView = 'combined' | 'brl-only' | 'usd-only';
 
 interface CurrencyViewToggleProps {
   value: CurrencyView;
@@ -55,17 +55,6 @@ export function CurrencyViewToggle({ value, onChange, className }: CurrencyViewT
           </TooltipContent>
         </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <ToggleGroupItem value="separated" aria-label="Separado por moeda" className="h-8 px-2 sm:px-3">
-              <SplitSquareVertical className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1.5 text-xs">Separado</span>
-            </ToggleGroupItem>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Cards separados por moeda</p>
-          </TooltipContent>
-        </Tooltip>
       </ToggleGroup>
     </TooltipProvider>
   );
