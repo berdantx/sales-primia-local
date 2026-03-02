@@ -35,23 +35,32 @@ export function StrategicScoreCard({
     );
   }, [rhythmPercent, goalProgress, periodPercent, conversionRate, hasGoal]);
 
-  const scoreColor = score >= 75
-    ? 'text-emerald-600'
-    : score >= 50
-    ? 'text-amber-600'
-    : 'text-red-600';
-
-  const scoreLabel = score >= 75
-    ? 'Status Operacional: Saudável'
-    : score >= 50
-    ? 'Status Operacional: Moderado'
-    : 'Status Operacional: Crítico';
-
-  const arcColor = score >= 75
-    ? 'stroke-emerald-500'
-    : score >= 50
-    ? 'stroke-amber-500'
-    : 'stroke-red-500';
+  const { scoreColor, arcColor, statusLabel, microPhrase } = useMemo(() => {
+    if (score >= 80) return {
+      scoreColor: 'text-emerald-600',
+      arcColor: 'stroke-emerald-500',
+      statusLabel: 'Status Operacional: Saudável',
+      microPhrase: 'Performance ideal. Meta sob controle, ritmo sustentável.',
+    };
+    if (score >= 65) return {
+      scoreColor: 'text-amber-500',
+      arcColor: 'stroke-amber-400',
+      statusLabel: 'Status Operacional: Atenção',
+      microPhrase: 'Execução estável, porém meta sob pressão. Monitorar ritmo.',
+    };
+    if (score >= 50) return {
+      scoreColor: 'text-amber-600',
+      arcColor: 'stroke-amber-500',
+      statusLabel: 'Status Operacional: Risco Moderado',
+      microPhrase: 'Ritmo atual não sustenta fechamento no cenário projetado.',
+    };
+    return {
+      scoreColor: 'text-red-600',
+      arcColor: 'stroke-red-500',
+      statusLabel: 'Status Operacional: Crítico',
+      microPhrase: 'Alta probabilidade de subentrega. Ação corretiva urgente.',
+    };
+  }, [score]);
 
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
@@ -70,14 +79,14 @@ export function StrategicScoreCard({
       <div className="flex items-center gap-2 mb-5">
         <Activity className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
         <div>
-          <h3 className="text-sm font-bold text-foreground tracking-tight">Score Estratégico de Lançamento</h3>
-          <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wide uppercase">Síntese baseada em ritmo, meta, conversão e timing</p>
+          <h3 className="text-[13px] font-extrabold text-foreground tracking-tight uppercase">IGPL</h3>
+          <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wide">Índice Global de Performance de Lançamento</p>
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-4 flex-1">
-        {/* Arc gauge — central and dominant */}
-        <div className="relative w-[160px] h-[160px] flex-shrink-0 my-2">
+      <div className="flex flex-col items-center gap-3 flex-1">
+        {/* Arc gauge */}
+        <div className="relative w-[160px] h-[160px] flex-shrink-0 my-1">
           <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
             <circle
               cx="50" cy="50" r={radius}
@@ -97,6 +106,7 @@ export function StrategicScoreCard({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[9px] font-bold text-muted-foreground/40 tracking-[0.25em] uppercase mb-0.5">IGPL</span>
             <span className={cn("text-5xl font-extrabold tracking-tighter", scoreColor)}>
               {score}
             </span>
@@ -104,7 +114,12 @@ export function StrategicScoreCard({
           </div>
         </div>
 
-        <p className={cn("text-xs font-bold tracking-widest text-center uppercase", scoreColor)}>{scoreLabel}</p>
+        <p className={cn("text-[10px] font-bold tracking-[0.15em] text-center uppercase", scoreColor)}>{statusLabel}</p>
+
+        {/* Micro-frase interpretativa */}
+        <p className="text-[11px] text-muted-foreground/70 text-center leading-relaxed italic px-2 max-w-[220px]">
+          {microPhrase}
+        </p>
 
         {/* Factors */}
         <div className="w-full space-y-2.5 mt-auto">
@@ -115,12 +130,27 @@ export function StrategicScoreCard({
                 <div
                   className={cn(
                     "h-full rounded-full transition-all duration-500",
-                    f.value >= 75 ? 'bg-emerald-400' : f.value >= 50 ? 'bg-amber-400' : 'bg-red-400'
+                    f.value >= 80 ? 'bg-emerald-400' : f.value >= 65 ? 'bg-amber-400' : f.value >= 50 ? 'bg-amber-500' : 'bg-red-400'
                   )}
                   style={{ width: `${f.value}%` }}
                 />
               </div>
               <span className="text-[11px] text-muted-foreground/70 w-7 text-right font-medium">{f.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Faixas legend */}
+        <div className="w-full flex items-center justify-center gap-3 pt-1">
+          {[
+            { color: 'bg-emerald-400', label: '80+' },
+            { color: 'bg-amber-400', label: '65–79' },
+            { color: 'bg-amber-500', label: '50–64' },
+            { color: 'bg-red-400', label: '<50' },
+          ].map((band) => (
+            <div key={band.label} className="flex items-center gap-1">
+              <div className={cn("w-1.5 h-1.5 rounded-full", band.color)} />
+              <span className="text-[9px] text-muted-foreground/50 font-medium">{band.label}</span>
             </div>
           ))}
         </div>
