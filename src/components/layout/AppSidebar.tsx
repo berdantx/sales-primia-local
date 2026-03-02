@@ -126,7 +126,7 @@ const menuGroups: MenuGroup[] = [
   },
 ];
 
-const menuBtnClass = "h-9 text-[13px] font-normal text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground data-[active=true]:border-l-2 data-[active=true]:border-l-primary data-[active=true]:font-medium";
+const menuBtnClass = "h-10 text-[13px] font-normal text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-transparent data-[active=true]:bg-transparent data-[active=true]:text-sidebar-foreground data-[active=true]:border-l-2 data-[active=true]:border-l-primary data-[active=true]:font-medium";
 
 export function AppSidebar() {
   const location = useLocation();
@@ -178,7 +178,7 @@ export function AppSidebar() {
 
           return (
             <SidebarGroup key={group.label} className="pb-1">
-              <SidebarGroupLabel className="text-[12px] font-bold tracking-wider text-foreground/70 uppercase mb-1">
+              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-foreground/50 uppercase mb-1.5">
                 {group.label}
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -187,7 +187,7 @@ export function AppSidebar() {
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title} className={menuBtnClass}>
                         <NavLink to={item.url} className="flex items-center gap-3" activeClassName="">
-                          <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+                          <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.5} />
                           <span>{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>
@@ -202,11 +202,11 @@ export function AppSidebar() {
                       <Collapsible key={sg.title} defaultOpen={isOpen} className="group/sub">
                         <SidebarMenuItem>
                           <CollapsibleTrigger asChild>
-                            <SidebarMenuButton
+                              <SidebarMenuButton
                               tooltip={sg.title}
-                              className="h-9 text-[13px] font-normal text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 cursor-pointer"
+                              className="h-10 text-[13px] font-normal text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-transparent cursor-pointer"
                             >
-                              <sg.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+                              <sg.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.5} />
                               <span className="flex-1">{sg.title}</span>
                               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]/sub:rotate-180" />
                             </SidebarMenuButton>
@@ -217,7 +217,7 @@ export function AppSidebar() {
                             <SidebarMenuItem key={item.url}>
                               <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title} className={`${menuBtnClass} pl-9`}>
                                 <NavLink to={item.url} className="flex items-center gap-3" activeClassName="">
-                                  <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                                  <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
                                   <span>{item.title}</span>
                                 </NavLink>
                               </SidebarMenuButton>

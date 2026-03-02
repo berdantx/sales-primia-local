@@ -49,8 +49,8 @@ export function ExecutiveKPICard({
   const cardContent = (
     <div
       className={cn(
-        'bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
-        accentColor && 'border-l-4',
+        'bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]',
+        accentColor && 'border-t-[3px]',
         accentColor,
         onClick && 'cursor-pointer',
         tooltipContent && 'cursor-help',

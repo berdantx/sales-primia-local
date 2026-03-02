@@ -69,19 +69,19 @@ export function RevenueEvolutionChart({ salesByDate, dollarRate }: RevenueEvolut
       dataKey: 'label' as const,
       axisLine: false,
       tickLine: false,
-      tick: { fontSize: 11, fill: 'hsl(var(--muted-foreground))' },
+      tick: { fontSize: 12, fill: 'hsl(var(--muted-foreground))' },
       interval: 'preserveStartEnd' as const,
     },
     yAxis: {
       axisLine: false,
       tickLine: false,
-      tick: { fontSize: 11, fill: 'hsl(var(--muted-foreground))' },
+      tick: { fontSize: 12, fill: 'hsl(var(--muted-foreground))' },
       tickFormatter: (v: number) => `${(v / 1000).toFixed(0)}k`,
       width: 45,
     },
     grid: {
-      strokeDasharray: '3 3',
-      stroke: 'hsl(var(--border))',
+      strokeDasharray: '4 8',
+      stroke: 'hsl(var(--border) / 0.6)',
       vertical: false,
     },
   };
@@ -126,7 +126,7 @@ export function RevenueEvolutionChart({ salesByDate, dollarRate }: RevenueEvolut
             type="monotone"
             dataKey="cumulative"
             stroke="hsl(var(--primary))"
-            strokeWidth={2}
+            strokeWidth={2.5}
             dot={(props: any) => {
               if (props.index === chartData.length - 1) {
                 return <circle cx={props.cx} cy={props.cy} r={5} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={2} />;
@@ -144,7 +144,7 @@ export function RevenueEvolutionChart({ salesByDate, dollarRate }: RevenueEvolut
       <AreaChart data={chartData} margin={margin}>
         <defs>
           <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.15} />
+            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
             <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
           </linearGradient>
         </defs>
@@ -156,7 +156,7 @@ export function RevenueEvolutionChart({ salesByDate, dollarRate }: RevenueEvolut
           type="monotone"
           dataKey="cumulative"
           stroke="hsl(var(--primary))"
-          strokeWidth={2}
+          strokeWidth={2.5}
           fill="url(#colorRevenue)"
           dot={(props: any) => {
             if (props.index === chartData.length - 1) {
@@ -174,8 +174,8 @@ export function RevenueEvolutionChart({ salesByDate, dollarRate }: RevenueEvolut
       <div className="p-5 sm:p-6 pb-2 flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <TrendingUp className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />
-            <h3 className="text-sm font-semibold text-foreground">Evolução de Receita</h3>
+            <TrendingUp className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.5} />
+            <h3 className="text-base font-bold text-foreground">Evolução de Receita</h3>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {chartType === 'bar' ? 'Receita diária nos últimos 30 dias' : 'Confirmada acumulada nos últimos 30 dias'}
@@ -208,7 +208,7 @@ export function RevenueEvolutionChart({ salesByDate, dollarRate }: RevenueEvolut
         </div>
       </div>
       <div className="px-2 pb-4">
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer width="100%" height={300}>
           {renderChart()}
         </ResponsiveContainer>
       </div>
