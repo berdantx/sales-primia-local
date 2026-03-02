@@ -27,13 +27,18 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
   const isAboveTarget = projecaoFechamento >= metaTotal;
   const diferencaProjecao = Math.abs(projecaoFechamento - metaTotal);
 
-  // Status
+  // Status & Gap
   const isRitmoAlinhado = ritmoAtualDiario >= ritmoNecessarioDiario;
+  const gapPercent = ritmoNecessarioDiario > 0
+    ? ((ritmoAtualDiario / ritmoNecessarioDiario) - 1) * 100
+    : 0;
+  const gapAbs = Math.abs(gapPercent);
+  const gapFormatted = gapAbs < 10 ? gapAbs.toFixed(1) : Math.round(gapAbs).toString();
 
   const RhythmLine = ({ label, value }: { label: string; value: number }) => (
     <div className="flex items-center justify-between py-1.5">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-lg font-semibold">{formatCurrency(value, currency)}</span>
+      <span className="text-lg font-semibold tabular-nums">{formatCurrency(value, currency)}</span>
     </div>
   );
 
@@ -54,7 +59,7 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
           </div>
 
           {/* Two-column rhythm comparison */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12">
             {/* Coluna Esquerda — Ritmo Necessário */}
             <div>
               <span className="text-xs text-muted-foreground uppercase tracking-wide">
@@ -80,39 +85,39 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
             </div>
           </div>
 
-          {/* Status */}
-          <div className="mt-5">
-            {isRitmoAlinhado ? (
-              <span className="text-emerald-600 text-sm font-medium">Ritmo alinhado com a meta</span>
-            ) : (
-              <span className="text-amber-600 text-sm font-medium">Ritmo abaixo do necessário</span>
-            )}
+          {/* Diagnóstico */}
+          <div className="mt-6 flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className={`inline-block h-2.5 w-2.5 rounded-full flex-shrink-0 ${isRitmoAlinhado ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <span className={`text-sm font-semibold ${isRitmoAlinhado ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {isRitmoAlinhado ? 'Ritmo alinhado com a meta' : 'Ritmo abaixo do necessário'}
+              </span>
+            </div>
+            <p className={`text-sm ml-[18px] ${isRitmoAlinhado ? 'text-emerald-600/80' : 'text-amber-600/80'}`}>
+              O ritmo atual está{' '}
+              <span className="font-semibold tabular-nums">{gapFormatted}%</span>{' '}
+              {isRitmoAlinhado ? 'acima' : 'abaixo'} do exigido.
+            </p>
           </div>
 
           {/* Divider + Projeção */}
-          <Separator className="my-6" />
+          <Separator className="my-6 bg-muted/40" />
 
           <div>
             <span className="text-xs text-muted-foreground uppercase tracking-wide">
               Projeção de Fechamento no Ritmo Atual
             </span>
-            <p className="text-2xl sm:text-3xl font-bold mt-2">
+            <p className="text-2xl sm:text-3xl font-bold mt-2 tabular-nums">
               {formatCurrency(projecaoFechamento, currency)}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Se o ritmo atual for mantido até o fim do período.
+              {isAboveTarget
+                ? 'Mantido o ritmo atual, a meta será atingida.'
+                : 'Mantido o ritmo atual, a meta não será atingida.'}
             </p>
-            <div className="mt-2">
-              {isAboveTarget ? (
-                <span className="text-emerald-600 text-sm font-medium">
-                  Meta será superada no ritmo atual.
-                </span>
-              ) : (
-                <span className="text-amber-600 text-sm font-medium">
-                  Faltariam {formatCurrency(diferencaProjecao, currency)} para atingir a meta.
-                </span>
-              )}
-            </div>
+            <p className={`text-sm font-semibold mt-1.5 tabular-nums ${isAboveTarget ? 'text-emerald-600' : 'text-amber-600'}`}>
+              {isAboveTarget ? 'Superávit' : 'Déficit'} projetado: {formatCurrency(diferencaProjecao, currency)}
+            </p>
           </div>
         </CardContent>
       </Card>
