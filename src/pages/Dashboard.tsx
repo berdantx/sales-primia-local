@@ -344,9 +344,18 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Ritmo Necessário para Fechamento */}
+            {/* Ritmo + Score lado a lado */}
             {canViewFinancials && goalProgressData && primaryGoal && (
-              <ProjectionCards progress={goalProgressData} currency={primaryGoal.currency} />
+              <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-5 sm:gap-6 items-start">
+                <ProjectionCards progress={goalProgressData} currency={primaryGoal.currency} />
+                <StrategicScoreCard
+                  rhythmPercent={rhythmStatus?.rhythmPercent || 0}
+                  goalProgress={goalProgressPercent}
+                  periodPercent={rhythmStatus?.periodPercent || 0}
+                  conversionRate={stats && leadCount && leadCount > 0 ? (stats.totalTransactions / leadCount) * 100 : 0}
+                  hasGoal={!!primaryGoal}
+                />
+              </div>
             )}
 
             {/* Charts: Evolution (2/3) + Recommendation (1/3) */}
@@ -358,14 +367,7 @@ export default function Dashboard() {
                     dollarRate={dollarRate?.rate}
                   />
                 </div>
-                <div className="lg:col-span-1 flex flex-col gap-5 sm:gap-6">
-                  <StrategicScoreCard
-                    rhythmPercent={rhythmStatus?.rhythmPercent || 0}
-                    goalProgress={goalProgressPercent}
-                    periodPercent={rhythmStatus?.periodPercent || 0}
-                    conversionRate={stats && leadCount && leadCount > 0 ? (stats.totalTransactions / leadCount) * 100 : 0}
-                    hasGoal={!!primaryGoal}
-                  />
+                <div className="lg:col-span-1">
                   <StrategicRecommendationCard
                     hasGoal={!!primaryGoal}
                     goalProgress={goalProgressPercent}
