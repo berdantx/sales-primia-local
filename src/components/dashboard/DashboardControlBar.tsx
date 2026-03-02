@@ -172,7 +172,7 @@ export function DashboardControlBar({
                     </span>
                     <span className="text-[11px] text-muted-foreground">do ritmo</span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground/60 mt-0.5">
+                  <span className="text-[11px] text-muted-foreground/70 mt-0.5">
                     {rhythmStatus.periodPercent}% do período decorrido
                   </span>
                 </div>
