@@ -45,9 +45,9 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
   
 
   const RhythmLine = ({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) => (
-    <div className="flex items-center justify-between py-1">
+    <div className="flex items-center justify-between py-1.5">
       <span className={`text-sm ${highlight ? 'font-medium' : ''} text-muted-foreground`}>{label}</span>
-      <span className={`tabular-nums ${highlight ? 'text-lg font-bold' : 'text-sm font-semibold'}`}>{formatCurrency(value, currency)}</span>
+      <span className={`tabular-nums ${highlight ? 'text-xl font-bold' : 'text-base font-semibold'}`}>{formatCurrency(value, currency)}</span>
     </div>
   );
 
@@ -60,9 +60,9 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
       <Card className="rounded-2xl border-border shadow-sm h-full">
         <CardContent className="p-6 sm:p-7 h-full flex flex-col">
           {/* Header */}
-          <div className="mb-4">
-            <h3 className="text-base font-semibold">Ritmo Necessário para Fechamento</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+          <div className="mb-5">
+            <h3 className="text-lg font-semibold">Ritmo Necessário para Fechamento</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
               Ritmo exigido vs ritmo atual, com projeção de fechamento.
             </p>
           </div>
@@ -70,7 +70,7 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
           {/* Two-column rhythm comparison */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-0 sm:divide-x sm:divide-border/40">
             <div className="sm:pr-6">
-              <span className="text-xs text-muted-foreground uppercase tracking-wide">
+              <span className="text-sm text-muted-foreground uppercase tracking-wide font-medium">
                 Ritmo Necessário
               </span>
               <div className="mt-2 space-y-0">
@@ -80,7 +80,7 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
               </div>
             </div>
             <div className="sm:pl-6">
-              <span className="text-xs text-muted-foreground uppercase tracking-wide">
+              <span className="text-sm text-muted-foreground uppercase tracking-wide font-medium">
                 Ritmo Atual
               </span>
               <div className="mt-2 space-y-0">
@@ -92,17 +92,17 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
           </div>
 
           {/* Verdict Zone */}
-          <div className={`mt-4 rounded-xl px-3 py-2.5 border ${isRitmoAlinhado ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800/30' : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800/30'}`}>
+          <div className={`mt-5 rounded-xl px-4 py-3 border ${isRitmoAlinhado ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800/30' : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800/30'}`}>
             <div className="flex items-center gap-2">
               <span className={`inline-block h-2 w-2 rounded-full flex-shrink-0 ${isRitmoAlinhado ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <span className={`text-[13px] font-semibold ${isRitmoAlinhado ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+              <span className={`text-sm font-semibold ${isRitmoAlinhado ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
                 {isExpired
                   ? (metaAtingida ? 'Meta atingida no período' : 'Período encerrado — meta não atingida')
                   : (isRitmoAlinhado ? 'Ritmo sustenta o fechamento da meta' : 'Ritmo atual não sustenta o fechamento da meta')}
               </span>
             </div>
             <div className="flex items-center gap-3 ml-[14px] mt-1">
-              <p className={`text-xs ${isRitmoAlinhado ? 'text-emerald-700/70 dark:text-emerald-400/70' : 'text-amber-700/70 dark:text-amber-400/70'}`}>
+              <p className={`text-sm ${isRitmoAlinhado ? 'text-emerald-700/70 dark:text-emerald-400/70' : 'text-amber-700/70 dark:text-amber-400/70'}`}>
                 {isExpired
                   ? (metaAtingida
                     ? `Meta superada em ${formatCurrency(totalSold - metaTotal, currency)}.`
@@ -138,21 +138,21 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
           </div>
 
           {/* Divider + Projeção */}
-          <Separator className="my-4 bg-muted/40" />
+          <Separator className="my-5 bg-muted/40" />
 
           <div>
-            <span className="text-xs text-muted-foreground/80 uppercase tracking-wide block">
+            <span className="text-sm text-muted-foreground/80 uppercase tracking-wide block font-medium">
               {isExpired ? 'Resultado Final' : 'Fechamento Projetado'}
             </span>
-            <p className="text-xl sm:text-2xl font-bold mt-1 tabular-nums tracking-tight">
+            <p className="text-2xl sm:text-3xl font-bold mt-1.5 tabular-nums tracking-tight">
               {formatCurrency(isExpired ? totalSold : projecaoFechamento, currency)}
             </p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
+            <p className="text-sm text-muted-foreground uppercase tracking-wide mt-1">
               Meta: {formatCurrency(metaTotal, currency)}
             </p>
             {!isExpired && (
               <>
-                <p className="text-xs text-muted-foreground/60 mt-1">
+                <p className="text-sm text-muted-foreground/60 mt-1.5">
                   {isAboveTarget
                     ? 'No ritmo atual, o fechamento superará a meta.'
                     : 'No ritmo atual, o fechamento ficará abaixo da meta.'}
