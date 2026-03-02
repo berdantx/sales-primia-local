@@ -262,7 +262,7 @@ function Leads() {
   const totalPages = paginatedData?.totalPages || 1;
   const totalCount = paginatedData?.totalCount || 0;
 
-  const clearFilters = () => {
+  const resetLeadFilters = () => {
     setSearch('');
     setSourceFilter('all');
     setCountryFilter('all');
@@ -277,9 +277,19 @@ function Leads() {
     setQualifiedFilter('all');
     setSelectedPeriod('all');
     setDateRange(undefined);
+    setShowAllPages(false);
     setCurrentPage(0);
     setSelectedTopItem(null);
   };
+
+  const clearFilters = () => {
+    resetLeadFilters();
+  };
+
+  useEffect(() => {
+    if (!isReady) return;
+    resetLeadFilters();
+  }, [clientId, isReady]);
 
   const hasActiveFilters = Boolean(
     search || 
