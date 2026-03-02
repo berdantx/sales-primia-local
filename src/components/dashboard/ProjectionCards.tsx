@@ -102,6 +102,7 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
                 {isRitmoAlinhado ? 'acima' : 'abaixo'} do exigido.
               </p>
               {/* Mini gap bar */}
+              <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wide flex-shrink-0 hidden sm:inline">Performance relativa</span>
               <motion.div
                 className="h-1 w-16 rounded-full bg-muted/60 overflow-hidden flex-shrink-0"
                 initial={{ opacity: 0, scaleX: 0.98 }}
@@ -123,7 +124,7 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
           <Separator className="my-6 bg-muted/40" />
 
           <div>
-            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide block">
+            <span className="text-xs text-muted-foreground/80 uppercase tracking-wide block">
               Fechamento Projetado
             </span>
             <p className="text-2xl sm:text-3xl font-bold mt-1.5 tabular-nums tracking-tight">
@@ -134,13 +135,13 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
               {isAboveTarget
-                ? 'No ritmo atual, a meta será atingida.'
-                : 'No ritmo atual, a meta não será atingida.'}
+                ? 'No ritmo atual, o fechamento superará a meta.'
+                : 'No ritmo atual, o fechamento ficará abaixo da meta.'}
             </p>
             <p className={`text-sm font-semibold mt-1.5 tabular-nums ${isAboveTarget ? 'text-emerald-600' : 'text-amber-600'}`}>
               {isAboveTarget
                 ? `Superávit projetado: ${formatCurrency(diferencaProjecao, currency)}`
-                : `Necessário acelerar ${formatCurrency(diferencaProjecao, currency)} para atingir a meta.`}
+                : `Necessário aumentar o ritmo diário em ${formatCurrency(daysRemaining > 0 ? diferencaProjecao / daysRemaining : diferencaProjecao, currency)}.`}
             </p>
           </div>
         </CardContent>
