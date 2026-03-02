@@ -78,7 +78,7 @@ export function DashboardControlBar({
 
   return (
     <div className="border-b border-border/60 bg-muted/30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4">
-      <div className="max-w-[1400px] mx-auto space-y-3">
+      <div className="max-w-[1400px] mx-auto space-y-5">
         {/* Row 1: Context + Status */}
         <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
           {/* ZONA 1 — CONTEXTO */}
