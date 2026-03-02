@@ -165,12 +165,12 @@ export function DashboardControlBar({
                   riskLabel.color === 'bg-amber-500' ? 'ring-amber-500/20' : 'ring-red-500/20'
                 }`} />
                 <div className="flex flex-col leading-tight">
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-baseline gap-1.5">
                     <span className="text-sm font-bold text-foreground">{riskLabel.text}</span>
-                    <span className="text-base font-extrabold text-foreground tracking-tight">
+                    <span className="text-sm font-bold text-foreground">
                       {rhythmStatus.rhythmPercent.toFixed(0)}%
                     </span>
-                    <span className="text-[11px] text-muted-foreground">do ritmo</span>
+                    <span className="text-sm text-muted-foreground">do ritmo</span>
                   </div>
                   <span className="text-[11px] text-muted-foreground/70 mt-0.5">
                     {rhythmStatus.periodPercent}% do período decorrido
