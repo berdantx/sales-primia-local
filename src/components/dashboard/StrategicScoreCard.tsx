@@ -75,9 +75,9 @@ export function StrategicScoreCard({
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-5 flex-1">
+      <div className="flex flex-col items-center gap-4 flex-1">
         {/* Arc gauge — central and dominant */}
-        <div className="relative w-[130px] h-[130px] flex-shrink-0">
+        <div className="relative w-[160px] h-[160px] flex-shrink-0 my-2">
           <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
             <circle
               cx="50" cy="50" r={radius}
@@ -97,10 +97,10 @@ export function StrategicScoreCard({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={cn("text-4xl font-extrabold tracking-tighter", scoreColor)}>
+            <span className={cn("text-5xl font-extrabold tracking-tighter", scoreColor)}>
               {score}
             </span>
-            <span className="text-[7px] text-muted-foreground/30 font-medium tracking-widest">/ 100</span>
+            <span className="text-[8px] text-muted-foreground/30 font-medium tracking-widest">/ 100</span>
           </div>
         </div>
 
