@@ -145,8 +145,8 @@ export function DashboardControlBar({
                 </>
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground/60 mt-0.5 tracking-wide">
-              Infraestrutura estratégica para decisões de alto impacto.
+            <p className="text-xs sm:text-sm text-muted-foreground/80 mt-1 font-medium tracking-wide">
+              Infraestrutura estratégica para decisões de alto impacto
             </p>
           </div>
 
