@@ -150,10 +150,10 @@ export function DashboardControlBar({
             </p>
           </div>
 
-          {/* ZONA 3 — STATUS + AÇÃO (right side) */}
-          <div className="flex items-center gap-3 flex-shrink-0">
+          {/* ZONA 3 — STATUS (right side) */}
+          <div className="flex items-center flex-shrink-0">
             {rhythmStatus && riskLabel && (
-              <div className={`hidden md:flex items-center gap-3 px-4 py-2.5 rounded-lg border ${
+              <div className={`hidden md:flex items-center gap-4 px-6 py-3 rounded-lg border min-w-[240px] ${
                 riskLabel.color === 'bg-emerald-500' 
                   ? 'bg-emerald-50/40 border-emerald-200/40' 
                   : riskLabel.color === 'bg-amber-500' 
@@ -178,12 +178,11 @@ export function DashboardControlBar({
                 </div>
               </div>
             )}
-            <ExportReportDialog defaultClientId={clientId} />
           </div>
         </div>
 
-        {/* Row 2: Filter groups */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        {/* Row 2: Filter groups + Export */}
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
           {/* PERÍODO */}
           <div className="flex flex-col gap-1">
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium hidden sm:block">Período</span>
@@ -231,6 +230,10 @@ export function DashboardControlBar({
               </div>
             </>
           )}
+
+          {/* Spacer + Export */}
+          <div className="hidden sm:flex sm:flex-1" />
+          <ExportReportDialog defaultClientId={clientId} />
         </div>
       </div>
     </div>
