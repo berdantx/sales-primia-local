@@ -96,10 +96,10 @@ const menuGroups: MenuGroup[] = [
       {
         title: 'Análise',
         icon: BarChart3,
-        roles: ['master', 'admin'],
+        roles: ['master', 'admin', 'user'],
         items: [
-          { title: 'Leads', url: '/leads', icon: BarChart3, roles: ['master', 'admin'] },
-          { title: 'Funil', url: '/leads/funnel', icon: Layers, roles: ['master', 'admin'] },
+          { title: 'Leads', url: '/leads', icon: BarChart3, roles: ['master', 'admin', 'user'] },
+          { title: 'Funil', url: '/leads/funnel', icon: Layers, roles: ['master', 'admin', 'user'] },
         ],
       },
     ],
