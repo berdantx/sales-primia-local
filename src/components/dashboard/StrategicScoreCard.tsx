@@ -66,7 +66,7 @@ export function StrategicScoreCard({
   ];
 
   return (
-    <div className="bg-card border border-border/80 rounded-xl p-6 sm:p-7 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 h-full flex flex-col">
+    <div className="bg-card border border-border/80 rounded-xl p-6 sm:p-7 pb-8 sm:pb-9 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 h-full flex flex-col">
       <div className="flex items-center gap-2 mb-5">
         <Activity className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
         <div>
@@ -83,13 +83,13 @@ export function StrategicScoreCard({
               cx="50" cy="50" r={radius}
               fill="none"
               stroke="hsl(var(--muted))"
-              strokeWidth="8"
+              strokeWidth="9"
             />
             <circle
               cx="50" cy="50" r={radius}
               fill="none"
               className={arcColor}
-              strokeWidth="8"
+              strokeWidth="9"
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
@@ -104,7 +104,7 @@ export function StrategicScoreCard({
           </div>
         </div>
 
-        <p className={cn("text-[11px] font-bold tracking-tight text-center", scoreColor)}>{scoreLabel}</p>
+        <p className={cn("text-xs font-bold tracking-widest text-center uppercase", scoreColor)}>{scoreLabel}</p>
 
         {/* Factors */}
         <div className="w-full space-y-2.5 mt-auto">
