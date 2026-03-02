@@ -40,54 +40,84 @@ import {
   User,
   LogOut,
   ChevronDown,
+  Globe,
+  GitCompare,
+  Layers,
 } from 'lucide-react';
 import defaultLogo from '@/assets/default-logo.png';
 import { useMemo } from 'react';
 
-// Map our AppRole to navigation roles
-// master → produtor/admin, admin → admin, user → coprodutor
 type NavRole = AppRole;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type IconComponent = React.ComponentType<any>;
 
 interface MenuItem {
   title: string;
   url: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: IconComponent;
+  roles: NavRole[];
+}
+
+interface SubGroup {
+  title: string;
+  icon: IconComponent;
+  items: MenuItem[];
   roles: NavRole[];
 }
 
 interface MenuGroup {
   label: string;
-  collapsible: boolean;
+  badge?: { text: string; color: string };
   items: MenuItem[];
+  subGroups?: SubGroup[];
 }
 
 const menuGroups: MenuGroup[] = [
   {
     label: 'CORE',
-    collapsible: false,
+    badge: { text: 'CORE', color: 'text-blue-600 bg-blue-50 border-blue-100' },
     items: [
       { title: 'Painel', url: '/', icon: LayoutDashboard, roles: ['master', 'admin', 'user'] },
-      { title: 'Vendas', url: '/transactions', icon: TrendingUp, roles: ['master', 'admin'] },
-      { title: 'Análise', url: '/leads', icon: BarChart3, roles: ['master', 'admin'] },
-      { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin'] },
-      { title: 'Coprodução', url: '/coproduction', icon: Wallet, roles: ['master', 'user'] },
+    ],
+    subGroups: [
+      {
+        title: 'Vendas',
+        icon: TrendingUp,
+        roles: ['master', 'admin'],
+        items: [
+          { title: 'Hotmart', url: '/transactions', icon: TrendingUp, roles: ['master', 'admin'] },
+          { title: 'TMB', url: '/tmb-transactions', icon: Wallet, roles: ['master', 'admin'] },
+          { title: 'Eduzz', url: '/eduzz-transactions', icon: Activity, roles: ['master', 'admin'] },
+          { title: 'Internacional', url: '/international-sales', icon: Globe, roles: ['master', 'admin'] },
+          { title: 'Comparativo', url: '/comparative', icon: GitCompare, roles: ['master', 'admin'] },
+        ],
+      },
+      {
+        title: 'Análise',
+        icon: BarChart3,
+        roles: ['master', 'admin'],
+        items: [
+          { title: 'Leads', url: '/leads', icon: BarChart3, roles: ['master', 'admin'] },
+          { title: 'Funil', url: '/leads/funnel', icon: Layers, roles: ['master', 'admin'] },
+        ],
+      },
     ],
   },
   {
     label: 'OPERAÇÃO',
-    collapsible: true,
+    badge: { text: 'OP', color: 'text-muted-foreground bg-muted border-border' },
     items: [
+      { title: 'Metas', url: '/goals', icon: Target, roles: ['master', 'admin'] },
+      { title: 'Coprodução', url: '/coproduction', icon: Wallet, roles: ['master', 'user'] },
       { title: 'Importar Dados', url: '/upload', icon: FileUp, roles: ['master', 'admin'] },
-      { title: 'Cancelamentos TMB', url: '/tmb-cancellations', icon: Ban, roles: ['master', 'admin'] },
-      { title: 'Cancelamentos Eduzz', url: '/eduzz-cancellations', icon: Ban, roles: ['master', 'admin'] },
-      { title: 'Transações TMB', url: '/tmb-transactions', icon: Activity, roles: ['master', 'admin', 'user'] },
-      { title: 'Transações Eduzz', url: '/eduzz-transactions', icon: Activity, roles: ['master', 'admin', 'user'] },
-      { title: 'Internacional', url: '/international-sales', icon: Activity, roles: ['master', 'admin', 'user'] },
+      { title: 'Cancel. TMB', url: '/tmb-cancellations', icon: Ban, roles: ['master', 'admin'] },
+      { title: 'Cancel. Eduzz', url: '/eduzz-cancellations', icon: Ban, roles: ['master', 'admin'] },
     ],
   },
   {
     label: 'ADMIN',
-    collapsible: true,
+    badge: { text: 'ADM', color: 'text-red-500 bg-red-50 border-red-100' },
     items: [
       { title: 'Equipe', url: '/users', icon: Users, roles: ['master', 'admin'] },
       { title: 'Clientes', url: '/clients', icon: Database, roles: ['master'] },
@@ -96,6 +126,8 @@ const menuGroups: MenuGroup[] = [
     ],
   },
 ];
+
+const menuBtnClass = "h-9 text-[13px] font-normal text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground data-[active=true]:border-l-2 data-[active=true]:border-l-primary data-[active=true]:font-medium";
 
 export function AppSidebar() {
   const location = useLocation();
@@ -115,108 +147,92 @@ export function AppSidebar() {
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
+    return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  const groupHasActiveItem = (items: MenuItem[]) =>
-    items.some(item => isActive(item.url));
+  const subGroupHasActive = (items: MenuItem[]) => items.some(i => isActive(i.url));
+
+  const roleLabel = role === 'master' ? 'Master' : role === 'admin' ? 'Admin' : 'Cliente';
 
   return (
     <Sidebar collapsible="icon">
-      {/* Header: Logo + App Name */}
       <SidebarHeader className="border-b border-sidebar-border px-4 py-5">
         {!collapsed ? (
           <div className="flex items-center gap-3">
-            <img
-              src={currentLogo}
-              alt={branding.appName || 'Logo'}
-              className="h-8 w-auto object-contain max-w-[140px]"
-            />
+            <img src={currentLogo} alt={branding.appName || 'Logo'} className="h-8 w-auto object-contain max-w-[140px]" />
           </div>
         ) : (
           <div className="flex justify-center">
-            <img
-              src={currentLogo}
-              alt={branding.appName || 'Logo'}
-              className="h-7 w-auto object-contain"
-            />
+            <img src={currentLogo} alt={branding.appName || 'Logo'} className="h-7 w-auto object-contain" />
           </div>
         )}
       </SidebarHeader>
 
       <SidebarContent className="pt-2 px-2">
         {menuGroups.map((group) => {
-          const visibleItems = group.items.filter(item => item.roles.includes(role));
-          if (visibleItems.length === 0) return null;
+          const visibleItems = group.items.filter(i => i.roles.includes(role));
+          const visibleSubGroups = (group.subGroups || []).filter(sg =>
+            sg.roles.includes(role) && sg.items.some(i => i.roles.includes(role))
+          );
 
-          if (group.collapsible) {
-            const isGroupActive = groupHasActiveItem(visibleItems);
-
-            return (
-              <Collapsible key={group.label} defaultOpen={isGroupActive} className="group/collapsible">
-                <SidebarGroup>
-                  <CollapsibleTrigger asChild>
-                    <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/50 rounded-md transition-colors text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-                      {group.label}
-                      <ChevronDown className="ml-auto h-3.5 w-3.5 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                    </SidebarGroupLabel>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarGroupContent>
-                      <SidebarMenu>
-                        {visibleItems.map((item) => (
-                          <SidebarMenuItem key={item.title}>
-                            <SidebarMenuButton
-                              asChild
-                              isActive={isActive(item.url)}
-                              tooltip={item.title}
-                              className="h-9 text-[13px] font-normal text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground data-[active=true]:border-l-2 data-[active=true]:border-l-primary data-[active=true]:font-medium"
-                            >
-                              <NavLink
-                                to={item.url}
-                                className="flex items-center gap-3"
-                                activeClassName=""
-                              >
-                                <item.icon className="h-[18px] w-[18px] shrink-0" />
-                                <span>{item.title}</span>
-                              </NavLink>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        ))}
-                      </SidebarMenu>
-                    </SidebarGroupContent>
-                  </CollapsibleContent>
-                </SidebarGroup>
-              </Collapsible>
-            );
-          }
+          if (visibleItems.length === 0 && visibleSubGroups.length === 0) return null;
 
           return (
-            <SidebarGroup key={group.label}>
-              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            <SidebarGroup key={group.label} className="pb-1">
+              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase flex items-center gap-2">
                 {group.label}
+                {group.badge && !collapsed && (
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${group.badge.color}`}>
+                    {group.badge.text}
+                  </span>
+                )}
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {visibleItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive(item.url)}
-                        tooltip={item.title}
-                        className="h-9 text-[13px] font-normal text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground data-[active=true]:border-l-2 data-[active=true]:border-l-primary data-[active=true]:font-medium"
-                      >
-                        <NavLink
-                          to={item.url}
-                          className="flex items-center gap-3"
-                          activeClassName=""
-                        >
-                          <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title} className={menuBtnClass}>
+                        <NavLink to={item.url} className="flex items-center gap-3" activeClassName="">
+                          <item.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
                           <span>{item.title}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
+
+                  {visibleSubGroups.map((sg) => {
+                    const sgItems = sg.items.filter(i => i.roles.includes(role));
+                    const isOpen = subGroupHasActive(sgItems);
+
+                    return (
+                      <Collapsible key={sg.title} defaultOpen={isOpen} className="group/sub">
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton
+                              tooltip={sg.title}
+                              className="h-9 text-[13px] font-normal text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 cursor-pointer"
+                            >
+                              <sg.icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+                              <span className="flex-1">{sg.title}</span>
+                              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]/sub:rotate-180" />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                        </SidebarMenuItem>
+                        <CollapsibleContent>
+                          {sgItems.map((item) => (
+                            <SidebarMenuItem key={item.url}>
+                              <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title} className={`${menuBtnClass} pl-9`}>
+                                <NavLink to={item.url} className="flex items-center gap-3" activeClassName="">
+                                  <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                                  <span>{item.title}</span>
+                                </NavLink>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          ))}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -228,17 +244,8 @@ export function AppSidebar() {
         <SidebarMenu>
           {(role === 'master' || role === 'admin') && (
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={isActive('/settings')}
-                tooltip="Configurações"
-                className="h-9 text-[13px] font-normal text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/60 data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
-              >
-                <NavLink
-                  to="/settings"
-                  className="flex items-center gap-3"
-                  activeClassName=""
-                >
+              <SidebarMenuButton asChild isActive={isActive('/settings')} tooltip="Configurações" className={menuBtnClass}>
+                <NavLink to="/settings" className="flex items-center gap-3" activeClassName="">
                   <Settings className="h-[18px] w-[18px]" strokeWidth={1.75} />
                   {!collapsed && <span>Configurações</span>}
                 </NavLink>
@@ -248,8 +255,12 @@ export function AppSidebar() {
         </SidebarMenu>
 
         {!collapsed && user && (
-          <div className="mt-2 px-1">
-            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+          <div className="mt-2 px-1 flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground shrink-0" strokeWidth={1.75} />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-foreground truncate">{user.email}</p>
+              <span className="text-[10px] text-muted-foreground">{roleLabel}</span>
+            </div>
           </div>
         )}
 
