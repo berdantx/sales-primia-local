@@ -23,6 +23,7 @@ import { parseFile, parseCSV, parseXLSX, parseHotmartData, autoDetectHotmartColu
 import { parseTmbFile, parseTmbCSV, parseTmbData, autoDetectTmbColumns, TmbTransaction, TmbParseError } from '@/lib/parsers/tmbParser';
 import { parseEduzzFile, parseEduzzCSV, parseEduzzXLSX, parseEduzzData, autoDetectEduzzColumns, EduzzTransaction, EduzzParseError } from '@/lib/parsers/eduzzParser';
 import { ArrowLeft, ArrowRight, FileSpreadsheet, Store, CheckCircle2, CreditCard, Loader2 } from 'lucide-react';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { DataManagement } from '@/components/upload/DataManagement';
 import { 
   ColumnMappingStep, ColumnMappingResult,
@@ -364,27 +365,26 @@ export default function UploadPage() {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        >
-          <ClientContextHeader 
-            title="Importar Vendas"
-            description={step === 'platform' 
-              ? 'Selecione a plataforma de origem dos dados'
-              : `Faça upload da sua planilha de vendas ${platform?.toUpperCase() || ''}`
-            }
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-3">
+            <ActiveClientBlock />
+            <ClientContextHeader 
+              title="Importar Vendas"
+              description={step === 'platform' 
+                ? 'Selecione a plataforma de origem dos dados'
+                : `Faça upload da sua planilha de vendas ${platform?.toUpperCase() || ''}`
+              }
+            />
+          </div>
           {platform && (
             <Badge variant="outline" className="gap-2">
               {getPlatformIcon()}
               Template: {getPlatformLabel()}
             </Badge>
           )}
-        </motion.div>
+        </div>
 
         {/* Steps */}
         {step !== 'platform' && (

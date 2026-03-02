@@ -22,6 +22,7 @@ import {
   Building2,
   Loader2
 } from 'lucide-react';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { motion } from 'framer-motion';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -40,21 +41,19 @@ function WebhookDocs() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-2"
-        >
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-            <BookOpen className="h-7 w-7" />
-            Documentação de Webhooks
-          </h1>
-          <p className="text-muted-foreground">
-            Guia completo para configurar webhooks e receber leads e vendas automaticamente
-          </p>
-        </motion.div>
+        <div className="space-y-3">
+          <ActiveClientBlock />
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Documentação de Webhooks
+            </h1>
+            <p className="text-muted-foreground text-xs sm:text-sm mt-1">
+              Guia completo para configurar webhooks e receber leads e vendas automaticamente
+            </p>
+          </div>
+        </div>
 
         {/* Overview */}
         <Card>

@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -125,15 +126,15 @@ export default function BackupDashboard() {
 
   return (
     <MainLayout>
-      <div className="max-w-6xl mx-auto space-y-6">
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+        <div>
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <Database className="h-8 w-8" />
-                Dashboard de Backup
-              </h1>
-              <p className="text-muted-foreground">Monitore e gerencie seus backups</p>
+            <div className="space-y-3">
+              <ActiveClientBlock />
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard de Backup</h1>
+                <p className="text-muted-foreground text-xs sm:text-sm mt-1">Monitore e gerencie seus backups</p>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -170,7 +171,7 @@ export default function BackupDashboard() {
               )}
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Table Selector */}
         <Card>

@@ -23,6 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { calculateGoalProgress, formatCurrency, formatPercent } from '@/lib/calculations/goalCalculations';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { 
   Target, 
   Plus, 
@@ -161,11 +162,14 @@ export default function Goals() {
   if (!canViewFinancials) {
     return (
       <MainLayout>
-        <div className="space-y-6">
-          <ClientContextHeader 
-            title="Metas de Vendas"
-            description="Defina e acompanhe suas metas de vendas"
-          />
+      <div className="space-y-6 sm:space-y-8">
+          <div className="space-y-3">
+            <ActiveClientBlock />
+            <ClientContextHeader 
+              title="Metas de Vendas"
+              description="Defina e acompanhe suas metas de vendas"
+            />
+          </div>
           <RestrictedFinancialSection />
         </div>
       </MainLayout>
@@ -174,17 +178,16 @@ export default function Goals() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        >
-          <ClientContextHeader 
-            title="Metas de Vendas"
-            description="Defina e acompanhe suas metas de vendas"
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-3">
+            <ActiveClientBlock />
+            <ClientContextHeader 
+              title="Metas de Vendas"
+              description="Defina e acompanhe suas metas de vendas"
+            />
+          </div>
           <div className="flex items-center gap-3">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
@@ -290,7 +293,7 @@ export default function Goals() {
               </DialogContent>
             </Dialog>
           </div>
-        </motion.div>
+        </div>
 
         {/* Active Goals */}
         {activeGoals.length > 0 && (

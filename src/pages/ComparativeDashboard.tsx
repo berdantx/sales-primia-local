@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Calendar, BarChart3, Download } from 'lucide-react';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { DateRange } from 'react-day-picker';
 import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC } from '@/lib/dateUtils';
 
@@ -129,21 +130,15 @@ function ComparativeDashboard() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <BarChart3 className="h-6 w-6 text-primary" />
-            </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-3">
+            <ActiveClientBlock />
             <div>
-              <h1 className="text-3xl font-bold">Análise Comparativa</h1>
-              <p className="text-muted-foreground">
-                Hotmart vs TMB vs Eduzz - Lado a lado
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Análise Comparativa</h1>
+              <p className="text-muted-foreground text-xs sm:text-sm mt-1">
+                Hotmart vs TMB vs Eduzz — Lado a lado
               </p>
             </div>
           </div>
@@ -156,7 +151,7 @@ function ComparativeDashboard() {
               </Button>
             }
           />
-        </motion.div>
+        </div>
 
         {/* Period Selector */}
         <motion.div
