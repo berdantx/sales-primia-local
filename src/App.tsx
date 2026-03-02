@@ -26,7 +26,7 @@ const WebhookConfig = lazy(() => import("./pages/WebhookConfig"));
 const WebhookDocs = lazy(() => import("./pages/WebhookDocs"));
 const Users = lazy(() => import("./pages/Users"));
 const Clients = lazy(() => import("./pages/Clients"));
-const Leads = lazy(() => import("./pages/Leads"));
+import Leads from "./pages/Leads";
 const LeadsFunnel = lazy(() => import("./pages/LeadsFunnel"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
