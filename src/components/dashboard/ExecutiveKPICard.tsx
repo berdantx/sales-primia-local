@@ -12,6 +12,7 @@ interface ExecutiveKPICardProps {
   value: string;
   badge?: string;
   badgeClassName?: string;
+  microLabel?: string;
   subtitle?: string;
   subtitleClassName?: string;
   progress?: number; // 0-100
@@ -31,6 +32,7 @@ export function ExecutiveKPICard({
   value,
   badge,
   badgeClassName,
+  microLabel,
   subtitle,
   subtitleClassName,
   progress,
@@ -57,7 +59,12 @@ export function ExecutiveKPICard({
       onClick={onClick}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm text-muted-foreground font-medium">{label}</span>
+        <div>
+          {microLabel && (
+            <span className="text-[10px] tracking-wide uppercase text-muted-foreground block mb-0.5">{microLabel}</span>
+          )}
+          <span className="text-sm text-muted-foreground font-medium">{label}</span>
+        </div>
         <div className="flex items-center gap-2">
           {badge && (
             <Badge variant="outline" className={cn("text-[10px] font-normal h-5 px-2 text-muted-foreground border-border", badgeClassName)}>
@@ -86,7 +93,11 @@ export function ExecutiveKPICard({
             />
           </div>
           {progressHint && (
-            <p className="text-xs text-muted-foreground mt-1.5">{progressHint}</p>
+            <div className="text-xs text-muted-foreground mt-1.5 space-y-0.5">
+              {progressHint.split('\n').map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
+            </div>
           )}
         </div>
       )}
