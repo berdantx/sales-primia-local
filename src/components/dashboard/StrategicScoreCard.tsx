@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Activity } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface StrategicScoreCardProps {
   rhythmPercent?: number;
@@ -154,6 +155,10 @@ export function StrategicScoreCard({
             </div>
           ))}
         </div>
+
+        <Link to="/igpl" className="text-[11px] text-primary/70 hover:text-primary font-medium transition-colors mt-1">
+          Saiba mais →
+        </Link>
       </div>
     </div>
   );
