@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { calculateGoalProgress } from '@/lib/calculations/goalCalculations';
+import { ProjectionCards } from '@/components/dashboard/ProjectionCards';
 import { DateRange } from 'react-day-picker';
 import { useCombinedStats, PlatformType } from '@/hooks/useCombinedStats';
 import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
@@ -94,9 +96,14 @@ export default function Dashboard() {
   }, [projectionStats, hotmartStats, tmbStats, eduzzStats, dollarRate]);
 
   // Goal progress
-  const goalProgress = useMemo(() => {
+  const goalProgressPercent = useMemo(() => {
     if (!primaryGoal) return 0;
     return Math.min((revenue.confirmed / primaryGoal.target_value) * 100, 100);
+  }, [primaryGoal, revenue.confirmed]);
+
+  const goalProgressData = useMemo(() => {
+    if (!primaryGoal) return null;
+    return calculateGoalProgress(primaryGoal, revenue.confirmed);
   }, [primaryGoal, revenue.confirmed]);
 
   const goalRemaining = primaryGoal ? Math.max(primaryGoal.target_value - revenue.confirmed, 0) : 0;
@@ -308,9 +315,9 @@ export default function Dashboard() {
                   value={primaryGoal ? formatCurrency(primaryGoal.target_value, primaryGoal.currency) : '—'}
                   subtitle={primaryGoal ? `Faltam ${formatCurrency(goalRemaining, primaryGoal.currency)}` : 'Nenhuma meta ativa'}
                   subtitleClassName={primaryGoal ? "font-medium" : undefined}
-                  progress={primaryGoal ? goalProgress : undefined}
-                  progressColor={primaryGoal ? getProgressColor(goalProgress) : undefined}
-                  progressHint={primaryGoal ? getGoalRhythmHint(goalProgress, primaryGoal) : undefined}
+                  progress={primaryGoal ? goalProgressPercent : undefined}
+                  progressColor={primaryGoal ? getProgressColor(goalProgressPercent) : undefined}
+                  progressHint={primaryGoal ? getGoalRhythmHint(goalProgressPercent, primaryGoal) : undefined}
                   onClick={!primaryGoal ? () => navigate('/goals') : undefined}
                   icon={Target}
                   accentColor="border-l-amber-500/70"
@@ -355,6 +362,11 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* Ritmo Necessário para Fechamento */}
+            {canViewFinancials && goalProgressData && primaryGoal && (
+              <ProjectionCards progress={goalProgressData} currency={primaryGoal.currency} />
+            )}
+
             {/* Charts: Evolution (2/3) + Recommendation (1/3) */}
             {canViewFinancials && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
@@ -367,7 +379,7 @@ export default function Dashboard() {
                 <div className="lg:col-span-1">
                   <StrategicRecommendationCard
                     hasGoal={!!primaryGoal}
-                    goalProgress={goalProgress}
+                    goalProgress={goalProgressPercent}
                     topProduct={topProductName}
                     leadCount={leadCount || 0}
                     totalRevenue={revenue.confirmed}
