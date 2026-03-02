@@ -28,7 +28,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ExecutiveKPICard } from '@/components/dashboard/ExecutiveKPICard';
 import { ClientSideExportDialog } from '@/components/leads/ClientSideExportDialog';
 import { LeadsTable } from '@/components/leads/LeadsTable';
-import { LeadsFilters } from '@/components/leads/LeadsFilters';
+import { LeadsCompactFilters } from '@/components/leads/LeadsCompactFilters';
+import { LeadsActiveFilters } from '@/components/leads/LeadsActiveFilters';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
@@ -300,6 +301,20 @@ function Leads() {
     selectedTopItem
   );
 
+  // Count filters in the advanced drawer (not in compact bar)
+  const advancedFiltersCount = [
+    countryFilter !== 'all',
+    utmSourceFilter !== 'all',
+    utmMediumFilter !== 'all',
+    utmCampaignFilter !== 'all',
+    utmContentFilter !== 'all',
+    utmTermFilter !== 'all',
+    qualifiedFilter !== 'all',
+    testFilter !== 'hide',
+    pageFilter !== 'all',
+    trafficTypeFilter !== 'all',
+  ].filter(Boolean).length;
+
   const handleBackfillGeolocation = async () => {
     setIsBackfilling(true);
     try {
@@ -494,50 +509,83 @@ function Leads() {
           </div>
         </div>
 
-        {/* ── FILTROS ── */}
-        <Card className="border-border/60 shadow-[0_1px_2px_rgba(0,0,0,0.03)] rounded-xl">
-          <CardContent className="p-3 sm:p-4">
-            <LeadsFilters
-              selectedPeriod={selectedPeriod}
-              dateRange={dateRange}
-              onPeriodChange={(period) => { setSelectedPeriod(period); setCurrentPage(0); }}
-              onDateRangeChange={(range) => { setDateRange(range); setCurrentPage(0); }}
-              search={search}
-              onSearchChange={(value) => { setSearch(value); setCurrentPage(0); }}
-              sourceFilter={sourceFilter}
-              onSourceFilterChange={(v) => { setSourceFilter(v); setCurrentPage(0); }}
-              countryFilter={countryFilter}
-              onCountryFilterChange={(v) => { setCountryFilter(v); setCurrentPage(0); }}
-              utmSourceFilter={utmSourceFilter}
-              onUtmSourceFilterChange={(v) => { setUtmSourceFilter(v); setCurrentPage(0); }}
-              utmMediumFilter={utmMediumFilter}
-              onUtmMediumFilterChange={(v) => { setUtmMediumFilter(v); setCurrentPage(0); }}
-              utmCampaignFilter={utmCampaignFilter}
-              onUtmCampaignFilterChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(0); }}
-              utmContentFilter={utmContentFilter}
-              onUtmContentFilterChange={(v) => { setUtmContentFilter(v); setCurrentPage(0); }}
-              utmTermFilter={utmTermFilter}
-              onUtmTermFilterChange={(v) => { setUtmTermFilter(v); setCurrentPage(0); }}
-              qualifiedFilter={qualifiedFilter}
-              onQualifiedFilterChange={(v) => { setQualifiedFilter(v); setCurrentPage(0); }}
-              testFilter={testFilter}
-              onTestFilterChange={(v) => { setTestFilter(v); setCurrentPage(0); }}
-              pageFilter={pageFilter}
-              onPageFilterChange={(v) => { setPageFilter(v); setCurrentPage(0); }}
-              trafficTypeFilter={trafficTypeFilter}
-              onTrafficTypeFilterChange={(v) => { setTrafficTypeFilter(v); setCurrentPage(0); }}
-              showAllPages={showAllPages}
-              onShowAllPages={() => setShowAllPages(true)}
-              totalPagesCount={totalPagesCount}
-              hiddenPagesCount={hiddenPagesCount}
-              totalLeads={stats?.total || 0}
-              testLeadsCount={testLeadsCount}
-              filterOptions={filterOptions}
-              hasActiveFilters={hasActiveFilters}
-              onClearFilters={clearFilters}
-            />
-          </CardContent>
-        </Card>
+        {/* ── IAQL — Soberano (acima dos filtros) ── */}
+        <IAQLCard
+          score={iaql.score}
+          interpretation={iaql.interpretation}
+          isLoading={isLoadingStats}
+        />
+
+        {/* ── FILTROS COMPACTOS ── */}
+        <LeadsCompactFilters
+          selectedPeriod={selectedPeriod}
+          dateRange={dateRange}
+          onPeriodChange={(period) => { setSelectedPeriod(period); setCurrentPage(0); }}
+          onDateRangeChange={(range) => { setDateRange(range); setCurrentPage(0); }}
+          search={search}
+          onSearchChange={(value) => { setSearch(value); setCurrentPage(0); }}
+          sourceFilter={sourceFilter}
+          onSourceFilterChange={(v) => { setSourceFilter(v); setCurrentPage(0); }}
+          countryFilter={countryFilter}
+          onCountryFilterChange={(v) => { setCountryFilter(v); setCurrentPage(0); }}
+          utmSourceFilter={utmSourceFilter}
+          onUtmSourceFilterChange={(v) => { setUtmSourceFilter(v); setCurrentPage(0); }}
+          utmMediumFilter={utmMediumFilter}
+          onUtmMediumFilterChange={(v) => { setUtmMediumFilter(v); setCurrentPage(0); }}
+          utmCampaignFilter={utmCampaignFilter}
+          onUtmCampaignFilterChange={(v) => { setUtmCampaignFilter(v); setCurrentPage(0); }}
+          utmContentFilter={utmContentFilter}
+          onUtmContentFilterChange={(v) => { setUtmContentFilter(v); setCurrentPage(0); }}
+          utmTermFilter={utmTermFilter}
+          onUtmTermFilterChange={(v) => { setUtmTermFilter(v); setCurrentPage(0); }}
+          qualifiedFilter={qualifiedFilter}
+          onQualifiedFilterChange={(v) => { setQualifiedFilter(v); setCurrentPage(0); }}
+          testFilter={testFilter}
+          onTestFilterChange={(v) => { setTestFilter(v); setCurrentPage(0); }}
+          pageFilter={pageFilter}
+          onPageFilterChange={(v) => { setPageFilter(v); setCurrentPage(0); }}
+          trafficTypeFilter={trafficTypeFilter}
+          onTrafficTypeFilterChange={(v) => { setTrafficTypeFilter(v); setCurrentPage(0); }}
+          showAllPages={showAllPages}
+          onShowAllPages={() => setShowAllPages(true)}
+          totalPagesCount={totalPagesCount}
+          hiddenPagesCount={hiddenPagesCount}
+          totalLeads={stats?.total || 0}
+          testLeadsCount={testLeadsCount}
+          filterOptions={filterOptions}
+          advancedFiltersCount={advancedFiltersCount}
+        />
+
+        {/* ── FILTROS ATIVOS (chips) ── */}
+        <LeadsActiveFilters
+          search={search}
+          onSearchClear={() => { setSearch(''); setCurrentPage(0); }}
+          sourceFilter={sourceFilter}
+          onSourceClear={() => { setSourceFilter('all'); setCurrentPage(0); }}
+          countryFilter={countryFilter}
+          onCountryClear={() => { setCountryFilter('all'); setCurrentPage(0); }}
+          utmSourceFilter={utmSourceFilter}
+          onUtmSourceClear={() => { setUtmSourceFilter('all'); setCurrentPage(0); }}
+          utmMediumFilter={utmMediumFilter}
+          onUtmMediumClear={() => { setUtmMediumFilter('all'); setCurrentPage(0); }}
+          utmCampaignFilter={utmCampaignFilter}
+          onUtmCampaignClear={() => { setUtmCampaignFilter('all'); setCurrentPage(0); }}
+          utmContentFilter={utmContentFilter}
+          onUtmContentClear={() => { setUtmContentFilter('all'); setCurrentPage(0); }}
+          utmTermFilter={utmTermFilter}
+          onUtmTermClear={() => { setUtmTermFilter('all'); setCurrentPage(0); }}
+          qualifiedFilter={qualifiedFilter}
+          onQualifiedClear={() => { setQualifiedFilter('all'); setCurrentPage(0); }}
+          testFilter={testFilter}
+          onTestClear={() => { setTestFilter('hide'); setCurrentPage(0); }}
+          pageFilter={pageFilter}
+          onPageClear={() => { setPageFilter('all'); setCurrentPage(0); }}
+          trafficTypeFilter={trafficTypeFilter}
+          onTrafficTypeClear={() => { setTrafficTypeFilter('all'); setCurrentPage(0); }}
+          selectedTopItem={selectedTopItem}
+          onTopItemClear={() => setSelectedTopItem(null)}
+          onClearAll={clearFilters}
+        />
 
         {/* ── TABS ── */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -561,12 +609,6 @@ function Leads() {
 
           {/* ════════ TAB 1: VISÃO ESTRATÉGICA ════════ */}
           <TabsContent value="strategic" className="space-y-6 mt-0">
-            {/* IAQL — Soberano */}
-            <IAQLCard
-              score={iaql.score}
-              interpretation={iaql.interpretation}
-              isLoading={isLoadingStats}
-            />
 
             {/* KPIs operacionais */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
@@ -787,23 +829,6 @@ function Leads() {
 
           {/* ════════ TAB 3: CRM & OPERAÇÃO ════════ */}
           <TabsContent value="crm" className="space-y-6 mt-0">
-            {/* Selected Filter Indicator */}
-            {selectedTopItem && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                <span className="text-sm text-primary font-medium">
-                  Filtrando por {topMode === 'ads' ? 'anúncio' : 'campanha'}:
-                </span>
-                <span className="text-sm font-semibold truncate max-w-[300px]">{selectedTopItem}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedTopItem(null)}
-                  className="h-6 w-6 p-0 ml-auto hover:bg-primary/10"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
 
             {/* Table */}
             {isLoadingLeads ? (
