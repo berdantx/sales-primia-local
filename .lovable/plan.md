@@ -1,15 +1,25 @@
 
 
-# Plano: Remover badges dos grupos da sidebar
+# Plano: Restaurar tooltip no card "Receita Projetada"
 
-## Mudança única
+## Mudanças
 
-**Arquivo:** `src/components/layout/AppSidebar.tsx`
+### 1. `ExecutiveKPICard` — adicionar suporte a `tooltipContent`
+**Arquivo:** `src/components/dashboard/ExecutiveKPICard.tsx`
 
-- Remover a propriedade `badge` de todos os objetos em `menuGroups`
-- Remover o bloco de renderização do badge dentro do `SidebarGroupLabel`
-- Manter os labels de grupo (`CORE`, `OPERAÇÃO`, `ADMIN`) no estilo atual: `text-[11px] font-semibold tracking-wider uppercase text-muted-foreground`
-- Remover a interface `badge` do tipo `MenuGroup`
+- Adicionar prop `tooltipContent?: React.ReactNode` à interface
+- Importar `Tooltip`, `TooltipTrigger`, `TooltipContent` de `@/components/ui/tooltip`
+- Quando `tooltipContent` existir, envolver o card em `Tooltip` (igual ao padrão do `ColoredKPICard`)
+- Adicionar `cursor-help` quando tooltip existir
 
-Resultado: labels de seção limpos, sem badges, mantendo hierarquia visual apenas com tipografia e espaçamento.
+### 2. `Dashboard.tsx` — passar tooltip com composição do valor
+**Arquivo:** `src/pages/Dashboard.tsx`
+
+- No card "Receita Projetada", passar `tooltipContent` com a composição:
+  - **Já processado:** `revenue.confirmed` (hotmart real + tmb + eduzz + USD convertido)
+  - **A receber (recorrências):** diferença entre projetado e confirmado (`revenue.projected - revenue.confirmed`), exibido em amarelo se > 0
+  - **USD convertido:** valor em BRL da conversão USD, exibido em azul se > 0
+  - Footer explicativo: "Soma dos valores já processados + parcelas futuras de transações parceladas."
+
+Isso restaura o tooltip com o mesmo layout visual que existia antes (conforme o print de referência).
 
