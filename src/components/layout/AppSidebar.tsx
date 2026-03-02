@@ -78,6 +78,7 @@ const menuGroups: MenuGroup[] = [
     
     items: [
       { title: 'Painel', url: '/', icon: LayoutDashboard, roles: ['master', 'admin', 'user'] },
+      { title: 'IGPL', url: '/igpl', icon: Activity, roles: ['master', 'admin', 'user'] },
     ],
     subGroups: [
       {

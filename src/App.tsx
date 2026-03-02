@@ -36,6 +36,7 @@ import BackupTestHarness from "./pages/BackupTestHarness";
 import CorsDiagnostics from "./pages/CorsDiagnostics";
 import Coproduction from "./pages/Coproduction";
 import InternationalSales from "./pages/InternationalSales";
+import IGPLExplainer from "./pages/IGPLExplainer";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -98,6 +99,7 @@ const App = () => (
             } />
             <Route path="/coproduction" element={<Coproduction />} />
             <Route path="/international-sales" element={<InternationalSales />} />
+            <Route path="/igpl" element={<IGPLExplainer />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/leads/funnel" element={<LeadsFunnel />} />
             <Route path="/invite/:token" element={<AcceptInvite />} />
