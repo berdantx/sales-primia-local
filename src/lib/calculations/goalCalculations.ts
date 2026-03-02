@@ -15,6 +15,8 @@ export interface GoalProgress {
   remaining: number;
   progressPercent: number;
   daysRemaining: number;
+  daysElapsed: number;
+  totalDays: number;
   weeksRemaining: number;
   monthsRemaining: number;
   perDay: number;
@@ -49,7 +51,7 @@ export function calculateGoalProgress(
   
   // Calculate if on track
   const totalDays = differenceInDays(endDate, startDate);
-  const daysElapsed = Math.max(0, differenceInDays(today, startDate));
+  const daysElapsed = Math.max(1, differenceInDays(today, startDate));
   const percentTimeElapsed = totalDays > 0 ? (daysElapsed / totalDays) * 100 : 0;
   const expectedByNow = totalDays > 0 
     ? (goal.target_value * daysElapsed) / totalDays
@@ -68,6 +70,8 @@ export function calculateGoalProgress(
     remaining,
     progressPercent,
     daysRemaining,
+    daysElapsed,
+    totalDays,
     weeksRemaining,
     monthsRemaining,
     perDay,
