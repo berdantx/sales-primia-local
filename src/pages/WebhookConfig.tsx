@@ -25,6 +25,7 @@ import {
   ExternalWebhook,
 } from '@/hooks/useExternalWebhooks';
 import { Loader2, Plus, Send, Trash2, Edit2, CheckCircle, XCircle, Clock, Webhook, History, Eye } from 'lucide-react';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -208,13 +209,16 @@ export default function WebhookConfig() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <ClientContextHeader 
-            title="Webhooks Externos"
-            description="Configure webhooks para enviar resumos de vendas automaticamente"
-          />
+          <div className="space-y-3">
+            <ActiveClientBlock />
+            <ClientContextHeader 
+              title="Webhooks Externos"
+              description="Configure webhooks para enviar resumos de vendas automaticamente"
+            />
+          </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={handleOpenCreate}>
