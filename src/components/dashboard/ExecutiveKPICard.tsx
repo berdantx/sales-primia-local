@@ -58,22 +58,22 @@ export function ExecutiveKPICard({
       )}
       onClick={onClick}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div>
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="min-w-0 flex-1">
           {microLabel && (
             <span className="text-[10px] tracking-wide uppercase text-muted-foreground block mb-0.5">{microLabel}</span>
           )}
-          <span className="text-sm text-muted-foreground font-medium">{label}</span>
+          <span className="text-sm text-muted-foreground font-medium whitespace-nowrap">{label}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {badge && (
-            <Badge variant="outline" className={cn("text-[10px] font-normal h-5 px-2 text-muted-foreground border-border", badgeClassName)}>
+            <Badge variant="outline" className={cn("text-[10px] font-normal h-5 px-1.5 text-muted-foreground border-border whitespace-nowrap", badgeClassName)}>
               {badge}
             </Badge>
           )}
           {Icon && (
-            <div className={cn("p-2 rounded-xl", iconClassName)}>
-              <Icon className="h-4 w-4" strokeWidth={1.75} />
+            <div className={cn("p-1.5 rounded-lg", iconClassName)}>
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
             </div>
           )}
         </div>
