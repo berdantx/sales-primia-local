@@ -346,15 +346,19 @@ export default function Dashboard() {
 
             {/* Ritmo + Score lado a lado */}
             {canViewFinancials && goalProgressData && primaryGoal && (
-              <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-5 sm:gap-6 items-start">
-                <ProjectionCards progress={goalProgressData} currency={primaryGoal.currency} />
-                <StrategicScoreCard
-                  rhythmPercent={rhythmStatus?.rhythmPercent || 0}
-                  goalProgress={goalProgressPercent}
-                  periodPercent={rhythmStatus?.periodPercent || 0}
-                  conversionRate={stats && leadCount && leadCount > 0 ? (stats.totalTransactions / leadCount) * 100 : 0}
-                  hasGoal={!!primaryGoal}
-                />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-start">
+                <div className="lg:col-span-2">
+                  <ProjectionCards progress={goalProgressData} currency={primaryGoal.currency} />
+                </div>
+                <div className="lg:col-span-1">
+                  <StrategicScoreCard
+                    rhythmPercent={rhythmStatus?.rhythmPercent || 0}
+                    goalProgress={goalProgressPercent}
+                    periodPercent={rhythmStatus?.periodPercent || 0}
+                    conversionRate={stats && leadCount && leadCount > 0 ? (stats.totalTransactions / leadCount) * 100 : 0}
+                    hasGoal={!!primaryGoal}
+                  />
+                </div>
               </div>
             )}
 
