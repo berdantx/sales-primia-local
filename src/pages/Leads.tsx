@@ -17,6 +17,7 @@ import { LeadsWorldMap } from '@/components/leads/LeadsWorldMap';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
 import { LandingPageTrendChart } from '@/components/leads/LandingPageTrendChart';
 import { IAQLCard } from '@/components/leads/IAQLCard';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { ChannelComparisonCards } from '@/components/leads/ChannelComparisonCards';
 import { DiagnosticBullets } from '@/components/leads/DiagnosticBullets';
 import { useFilter } from '@/contexts/FilterContext';
@@ -430,17 +431,16 @@ function Leads() {
       <div className="space-y-6 sm:space-y-8">
         {/* ── HEADER INSTITUCIONAL ── */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="space-y-1">
+          <div className="space-y-3">
+            <ActiveClientBlock />
             <ClientContextHeader 
               title="Leads"
               description="Inteligência de Aquisição e Gestão Comercial"
             />
-            <div className="flex items-center gap-3 mt-2">
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {totalCount.toLocaleString('pt-BR')} leads no período
-              </span>
-            </div>
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {totalCount.toLocaleString('pt-BR')} leads no período
+            </span>
           </div>
           <div className="flex gap-2 flex-wrap">
             {testLeadsCount > 0 && (
@@ -561,13 +561,15 @@ function Leads() {
 
           {/* ════════ TAB 1: VISÃO ESTRATÉGICA ════════ */}
           <TabsContent value="strategic" className="space-y-6 mt-0">
-            {/* IAQL + KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
-              <IAQLCard
-                score={iaql.score}
-                interpretation={iaql.interpretation}
-                isLoading={isLoadingStats}
-              />
+            {/* IAQL — Soberano */}
+            <IAQLCard
+              score={iaql.score}
+              interpretation={iaql.interpretation}
+              isLoading={isLoadingStats}
+            />
+
+            {/* KPIs operacionais */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
               <ExecutiveKPICard
                 label="Total de Leads"
                 value={stats?.total?.toLocaleString('pt-BR') || '0'}
@@ -604,6 +606,14 @@ function Leads() {
                 iconClassName="bg-amber-500/10 text-amber-600"
               />
             </div>
+
+            {/* Diagnóstico Rápido - na aba estratégica */}
+            <DiagnosticBullets
+              byTrafficType={stats?.byTrafficType || {}}
+              byCountry={stats?.byCountry || {}}
+              topContentName={topContentName}
+              total={stats?.total || 0}
+            />
 
             {/* Funnel Summary Link */}
             <Card className="border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.03)] rounded-xl">

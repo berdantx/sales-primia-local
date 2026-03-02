@@ -66,7 +66,7 @@ export function LeadsByDayChart({ data, isLoading, embedded = false }: LeadsByDa
           />
           <Bar 
             dataKey="leads" 
-            fill="hsl(var(--primary))" 
+            fill="hsl(var(--primary) / 0.65)" 
             radius={[4, 4, 0, 0]}
           />
         </BarChart>
