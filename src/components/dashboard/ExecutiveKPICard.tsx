@@ -1,5 +1,10 @@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ExecutiveKPICardProps {
   label: string;
@@ -9,6 +14,7 @@ interface ExecutiveKPICardProps {
   progress?: number; // 0-100
   onClick?: () => void;
   className?: string;
+  tooltipContent?: React.ReactNode;
 }
 
 export function ExecutiveKPICard({
@@ -19,12 +25,14 @@ export function ExecutiveKPICard({
   progress,
   onClick,
   className,
+  tooltipContent,
 }: ExecutiveKPICardProps) {
-  return (
+  const cardContent = (
     <div
       className={cn(
         'bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-sm transition-shadow hover:shadow-md',
         onClick && 'cursor-pointer',
+        tooltipContent && 'cursor-help',
         className
       )}
       onClick={onClick}
@@ -53,4 +61,19 @@ export function ExecutiveKPICard({
       )}
     </div>
   );
+
+  if (tooltipContent) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {cardContent}
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs bg-popover text-popover-foreground border shadow-lg p-3">
+          {tooltipContent}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return cardContent;
 }

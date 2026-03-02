@@ -223,6 +223,29 @@ export default function Dashboard() {
                   value={formatCurrency(revenue.projected, 'BRL')}
                   badge="Previsão"
                   subtitle="Inclui parcelas futuras e recorrência"
+                  tooltipContent={
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Já processado:</span>
+                        <span className="font-medium">{formatCurrency(revenue.confirmed, 'BRL')}</span>
+                      </div>
+                      {revenue.projected - revenue.confirmed > 0 && (
+                        <div className="flex justify-between gap-4">
+                          <span className="text-yellow-500">A receber (recorrências):</span>
+                          <span className="font-medium text-yellow-500">{formatCurrency(revenue.projected - revenue.confirmed, 'BRL')}</span>
+                        </div>
+                      )}
+                      {dollarRate && (hotmartStats?.totalByCurrency?.['USD'] || 0) > 0 && (
+                        <div className="flex justify-between gap-4">
+                          <span className="text-blue-400">USD convertido:</span>
+                          <span className="font-medium text-blue-400">{formatCurrency((hotmartStats?.totalByCurrency?.['USD'] || 0) * dollarRate.rate, 'BRL')}</span>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-muted-foreground pt-1 border-t border-border">
+                        Soma dos valores já processados + parcelas futuras de transações parceladas.
+                      </p>
+                    </div>
+                  }
                 />
                 <ExecutiveKPICard
                   label="Meta do Período"
