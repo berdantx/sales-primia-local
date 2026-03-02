@@ -47,9 +47,9 @@ export function DiagnosticBullets({ byTrafficType, byCountry, topContentName, to
         <Lightbulb className="h-4 w-4 text-amber-500" strokeWidth={1.75} />
         <span className="text-sm font-semibold text-foreground">Diagnóstico Rápido</span>
       </div>
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {bullets.map((bullet, i) => (
-          <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+          <li key={i} className="flex items-start gap-2.5 text-sm text-muted-foreground leading-relaxed">
             <span className="text-primary mt-0.5">•</span>
             {bullet}
           </li>
