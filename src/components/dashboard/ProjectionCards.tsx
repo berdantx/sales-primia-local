@@ -120,7 +120,7 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
               </p>
               {!isExpired && (
                 <>
-                  <span className="text-[10px] text-muted-foreground/50 uppercase tracking-wide flex-shrink-0 hidden sm:inline">Performance relativa</span>
+                  <span className="text-[10px] text-muted-foreground/90 uppercase tracking-wide flex-shrink-0 hidden sm:inline">Performance relativa</span>
                   <motion.div
                     className="h-1 w-16 rounded-full bg-muted/60 overflow-hidden flex-shrink-0"
                     initial={{ opacity: 0, scaleX: 0.98 }}
