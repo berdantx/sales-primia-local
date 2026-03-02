@@ -79,6 +79,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: 'Painel', url: '/', icon: LayoutDashboard, roles: ['master', 'admin', 'user'] },
       { title: 'IGPL', url: '/igpl', icon: Activity, roles: ['master', 'admin', 'user'] },
+      { title: 'Leads', url: '/leads', icon: BarChart3, roles: ['master', 'admin', 'user'] },
     ],
     subGroups: [
       {
@@ -98,7 +99,6 @@ const menuGroups: MenuGroup[] = [
         icon: BarChart3,
         roles: ['master', 'admin', 'user'],
         items: [
-          { title: 'Leads', url: '/leads', icon: BarChart3, roles: ['master', 'admin', 'user'] },
           { title: 'Funil', url: '/leads/funnel', icon: Layers, roles: ['master', 'admin', 'user'] },
         ],
       },
