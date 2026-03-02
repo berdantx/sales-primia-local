@@ -143,14 +143,10 @@ export default function Dashboard() {
     return 'bg-muted-foreground/30';
   };
 
-  const getGoalRhythmHint = (prog: number, goal: typeof primaryGoal) => {
-    if (!goal) return undefined;
-    const now = new Date();
-    const start = new Date(goal.start_date);
-    const end = new Date(goal.end_date);
-    const totalDays = Math.max((end.getTime() - start.getTime()) / 86400000, 1);
-    const elapsedDays = Math.max((now.getTime() - start.getTime()) / 86400000, 0);
-    const timePercent = Math.round((elapsedDays / totalDays) * 100);
+  const getGoalRhythmHint = (prog: number) => {
+    if (!goalProgressData) return undefined;
+    const { daysElapsed, totalDays } = goalProgressData;
+    const timePercent = totalDays > 0 ? Math.min(Math.round((daysElapsed / totalDays) * 100), 100) : 0;
     const goalPercent = Math.round(prog);
     const hint = `${goalPercent}% da meta · ${timePercent}% do período decorrido`;
     const rhythm = prog < timePercent ? 'Ritmo abaixo do necessário' : 'Ritmo alinhado com meta';
@@ -303,7 +299,7 @@ export default function Dashboard() {
                   subtitleClassName={primaryGoal ? "font-medium" : undefined}
                   progress={primaryGoal ? goalProgressPercent : undefined}
                   progressColor={primaryGoal ? getProgressColor(goalProgressPercent) : undefined}
-                  progressHint={primaryGoal ? getGoalRhythmHint(goalProgressPercent, primaryGoal) : undefined}
+                  progressHint={primaryGoal ? getGoalRhythmHint(goalProgressPercent) : undefined}
                   onClick={!primaryGoal ? () => navigate('/goals') : undefined}
                   icon={Target}
                   accentColor="border-t-amber-500/70"
