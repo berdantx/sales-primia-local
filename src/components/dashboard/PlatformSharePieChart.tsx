@@ -10,9 +10,9 @@ interface PlatformSharePieChartProps {
 }
 
 const COLORS = {
-  Hotmart: 'hsl(217, 100%, 50%)',
-  TMB: 'hsl(160, 100%, 35%)',
-  Eduzz: 'hsl(270, 70%, 50%)',
+  Hotmart: 'hsl(217, 55%, 55%)',
+  TMB: 'hsl(160, 40%, 45%)',
+  Eduzz: 'hsl(270, 35%, 55%)',
 };
 
 export function PlatformSharePieChart({ hotmartTotal, tmbTotal, eduzzTotal }: PlatformSharePieChartProps) {

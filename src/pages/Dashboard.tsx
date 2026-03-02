@@ -142,6 +142,18 @@ export default function Dashboard() {
     return 'bg-muted-foreground/30';
   };
 
+  const getGoalRhythmHint = (prog: number, goal: typeof primaryGoal) => {
+    if (!goal) return undefined;
+    const now = new Date();
+    const start = new Date(goal.start_date);
+    const end = new Date(goal.end_date);
+    const totalDays = Math.max((end.getTime() - start.getTime()) / 86400000, 1);
+    const elapsedDays = Math.max((now.getTime() - start.getTime()) / 86400000, 0);
+    const expectedProgress = (elapsedDays / totalDays) * 100;
+    if (prog < expectedProgress * 0.7) return 'Ritmo atual abaixo do necessário';
+    return 'Ritmo alinhado com meta';
+  };
+
   const isRevenueFullyRealized = Math.abs(revenue.confirmed - revenue.projected) < 1;
 
   if (isLoading || isLoadingAccess) {
@@ -249,8 +261,8 @@ export default function Dashboard() {
                   badgeClassName={isRevenueFullyRealized ? "bg-emerald-50 text-emerald-700 border-emerald-200" : undefined}
                   subtitle={isRevenueFullyRealized ? "Vendas pagas e efetivadas" : "Vendas pagas e efetivadas"}
                   icon={DollarSign}
-                  accentColor="border-l-emerald-400"
-                  iconClassName="bg-emerald-500/10 text-emerald-600"
+                  accentColor="border-l-emerald-400/60"
+                  iconClassName="bg-emerald-100 text-emerald-600"
                 />
                 <ExecutiveKPICard
                   label="Receita Projetada"
@@ -258,10 +270,12 @@ export default function Dashboard() {
                   badge={isRevenueFullyRealized ? "Consolidado" : "Previsão"}
                   badgeClassName={isRevenueFullyRealized ? "bg-muted text-foreground/70 border-border" : "bg-blue-50 text-blue-700 border-blue-200"}
                   subtitle={isRevenueFullyRealized ? "Sem valores pendentes" : "Inclui parcelas futuras"}
+                  subtitleClassName="text-foreground/60"
                   className={!isRevenueFullyRealized ? "opacity-90" : undefined}
+                  valueClassName="text-foreground/90"
                   icon={TrendingUp}
-                  accentColor="border-l-blue-400"
-                  iconClassName="bg-blue-500/10 text-blue-600"
+                  accentColor="border-l-blue-400/60"
+                  iconClassName="bg-blue-100 text-blue-600"
                   tooltipContent={
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between gap-4">
@@ -290,25 +304,27 @@ export default function Dashboard() {
                   label="Meta do Período"
                   value={primaryGoal ? formatCurrency(primaryGoal.target_value, primaryGoal.currency) : '—'}
                   badge={primaryGoal ? `${Math.round(goalProgress)}%` : undefined}
-                  badgeClassName={primaryGoal ? "font-semibold" : undefined}
+                  badgeClassName={primaryGoal ? "bg-amber-50 text-amber-700 border-amber-200 font-semibold" : undefined}
                   subtitle={primaryGoal ? `Faltam ${formatCurrency(goalRemaining, primaryGoal.currency)}` : 'Nenhuma meta ativa'}
                   subtitleClassName={primaryGoal ? "font-medium" : undefined}
                   progress={primaryGoal ? goalProgress : undefined}
                   progressColor={primaryGoal ? getProgressColor(goalProgress) : undefined}
+                  progressHint={primaryGoal ? getGoalRhythmHint(goalProgress, primaryGoal) : undefined}
                   onClick={!primaryGoal ? () => navigate('/goals') : undefined}
                   icon={Target}
-                  accentColor="border-l-amber-400"
-                  iconClassName="bg-amber-500/10 text-amber-600"
+                  accentColor="border-l-amber-500/70"
+                  iconClassName="bg-amber-100 text-amber-700"
                 />
                 <ExecutiveKPICard
                   label="Leads no Período"
                   value={formatNumber(leadCount || 0)}
                   badge="Aquisição"
+                  badgeClassName="bg-violet-50 text-violet-700 border-violet-200"
                   subtitle="Com UTMs e origem"
                   onClick={() => navigate('/leads')}
                   icon={Users}
-                  accentColor="border-l-violet-400"
-                  iconClassName="bg-violet-500/10 text-violet-600"
+                  accentColor="border-l-violet-400/60"
+                  iconClassName="bg-violet-100 text-violet-600"
                 />
               </div>
             )}
