@@ -153,11 +153,14 @@ export function DashboardControlBar({
           {/* ZONA 3 — STATUS + AÇÃO (right side) */}
           <div className="flex items-center gap-3 flex-shrink-0">
             {rhythmStatus && riskLabel && (
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background border border-border/60">
-                <span className={`h-2 w-2 rounded-full ${riskLabel.color}`} />
-                <div className="text-[11px] leading-tight">
-                  <span className="font-semibold text-foreground">{riskLabel.text}</span>
-                  <span className="text-muted-foreground/70 ml-1.5">
+              <div className="hidden md:flex items-center gap-2.5 px-4 py-2 rounded-xl bg-background border border-border shadow-sm">
+                <span className={`h-2.5 w-2.5 rounded-full ${riskLabel.color} ring-2 ring-offset-1 ring-offset-background ${
+                  riskLabel.color === 'bg-emerald-500' ? 'ring-emerald-500/30' : 
+                  riskLabel.color === 'bg-amber-500' ? 'ring-amber-500/30' : 'ring-red-500/30'
+                }`} />
+                <div className="text-xs leading-tight">
+                  <span className="font-bold text-foreground">{riskLabel.text}</span>
+                  <span className="text-muted-foreground ml-2">
                     {rhythmStatus.rhythmPercent.toFixed(0)}% do ritmo · {rhythmStatus.periodPercent}% decorrido
                   </span>
                 </div>
