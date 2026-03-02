@@ -35,10 +35,12 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
   const gapAbs = Math.abs(gapPercent);
   const gapFormatted = gapAbs < 10 ? gapAbs.toFixed(1) : Math.round(gapAbs).toString();
 
-  const RhythmLine = ({ label, value }: { label: string; value: number }) => (
+  const gapRatio = ritmoNecessarioDiario > 0 ? Math.min(ritmoAtualDiario / ritmoNecessarioDiario, 1) : 0;
+
+  const RhythmLine = ({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) => (
     <div className="flex items-center justify-between py-1.5">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-lg font-semibold tabular-nums">{formatCurrency(value, currency)}</span>
+      <span className={`text-sm ${highlight ? 'font-medium' : ''} text-muted-foreground`}>{label}</span>
+      <span className={`tabular-nums ${highlight ? 'text-xl font-bold' : 'text-base font-semibold'}`}>{formatCurrency(value, currency)}</span>
     </div>
   );
 
@@ -59,45 +61,54 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
           </div>
 
           {/* Two-column rhythm comparison */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-0 sm:divide-x sm:divide-border/40">
             {/* Coluna Esquerda — Ritmo Necessário */}
-            <div>
+            <div className="sm:pr-8">
               <span className="text-xs text-muted-foreground uppercase tracking-wide">
                 Ritmo Necessário
               </span>
               <div className="mt-3 space-y-0">
-                <RhythmLine label="Diário" value={ritmoNecessarioDiario} />
+                <RhythmLine label="Diário" value={ritmoNecessarioDiario} highlight />
                 <RhythmLine label="Semanal" value={ritmoNecessarioSemanal} />
                 <RhythmLine label="Mensal" value={ritmoNecessarioMensal} />
               </div>
             </div>
 
             {/* Coluna Direita — Ritmo Atual */}
-            <div>
+            <div className="sm:pl-8">
               <span className="text-xs text-muted-foreground uppercase tracking-wide">
                 Ritmo Atual
               </span>
               <div className="mt-3 space-y-0">
-                <RhythmLine label="Diário" value={ritmoAtualDiario} />
+                <RhythmLine label="Diário" value={ritmoAtualDiario} highlight />
                 <RhythmLine label="Semanal" value={ritmoAtualSemanal} />
                 <RhythmLine label="Mensal" value={ritmoAtualMensal} />
               </div>
             </div>
           </div>
 
-          {/* Diagnóstico */}
-          <div className="mt-6 flex flex-col gap-1">
+          {/* Verdict Zone */}
+          <div className={`mt-6 rounded-xl px-4 py-3 border ${isRitmoAlinhado ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800/30' : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800/30'}`}>
             <div className="flex items-center gap-2">
               <span className={`inline-block h-2.5 w-2.5 rounded-full flex-shrink-0 ${isRitmoAlinhado ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <span className={`text-sm font-semibold ${isRitmoAlinhado ? 'text-emerald-600' : 'text-amber-600'}`}>
+              <span className={`text-sm font-semibold ${isRitmoAlinhado ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
                 {isRitmoAlinhado ? 'Ritmo sustenta o fechamento da meta' : 'Ritmo atual não sustenta o fechamento da meta'}
               </span>
             </div>
-            <p className={`text-sm ml-[18px] ${isRitmoAlinhado ? 'text-emerald-600/70' : 'text-amber-600/70'}`}>
-              O ritmo atual está{' '}
-              <span className="font-semibold tabular-nums">{gapFormatted}%</span>{' '}
-              {isRitmoAlinhado ? 'acima' : 'abaixo'} do exigido.
-            </p>
+            <div className="flex items-center gap-3 ml-[18px] mt-1.5">
+              <p className={`text-sm ${isRitmoAlinhado ? 'text-emerald-700/70 dark:text-emerald-400/70' : 'text-amber-700/70 dark:text-amber-400/70'}`}>
+                O ritmo atual está{' '}
+                <span className="font-semibold tabular-nums">{gapFormatted}%</span>{' '}
+                {isRitmoAlinhado ? 'acima' : 'abaixo'} do exigido.
+              </p>
+              {/* Mini gap bar */}
+              <div className="h-1 w-16 rounded-full bg-muted/60 overflow-hidden flex-shrink-0">
+                <div
+                  className={`h-full rounded-full ${isRitmoAlinhado ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  style={{ width: `${gapRatio * 100}%` }}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Divider + Projeção */}
@@ -109,6 +120,9 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
             </span>
             <p className="text-2xl sm:text-3xl font-bold mt-1.5 tabular-nums tracking-tight">
               {formatCurrency(projecaoFechamento, currency)}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Meta: {formatCurrency(metaTotal, currency)}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
               {isAboveTarget
