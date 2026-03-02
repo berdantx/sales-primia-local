@@ -181,28 +181,30 @@ export function RevenueEvolutionChart({ salesByDate, dollarRate }: RevenueEvolut
             {chartType === 'bar' ? 'Receita diária nos últimos 30 dias' : 'Confirmada acumulada nos últimos 30 dias'}
           </p>
         </div>
-
-        {/* Chart type toggle */}
-        <div className="flex items-center gap-0.5 bg-muted/60 rounded-lg p-0.5">
-          {chartOptions.map((opt) => {
-            const Icon = opt.icon;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => setChartType(opt.value)}
-                className={cn(
-                  'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all',
-                  chartType === opt.value
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-                title={opt.label}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{opt.label}</span>
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground hidden sm:block">Foco: Caixa Confirmado</span>
+          {/* Chart type toggle */}
+          <div className="flex items-center gap-0.5 bg-muted/60 rounded-lg p-0.5">
+            {chartOptions.map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setChartType(opt.value)}
+                  className={cn(
+                    'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all',
+                    chartType === opt.value
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  title={opt.label}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
       <div className="px-2 pb-4">

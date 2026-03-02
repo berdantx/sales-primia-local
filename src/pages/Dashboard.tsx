@@ -149,9 +149,11 @@ export default function Dashboard() {
     const end = new Date(goal.end_date);
     const totalDays = Math.max((end.getTime() - start.getTime()) / 86400000, 1);
     const elapsedDays = Math.max((now.getTime() - start.getTime()) / 86400000, 0);
-    const expectedProgress = (elapsedDays / totalDays) * 100;
-    if (prog < expectedProgress * 0.7) return 'Ritmo atual abaixo do necessário';
-    return 'Ritmo alinhado com meta';
+    const timePercent = Math.round((elapsedDays / totalDays) * 100);
+    const goalPercent = Math.round(prog);
+    const hint = `${goalPercent}% da meta · ${timePercent}% do período decorrido`;
+    const rhythm = prog < timePercent ? 'Ritmo abaixo do necessário' : 'Ritmo alinhado com meta';
+    return `${hint}\n${rhythm}`;
   };
 
   const isRevenueFullyRealized = Math.abs(revenue.confirmed - revenue.projected) < 1;
@@ -184,7 +186,7 @@ export default function Dashboard() {
         {/* Page Header */}
         <ClientContextHeader
           title="Centro de Comando do Lançamento"
-          description="O que importa agora: caixa, ritmo e direção estratégica."
+          description="Infraestrutura estratégica para decisões de alto impacto."
         />
 
         {/* Filter Bar */}
@@ -255,6 +257,7 @@ export default function Dashboard() {
             {canViewFinancials && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
                 <ExecutiveKPICard
+                  microLabel="CAIXA REAL"
                   label="Receita Confirmada"
                   value={formatCurrency(revenue.confirmed, 'BRL')}
                   badge={isRevenueFullyRealized ? "100% realizado" : "Caixa"}
@@ -265,6 +268,7 @@ export default function Dashboard() {
                   iconClassName="bg-emerald-100 text-emerald-600"
                 />
                 <ExecutiveKPICard
+                  microLabel="PROJEÇÃO"
                   label="Receita Projetada"
                   value={formatCurrency(revenue.projected, 'BRL')}
                   badge={isRevenueFullyRealized ? "Consolidado" : "Previsão"}
@@ -272,7 +276,7 @@ export default function Dashboard() {
                   subtitle={isRevenueFullyRealized ? "Sem valores pendentes" : "Inclui parcelas futuras"}
                   subtitleClassName="text-foreground/60"
                   className={!isRevenueFullyRealized ? "opacity-90" : undefined}
-                  valueClassName="text-foreground/90"
+                  valueClassName="text-foreground/90 text-[1.7rem]"
                   icon={TrendingUp}
                   accentColor="border-l-blue-400/60"
                   iconClassName="bg-blue-100 text-blue-600"
@@ -316,11 +320,12 @@ export default function Dashboard() {
                   iconClassName="bg-amber-100 text-amber-700"
                 />
                 <ExecutiveKPICard
+                  microLabel="AQUISIÇÃO"
                   label="Leads no Período"
                   value={formatNumber(leadCount || 0)}
                   badge="Aquisição"
                   badgeClassName="bg-violet-50 text-violet-700 border-violet-200"
-                  subtitle="Com UTMs e origem"
+                  subtitle={stats && stats.totalTransactions > 0 && leadCount ? `Conversão: ${((stats.totalTransactions / leadCount) * 100).toFixed(1)}%` : "Com UTMs e origem"}
                   onClick={() => navigate('/leads')}
                   icon={Users}
                   accentColor="border-l-violet-400/60"
