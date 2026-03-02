@@ -16,22 +16,24 @@ import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
 import { LeadsWorldMap } from '@/components/leads/LeadsWorldMap';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
 import { LandingPageTrendChart } from '@/components/leads/LandingPageTrendChart';
+import { IAQLCard } from '@/components/leads/IAQLCard';
+import { ChannelComparisonCards } from '@/components/leads/ChannelComparisonCards';
+import { DiagnosticBullets } from '@/components/leads/DiagnosticBullets';
 import { useFilter } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ExecutiveKPICard } from '@/components/dashboard/ExecutiveKPICard';
 import { ClientSideExportDialog } from '@/components/leads/ClientSideExportDialog';
 import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadsFilters } from '@/components/leads/LeadsFilters';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
-import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { formatDateTimeBR } from '@/lib/dateUtils';
 import { DateRange } from 'react-day-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { normalizePageUrl } from '@/lib/urlUtils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,13 +60,62 @@ import {
   MapPin,
   Target,
   ArrowRight,
-  Megaphone
+  Megaphone,
+  Eye,
+  Zap,
+  Briefcase,
+  Clock,
 } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 50;
 
 type ViewMode = 'ads' | 'campaigns' | 'pages';
 type GroupBy = 'day' | 'week';
+
+// Compute IAQL score from stats
+function computeIAQL(stats: {
+  total: number;
+  byTrafficType: Record<string, number>;
+  bySource: Record<string, number>;
+  byUtmSource: Record<string, number>;
+}): { score: number; interpretation: string } {
+  if (stats.total === 0) return { score: 0, interpretation: 'Sem dados suficientes para calcular.' };
+
+  const paid = stats.byTrafficType['paid'] || 0;
+  const organic = stats.byTrafficType['organic'] || 0;
+  const direct = stats.byTrafficType['direct'] || 0;
+  const total = stats.total;
+
+  // Diversity of sources (more sources = healthier)
+  const sourceCount = Object.keys(stats.bySource).length;
+  const sourceDiversity = Math.min(sourceCount * 8, 25); // max 25 pts
+
+  // UTM coverage (qualified leads)
+  const utmCount = Object.values(stats.byUtmSource).reduce((a, b) => a + b, 0);
+  const utmCoverage = total > 0 ? (utmCount / total) * 100 : 0;
+  const utmScore = Math.min(utmCoverage * 0.3, 25); // max 25 pts
+
+  // Channel balance (penalize over-reliance on single channel)
+  const paidShare = total > 0 ? paid / total : 0;
+  const organicShare = total > 0 ? organic / total : 0;
+  const balanceScore = Math.min(
+    (1 - Math.abs(paidShare - organicShare)) * 25,
+    25
+  ); // max 25 pts
+
+  // Volume factor
+  const volumeScore = Math.min(Math.log10(Math.max(total, 1)) * 8, 25); // max 25 pts
+
+  const score = Math.round(Math.min(sourceDiversity + utmScore + balanceScore + volumeScore, 100));
+
+  let interpretation = '';
+  if (score >= 80) interpretation = 'Qualidade excelente. Aquisição diversificada e consistente.';
+  else if (score >= 65) interpretation = 'Qualidade saudável, conversão consistente.';
+  else if (score >= 50) interpretation = 'Atenção: concentração de canais ou cobertura UTM baixa.';
+  else interpretation = 'Crítico: diversificar fontes e melhorar rastreamento UTM.';
+
+  return { score, interpretation };
+}
 
 function Leads() {
   const [search, setSearch] = useState('');
@@ -95,30 +146,27 @@ function Leads() {
   const [showCharts, setShowCharts] = useState(false);
   const [hideUnidentifiedGeo, setHideUnidentifiedGeo] = useState(false);
   const [showSummary, setShowSummary] = useState(true);
+  const [activeTab, setActiveTab] = useState('strategic');
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
 
-  // Data for summary dialog
   const { data: clients } = useClients();
   const clientName = useMemo(() => {
     if (!clientId || !clients) return '';
     return clients.find(c => c.id === clientId)?.name || '';
   }, [clientId, clients]);
 
-  // Lazy load charts after initial render
   useEffect(() => {
     const timer = setTimeout(() => setShowCharts(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
-  // Date filters for stats
   const statsFilters = useMemo(() => ({
     startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
     endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
     clientId,
   }), [clientId, dateRange]);
 
-  // Paginated filters for table
   const paginatedFilters = useMemo(() => ({
     startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
     endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
@@ -137,24 +185,20 @@ function Leads() {
     trafficType: trafficTypeFilter !== 'all' ? trafficTypeFilter : undefined,
   }), [clientId, dateRange, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter, utmContentFilter, utmTermFilter, countryFilter, pageFilter, search, testFilter, qualifiedFilter, trafficTypeFilter]);
 
-  // Optimized stats from SQL function (single query)
   const { data: stats, isLoading: isLoadingStats } = useLeadStatsOptimized(isReady ? statsFilters : undefined);
 
-  // Optimized top ads from SQL function
   const { data: topAdsData, isLoading: isLoadingTopAds } = useTopAdsOptimized(isReady ? {
     ...statsFilters,
     mode: topMode,
     limit: 10,
   } : undefined);
 
-  // Paginated leads for table (only fetches what's needed)
   const { data: paginatedData, isLoading: isLoadingLeads } = useLeadsPaginated({
     filters: isReady ? paginatedFilters : undefined,
     page: currentPage,
     pageSize: ITEMS_PER_PAGE,
   });
 
-  // Landing page stats (still needs leads for now - could be optimized later)
   const { stats: landingPageStats, totalPagesCount, hiddenPagesCount } = useLandingPageStats({ 
     leads: paginatedData?.leads || [], 
     limit: 10,
@@ -167,7 +211,6 @@ function Leads() {
     [topAdsData]
   );
   
-  // Conversion tracking - only load when charts are visible
   const { conversionStats, totalConversion, isLoading: isLoadingConversion } = useLandingPageConversion({
     clientId,
     leads: paginatedData?.leads || [],
@@ -175,9 +218,7 @@ function Leads() {
     endDate: dateRange?.to,
   });
 
-  // Filter options from stats (already aggregated)
   const filterOptions = useMemo(() => {
-    // Filter out unidentified countries from the filter options if hideUnidentifiedGeo is true
     const countries = Object.keys(stats?.byCountry || {})
       .filter(c => {
         if (hideUnidentifiedGeo && (c === 'Não identificado' || c === 'Desconhecido')) return false;
@@ -209,13 +250,11 @@ function Leads() {
     };
   }, [stats, hideUnidentifiedGeo]);
 
-  // Check if lead is a test lead
   const isTestLead = (tags: string | null) => {
     if (!tags) return false;
     return tags.includes('[TESTE]') || tags.toLowerCase().includes('teste');
   };
 
-  // Count test leads from current page
   const testLeadsCount = useMemo(() => {
     if (!paginatedData?.leads) return 0;
     return paginatedData.leads.filter(l => isTestLead(l.tags)).length;
@@ -223,7 +262,6 @@ function Leads() {
 
   const totalPages = paginatedData?.totalPages || 1;
   const totalCount = paginatedData?.totalCount || 0;
-
 
   const clearFilters = () => {
     setSearch('');
@@ -261,16 +299,13 @@ function Leads() {
     selectedTopItem
   );
 
-  // Backfill geolocation handler
   const handleBackfillGeolocation = async () => {
     setIsBackfilling(true);
     try {
       const { data, error } = await supabase.functions.invoke('backfill-geolocation', {
         body: { batchSize: 100, maxBatches: 10 }
       });
-
       if (error) throw error;
-
       if (data?.success) {
         toast.success(`Geolocalização atualizada: ${data.stats.totalUpdated} leads processados`);
         queryClient.invalidateQueries({ queryKey: ['leads'] });
@@ -286,7 +321,6 @@ function Leads() {
     }
   };
 
-  // Handle mode change - reset selected item when mode changes
   const handleTopModeChange = (mode: ViewMode) => {
     setTopMode(mode);
     setSelectedTopItem(null);
@@ -295,38 +329,18 @@ function Leads() {
   const handleDeleteTestLeads = async () => {
     setIsDeleting(true);
     try {
-      // Get test lead IDs from current filters
-      let query = supabase
-        .from('leads')
-        .select('id, tags');
-
-      if (paginatedFilters.clientId) {
-        query = query.eq('client_id', paginatedFilters.clientId);
-      }
-      if (paginatedFilters.startDate) {
-        query = query.gte('created_at', paginatedFilters.startDate.toISOString());
-      }
-      if (paginatedFilters.endDate) {
-        query = query.lte('created_at', paginatedFilters.endDate.toISOString());
-      }
+      let query = supabase.from('leads').select('id, tags');
+      if (paginatedFilters.clientId) query = query.eq('client_id', paginatedFilters.clientId);
+      if (paginatedFilters.startDate) query = query.gte('created_at', paginatedFilters.startDate.toISOString());
+      if (paginatedFilters.endDate) query = query.lte('created_at', paginatedFilters.endDate.toISOString());
 
       const { data: allLeads, error: fetchError } = await query;
       if (fetchError) throw fetchError;
 
-      const testLeadIds = (allLeads || [])
-        .filter(l => isTestLead(l.tags))
-        .map(l => l.id);
+      const testLeadIds = (allLeads || []).filter(l => isTestLead(l.tags)).map(l => l.id);
+      if (testLeadIds.length === 0) { toast.info('Não há leads de teste para deletar.'); return; }
 
-      if (testLeadIds.length === 0) {
-        toast.info('Não há leads de teste para deletar.');
-        return;
-      }
-
-      const { error } = await supabase
-        .from('leads')
-        .delete()
-        .in('id', testLeadIds);
-
+      const { error } = await supabase.from('leads').delete().in('id', testLeadIds);
       if (error) throw error;
 
       toast.success(`${testLeadIds.length} leads de teste deletados com sucesso!`);
@@ -341,7 +355,6 @@ function Leads() {
     }
   };
 
-  // Transform topAdsData to match TopAdsCard expected format
   const topItems = useMemo(() => {
     if (!topAdsData?.items) return [];
     return topAdsData.items.map(item => ({
@@ -354,13 +367,52 @@ function Leads() {
     }));
   }, [topAdsData]);
 
+  // IAQL computation
+  const iaql = useMemo(() => {
+    if (!stats) return { score: 0, interpretation: 'Carregando...' };
+    return computeIAQL({
+      total: stats.total,
+      byTrafficType: stats.byTrafficType,
+      bySource: stats.bySource,
+      byUtmSource: stats.byUtmSource,
+    });
+  }, [stats]);
+
+  // Derived KPIs
+  const qualifiedLeads = useMemo(() => {
+    if (!stats) return 0;
+    return Object.values(stats.byUtmSource).reduce((a, b) => a + b, 0);
+  }, [stats]);
+
+  const avgDaily = useMemo(() => {
+    if (!stats?.byDay) return '0';
+    const days = Math.max(Object.keys(stats.byDay).length, 1);
+    return (stats.total / days).toFixed(1);
+  }, [stats]);
+
+  const topContentName = useMemo(() => {
+    return topAdsData?.items?.[0]?.name || undefined;
+  }, [topAdsData]);
+
   const isLoading = !isReady || isLoadingStats;
 
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-6 sm:space-y-8">
+          {/* Skeleton header */}
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48 rounded-xl" />
+            <Skeleton className="h-4 w-72 rounded-xl" />
+          </div>
+          {/* Skeleton KPIs */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} className="h-32 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-10 w-full max-w-md rounded-xl" />
+          <Skeleton className="h-96 rounded-xl" />
         </div>
       </MainLayout>
     );
@@ -374,23 +426,28 @@ function Leads() {
         clientId={clientId}
         clientName={clientName}
       />
-      <div className="space-y-4 sm:space-y-6">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-        >
-          <ClientContextHeader 
-            title="Leads"
-            description={`${totalCount.toLocaleString('pt-BR')} leads encontrados`}
-          />
-          <div className="flex gap-2 w-full sm:w-auto">
+
+      <div className="space-y-6 sm:space-y-8">
+        {/* ── HEADER INSTITUCIONAL ── */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="space-y-1">
+            <ClientContextHeader 
+              title="Leads"
+              description="Inteligência de Aquisição e Gestão Comercial"
+            />
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {totalCount.toLocaleString('pt-BR')} leads no período
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
             {testLeadsCount > 0 && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-4 w-4 mr-1.5" />
                     <span className="hidden sm:inline">Deletar Testes</span>
                     <span className="sm:hidden">Testes</span>
                     <span className="ml-1">({testLeadsCount})</span>
@@ -412,15 +469,9 @@ function Leads() {
                       disabled={isDeleting}
                     >
                       {isDeleting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Deletando...
-                        </>
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deletando...</>
                       ) : (
-                        <>
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Deletar leads de teste
-                        </>
+                        <><Trash2 className="h-4 w-4 mr-2" />Deletar leads de teste</>
                       )}
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -432,162 +483,27 @@ function Leads() {
               size="sm" 
               onClick={handleBackfillGeolocation}
               disabled={isBackfilling}
-              className="flex-1 sm:flex-none"
             >
               {isBackfilling ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processando...
-                </>
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Processando...</>
               ) : (
-                <>
-                  <MapPin className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">Atualizar Geo</span>
-                  <span className="sm:hidden">Geo</span>
-                </>
+                <><MapPin className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Atualizar Geo</span><span className="sm:hidden">Geo</span></>
               )}
             </Button>
             <ClientSideExportDialog />
           </div>
-        </motion.div>
+        </div>
 
-        {/* Summary KPIs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
-        >
-          <ColoredKPICard
-            title="Tipo de Tráfego"
-            value=""
-            icon={Megaphone}
-            variant="blue"
-            delay={0}
-            customContent={
-              (() => {
-                const byType = stats?.byTrafficType || {};
-                const total = stats?.total || 0;
-                const paid = byType['paid'] || 0;
-                const organic = byType['organic'] || 0;
-                const direct = byType['direct'] || 0;
-                const paidPercent = total > 0 ? ((paid / total) * 100).toFixed(1) : '0';
-                const organicPercent = total > 0 ? ((organic / total) * 100).toFixed(1) : '0';
-                const directPercent = total > 0 ? ((direct / total) * 100).toFixed(1) : '0';
-                
-                return (
-                  <div className="space-y-1 mt-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-blue-400" />
-                        Pago
-                      </span>
-                      <span className="font-medium">
-                        {paid.toLocaleString('pt-BR')}
-                        <span className="text-xs text-white/70 ml-1">({paidPercent}%)</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                        Orgânico
-                      </span>
-                      <span className="font-medium">
-                        {organic.toLocaleString('pt-BR')}
-                        <span className="text-xs text-white/70 ml-1">({organicPercent}%)</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-gray-300" />
-                        Direto
-                      </span>
-                      <span className="font-medium">
-                        {direct.toLocaleString('pt-BR')}
-                        <span className="text-xs text-white/70 ml-1">({directPercent}%)</span>
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()
-            }
-          />
-          <ColoredKPICard
-            title="Total de Leads"
-            value={stats?.total?.toLocaleString('pt-BR') || '0'}
-            subtitle="no período"
-            icon={Users}
-            variant="purple"
-            delay={1}
-          />
-          <ColoredKPICard
-            title="Fontes Diferentes"
-            value={Object.keys(stats?.bySource || {}).length.toString()}
-            subtitle="origens de leads"
-            icon={Globe}
-            variant="cyan"
-            delay={2}
-          />
-          <ColoredKPICard
-            title="Média Diária"
-            value={stats?.byDay ? (stats.total / Math.max(Object.keys(stats.byDay).length, 1)).toFixed(1) : '0'}
-            subtitle="leads por dia"
-            icon={TrendingUp}
-            variant="green"
-            delay={3}
-          />
-        </motion.div>
-
-        {/* Conversion Summary Link */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/10">
-                    <Target className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm sm:text-base">Funil de Conversão</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      {totalConversion.totalConverted} conversões • {totalConversion.conversionRate.toFixed(1)}% taxa • {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(totalConversion.totalRevenue)} receita
-                    </p>
-                  </div>
-                </div>
-                <Button asChild variant="default" size="sm" className="gap-2">
-                  <Link to="/leads/funnel">
-                    Ver Funil Completo
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Filters */}
-        <Card>
+        {/* ── FILTROS ── */}
+        <Card className="border-border/60 shadow-[0_1px_2px_rgba(0,0,0,0.03)] rounded-xl">
           <CardContent className="p-3 sm:p-4">
             <LeadsFilters
               selectedPeriod={selectedPeriod}
               dateRange={dateRange}
-              onPeriodChange={(period) => {
-                setSelectedPeriod(period);
-                setCurrentPage(0);
-              }}
-              onDateRangeChange={(range) => {
-                setDateRange(range);
-                setCurrentPage(0);
-              }}
+              onPeriodChange={(period) => { setSelectedPeriod(period); setCurrentPage(0); }}
+              onDateRangeChange={(range) => { setDateRange(range); setCurrentPage(0); }}
               search={search}
-              onSearchChange={(value) => {
-                setSearch(value);
-                setCurrentPage(0);
-              }}
+              onSearchChange={(value) => { setSearch(value); setCurrentPage(0); }}
               sourceFilter={sourceFilter}
               onSourceFilterChange={(v) => { setSourceFilter(v); setCurrentPage(0); }}
               countryFilter={countryFilter}
@@ -603,7 +519,7 @@ function Leads() {
               utmTermFilter={utmTermFilter}
               onUtmTermFilterChange={(v) => { setUtmTermFilter(v); setCurrentPage(0); }}
               qualifiedFilter={qualifiedFilter}
-              onQualifiedFilterChange={(v) => { setQualifiedFilter(v as 'all' | 'qualified' | 'unqualified'); setCurrentPage(0); }}
+              onQualifiedFilterChange={(v) => { setQualifiedFilter(v); setCurrentPage(0); }}
               testFilter={testFilter}
               onTestFilterChange={(v) => { setTestFilter(v); setCurrentPage(0); }}
               pageFilter={pageFilter}
@@ -623,217 +539,305 @@ function Leads() {
           </CardContent>
         </Card>
 
-        {/* Chart + Top Ads - Lazy loaded */}
-        {showCharts && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-4"
-          >
-            <div className="lg:col-span-2 h-[420px]">
-              <Card className="h-full flex flex-col">
-                <Tabs value={chartTab} onValueChange={(v) => setChartTab(v as 'daily' | 'evolution')} className="flex flex-col h-full">
-                  <div className="px-4 pt-4 pb-2">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="daily" className="flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4" />
-                        <span className="hidden sm:inline">Leads por Dia</span>
-                        <span className="sm:hidden">Por Dia</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="evolution" className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
-                        <span className="hidden sm:inline">Evolução {topMode === 'ads' ? 'Anúncios' : 'Campanhas'}</span>
-                        <span className="sm:hidden">Evolução</span>
-                      </TabsTrigger>
-                    </TabsList>
-                  </div>
-                  <CardContent className="pt-2 flex-1 overflow-hidden">
-                    <TabsContent value="daily" className="mt-0 h-full">
-                      <LeadsByDayChart 
-                        data={stats?.byDay || {}} 
-                        isLoading={isLoadingStats} 
-                        embedded 
-                      />
-                    </TabsContent>
-                    <TabsContent value="evolution" className="mt-0 h-full">
-                      <AdTrendChartOptimized
-                        clientId={clientId}
-                        startDate={dateRange?.from}
-                        endDate={dateRange?.to}
-                        topItemNames={topItemNames}
-                        mode={topMode}
-                        groupBy={trendGroupBy}
-                        onGroupByChange={setTrendGroupBy}
-                      />
-                    </TabsContent>
-                  </CardContent>
-                </Tabs>
-              </Card>
-            </div>
-            <div className="lg:col-span-1 h-[420px]">
-              <TopAdsCard
-                topItems={topItems} 
-                totalCount={topAdsData?.totalCount || 0} 
-                isLoading={isLoadingTopAds}
-                mode={topMode}
-                onModeChange={handleTopModeChange}
-                selectedItem={selectedTopItem}
-                onItemClick={(item) => {
-                  setSelectedTopItem(item);
-                  setCurrentPage(0);
-                }}
+        {/* ── TABS ── */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full max-w-lg grid-cols-3 h-11">
+            <TabsTrigger value="strategic" className="gap-1.5 text-xs sm:text-sm">
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">Visão Estratégica</span>
+              <span className="sm:hidden">Estratégica</span>
+            </TabsTrigger>
+            <TabsTrigger value="intelligence" className="gap-1.5 text-xs sm:text-sm">
+              <Zap className="h-4 w-4" />
+              <span className="hidden sm:inline">Inteligência</span>
+              <span className="sm:hidden">Inteligência</span>
+            </TabsTrigger>
+            <TabsTrigger value="crm" className="gap-1.5 text-xs sm:text-sm">
+              <Briefcase className="h-4 w-4" />
+              <span className="hidden sm:inline">CRM & Operação</span>
+              <span className="sm:hidden">CRM</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ════════ TAB 1: VISÃO ESTRATÉGICA ════════ */}
+          <TabsContent value="strategic" className="space-y-6 mt-0">
+            {/* IAQL + KPIs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
+              <IAQLCard
+                score={iaql.score}
+                interpretation={iaql.interpretation}
+                isLoading={isLoadingStats}
+              />
+              <ExecutiveKPICard
+                label="Total de Leads"
+                value={stats?.total?.toLocaleString('pt-BR') || '0'}
+                microLabel="VOLUME"
+                icon={Users}
+                accentColor="border-t-violet-400"
+                iconClassName="bg-violet-500/10 text-violet-600"
+              />
+              <ExecutiveKPICard
+                label="Leads Qualificados"
+                value={qualifiedLeads.toLocaleString('pt-BR')}
+                microLabel="COM UTMs"
+                subtitle={stats && stats.total > 0 ? `${((qualifiedLeads / stats.total) * 100).toFixed(1)}% do total` : undefined}
+                icon={Target}
+                accentColor="border-t-blue-400"
+                iconClassName="bg-blue-500/10 text-blue-600"
+              />
+              <ExecutiveKPICard
+                label="Média Diária"
+                value={avgDaily}
+                microLabel="RITMO"
+                subtitle="leads por dia"
+                icon={TrendingUp}
+                accentColor="border-t-emerald-400"
+                iconClassName="bg-emerald-500/10 text-emerald-600"
+              />
+              <ExecutiveKPICard
+                label="Fontes"
+                value={Object.keys(stats?.bySource || {}).length.toString()}
+                microLabel="DIVERSIFICAÇÃO"
+                subtitle="origens ativas"
+                icon={Globe}
+                accentColor="border-t-amber-400"
+                iconClassName="bg-amber-500/10 text-amber-600"
               />
             </div>
-          </motion.div>
-        )}
 
-        {/* Landing Page Comparison - Only show if there are multiple pages */}
-        {showCharts && landingPageStats.length > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-4"
-          >
-            <LandingPageComparisonCard
-              stats={landingPageStats}
-              conversionStats={conversionStats}
-              isLoading={isLoadingLeads || isLoadingConversion}
-              selectedPage={pageFilter !== 'all' ? pageFilter : null}
-              onPageClick={(page) => {
-                setPageFilter(page || 'all');
-                setCurrentPage(0);
-              }}
-              showAllPages={showAllPages}
-              hiddenPagesCount={hiddenPagesCount}
-              onToggleShowAll={() => setShowAllPages(true)}
-            />
-            <Card className="h-[300px]">
-              <CardContent className="h-full pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">Evolução de Landing Pages</span>
-                </div>
-                <div className="h-[calc(100%-30px)]">
-                  <LandingPageTrendChart
-                    stats={landingPageStats.slice(0, 5)}
-                    dateRange={dateRange}
-                    isLoading={isLoadingLeads}
-                    embedded
-                  />
+            {/* Funnel Summary Link */}
+            <Card className="border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.03)] rounded-xl">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-primary/5">
+                      <Target className="h-5 w-5 text-primary" strokeWidth={1.75} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-sm">Funil de Conversão</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {totalConversion.totalConverted} conversões • {totalConversion.conversionRate.toFixed(1)}% taxa • {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(totalConversion.totalRevenue)} receita
+                      </p>
+                    </div>
+                  </div>
+                  <Button asChild variant="default" size="sm" className="gap-2">
+                    <Link to="/leads/funnel">
+                      Ver Funil Completo
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
-        )}
 
-        {/* Interactive World Map - Lazy loaded */}
-        {showCharts && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <LeadsWorldMap
-              byCountry={stats?.byCountry || {}}
+            {/* Main Chart */}
+            {showCharts && (
+              <Card className="rounded-xl border-border/60 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+                <CardContent className="p-4 sm:p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BarChart3 className="h-4 w-4 text-primary" strokeWidth={1.75} />
+                    <span className="text-sm font-semibold text-foreground">Captação por Dia</span>
+                  </div>
+                  <div className="h-[320px]">
+                    <LeadsByDayChart 
+                      data={stats?.byDay || {}} 
+                      isLoading={isLoadingStats} 
+                      embedded 
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* ════════ TAB 2: INTELIGÊNCIA DE AQUISIÇÃO ════════ */}
+          <TabsContent value="intelligence" className="space-y-6 mt-0">
+            {/* Channel Comparison */}
+            <ChannelComparisonCards
+              byTrafficType={stats?.byTrafficType || {}}
+              total={stats?.total || 0}
               isLoading={isLoadingStats}
-              totalLeads={stats?.total || 0}
-              onCountryClick={(country) => {
-                setCountryFilter(country);
-                setCurrentPage(0);
-              }}
             />
-          </motion.div>
-        )}
 
-        {/* Geographic Distribution Charts - Lazy loaded */}
-        {showCharts && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <LeadsByCountryChart
-              byCountry={stats?.byCountry || {}}
-              byCity={stats?.byCity || {}}
-              isLoading={isLoadingStats}
-              totalLeads={stats?.total || 0}
-              hideUnidentified={hideUnidentifiedGeo}
-              onToggleUnidentified={() => setHideUnidentifiedGeo(!hideUnidentifiedGeo)}
-            />
-          </motion.div>
-        )}
-
-        {/* Selected Filter Indicator */}
-        {selectedTopItem && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20"
-          >
-            <span className="text-sm text-primary font-medium">
-              Filtrando por {topMode === 'ads' ? 'anúncio' : 'campanha'}:
-            </span>
-            <span className="text-sm font-semibold truncate max-w-[300px]">{selectedTopItem}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedTopItem(null)}
-              className="h-6 w-6 p-0 ml-auto hover:bg-primary/20"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </motion.div>
-        )}
-
-        {/* Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          {isLoadingLeads ? (
-            <Card className="p-8">
-              <div className="flex items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            {/* Rankings: Top Ads + Chart */}
+            {showCharts && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
+                <div className="lg:col-span-2 h-[420px]">
+                  <Card className="h-full flex flex-col rounded-xl border-border/60 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+                    <Tabs value={chartTab} onValueChange={(v) => setChartTab(v as 'daily' | 'evolution')} className="flex flex-col h-full">
+                      <div className="px-4 pt-4 pb-2">
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="daily" className="flex items-center gap-2 text-xs">
+                            <BarChart3 className="h-4 w-4" />
+                            Leads por Dia
+                          </TabsTrigger>
+                          <TabsTrigger value="evolution" className="flex items-center gap-2 text-xs">
+                            <TrendingUp className="h-4 w-4" />
+                            Evolução {topMode === 'ads' ? 'Anúncios' : topMode === 'campaigns' ? 'Campanhas' : 'Páginas'}
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
+                      <CardContent className="pt-2 flex-1 overflow-hidden">
+                        <TabsContent value="daily" className="mt-0 h-full">
+                          <LeadsByDayChart 
+                            data={stats?.byDay || {}} 
+                            isLoading={isLoadingStats} 
+                            embedded 
+                          />
+                        </TabsContent>
+                        <TabsContent value="evolution" className="mt-0 h-full">
+                          <AdTrendChartOptimized
+                            clientId={clientId}
+                            startDate={dateRange?.from}
+                            endDate={dateRange?.to}
+                            topItemNames={topItemNames}
+                            mode={topMode}
+                            groupBy={trendGroupBy}
+                            onGroupByChange={setTrendGroupBy}
+                          />
+                        </TabsContent>
+                      </CardContent>
+                    </Tabs>
+                  </Card>
+                </div>
+                <div className="lg:col-span-1 h-[420px]">
+                  <TopAdsCard
+                    topItems={topItems} 
+                    totalCount={topAdsData?.totalCount || 0} 
+                    isLoading={isLoadingTopAds}
+                    mode={topMode}
+                    onModeChange={handleTopModeChange}
+                    selectedItem={selectedTopItem}
+                    onItemClick={(item) => { setSelectedTopItem(item); setCurrentPage(0); }}
+                  />
+                </div>
               </div>
-            </Card>
-          ) : (
-            <LeadsTable leads={paginatedData?.leads || []} hasActiveFilters={hasActiveFilters} />
-          )}
-        </motion.div>
+            )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Mostrando {currentPage * ITEMS_PER_PAGE + 1} a{' '}
-              {Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalCount)} de {totalCount.toLocaleString('pt-BR')}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                disabled={currentPage === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="flex items-center px-3 text-sm text-muted-foreground">
-                {currentPage + 1} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={currentPage >= totalPages - 1}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+            {/* Landing Pages */}
+            {showCharts && landingPageStats.length > 1 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+                <LandingPageComparisonCard
+                  stats={landingPageStats}
+                  conversionStats={conversionStats}
+                  isLoading={isLoadingLeads || isLoadingConversion}
+                  selectedPage={pageFilter !== 'all' ? pageFilter : null}
+                  onPageClick={(page) => { setPageFilter(page || 'all'); setCurrentPage(0); }}
+                  showAllPages={showAllPages}
+                  hiddenPagesCount={hiddenPagesCount}
+                  onToggleShowAll={() => setShowAllPages(true)}
+                />
+                <Card className="h-[300px] rounded-xl border-border/60 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+                  <CardContent className="h-full pt-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="h-4 w-4 text-primary" strokeWidth={1.75} />
+                      <span className="text-sm font-semibold">Evolução de Landing Pages</span>
+                    </div>
+                    <div className="h-[calc(100%-30px)]">
+                      <LandingPageTrendChart
+                        stats={landingPageStats.slice(0, 5)}
+                        dateRange={dateRange}
+                        isLoading={isLoadingLeads}
+                        embedded
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Diagnostic Bullets */}
+            <DiagnosticBullets
+              byTrafficType={stats?.byTrafficType || {}}
+              byCountry={stats?.byCountry || {}}
+              topContentName={topContentName}
+              total={stats?.total || 0}
+            />
+
+            {/* Geo */}
+            {showCharts && (
+              <>
+                <LeadsWorldMap
+                  byCountry={stats?.byCountry || {}}
+                  isLoading={isLoadingStats}
+                  totalLeads={stats?.total || 0}
+                  onCountryClick={(country) => { setCountryFilter(country); setCurrentPage(0); }}
+                />
+                <LeadsByCountryChart
+                  byCountry={stats?.byCountry || {}}
+                  byCity={stats?.byCity || {}}
+                  isLoading={isLoadingStats}
+                  totalLeads={stats?.total || 0}
+                  hideUnidentified={hideUnidentifiedGeo}
+                  onToggleUnidentified={() => setHideUnidentifiedGeo(!hideUnidentifiedGeo)}
+                />
+              </>
+            )}
+          </TabsContent>
+
+          {/* ════════ TAB 3: CRM & OPERAÇÃO ════════ */}
+          <TabsContent value="crm" className="space-y-6 mt-0">
+            {/* Selected Filter Indicator */}
+            {selectedTopItem && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
+                <span className="text-sm text-primary font-medium">
+                  Filtrando por {topMode === 'ads' ? 'anúncio' : 'campanha'}:
+                </span>
+                <span className="text-sm font-semibold truncate max-w-[300px]">{selectedTopItem}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedTopItem(null)}
+                  className="h-6 w-6 p-0 ml-auto hover:bg-primary/10"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Table */}
+            {isLoadingLeads ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <Skeleton key={i} className="h-16 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : (
+              <LeadsTable leads={paginatedData?.leads || []} hasActiveFilters={hasActiveFilters} />
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando {currentPage * ITEMS_PER_PAGE + 1} a{' '}
+                  {Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalCount)} de {totalCount.toLocaleString('pt-BR')}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="flex items-center px-3 text-sm text-muted-foreground">
+                    {currentPage + 1} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={currentPage >= totalPages - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
