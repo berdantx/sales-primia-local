@@ -102,12 +102,20 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
                 {isRitmoAlinhado ? 'acima' : 'abaixo'} do exigido.
               </p>
               {/* Mini gap bar */}
-              <div className="h-1 w-16 rounded-full bg-muted/60 overflow-hidden flex-shrink-0">
-                <div
+              <motion.div
+                className="h-1 w-16 rounded-full bg-muted/60 overflow-hidden flex-shrink-0"
+                initial={{ opacity: 0, scaleX: 0.98 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ delay: 0.6, duration: 0.4, ease: 'easeOut' }}
+                style={{ originX: 0 }}
+              >
+                <motion.div
                   className={`h-full rounded-full ${isRitmoAlinhado ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                  style={{ width: `${gapRatio * 100}%` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${gapRatio * 100}%` }}
+                  transition={{ delay: 0.8, duration: 0.5, ease: 'easeOut' }}
                 />
-              </div>
+              </motion.div>
             </div>
           </div>
 
@@ -121,13 +129,13 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
             <p className="text-2xl sm:text-3xl font-bold mt-1.5 tabular-nums tracking-tight">
               {formatCurrency(projecaoFechamento, currency)}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mt-1">
               Meta: {formatCurrency(metaTotal, currency)}
             </p>
             <p className="text-xs text-muted-foreground/60 mt-1">
               {isAboveTarget
-                ? 'Mantido o ritmo atual, a meta será atingida.'
-                : 'Mantido o ritmo atual, a meta não será atingida.'}
+                ? 'No ritmo atual, a meta será atingida.'
+                : 'No ritmo atual, a meta não será atingida.'}
             </p>
             <p className={`text-sm font-semibold mt-1.5 tabular-nums ${isAboveTarget ? 'text-emerald-600' : 'text-amber-600'}`}>
               {isAboveTarget
