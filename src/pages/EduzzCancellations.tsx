@@ -9,7 +9,8 @@ import { useFilter } from '@/contexts/FilterContext';
 import { useFinancialAccess } from '@/hooks/useFinancialAccess';
 import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
-import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
+import { ExecutiveKPICard } from '@/components/dashboard/ExecutiveKPICard';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -170,22 +171,21 @@ function EduzzCancellations() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        >
-          <ClientContextHeader
-            title="Cancelamentos Eduzz"
-            description={`${cancelledTransactions.length} cancelamentos automáticos · ${deletionLogs?.length || 0} exclusões manuais`}
-          />
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="space-y-3">
+            <ActiveClientBlock />
+            <ClientContextHeader
+              title="Cancelamentos Eduzz"
+              description={`${cancelledTransactions.length} cancelamentos automáticos · ${deletionLogs?.length || 0} exclusões manuais`}
+            />
+          </div>
           <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
-        </motion.div>
+        </div>
 
         {/* KPIs */}
         {canViewFinancials ? (
@@ -195,37 +195,41 @@ function EduzzCancellations() {
             transition={{ delay: 0.1 }}
             className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4"
           >
-            <ColoredKPICard
-              title="Total Cancelado"
+            <ExecutiveKPICard
+              label="Total Cancelado"
               value={formatCurrency(cancelledTotal, 'BRL')}
               subtitle={`${cancelledTransactions.length} cancelamentos`}
               icon={DollarSign}
-              variant="red"
-              delay={0}
+              microLabel="CANCELADO"
+              accentColor="border-t-amber-400"
+              iconClassName="bg-amber-500/10 text-amber-600"
             />
-            <ColoredKPICard
-              title="Taxa Cancelamento"
+            <ExecutiveKPICard
+              label="Taxa Cancelamento"
               value={`${cancellationRate.toFixed(1)}%`}
               subtitle="cancelados / total"
               icon={TrendingDown}
-              variant="orange"
-              delay={1}
+              microLabel="TAXA"
+              accentColor="border-t-red-400"
+              iconClassName="bg-red-500/10 text-red-600"
             />
-            <ColoredKPICard
-              title="Exclusões Manuais"
+            <ExecutiveKPICard
+              label="Exclusões Manuais"
               value={(deletionLogs?.length || 0).toString()}
               subtitle="com justificativa"
               icon={Trash2}
-              variant="yellow"
-              delay={2}
+              microLabel="MANUAIS"
+              accentColor="border-t-violet-400"
+              iconClassName="bg-violet-500/10 text-violet-600"
             />
-            <ColoredKPICard
-              title="Total Excluído"
+            <ExecutiveKPICard
+              label="Total Excluído"
               value={formatCurrency(manualTotal, 'BRL')}
               subtitle="exclusões manuais"
               icon={Ban}
-              variant="purple"
-              delay={3}
+              microLabel="EXCLUÍDO"
+              accentColor="border-t-sky-400"
+              iconClassName="bg-sky-500/10 text-sky-600"
             />
           </motion.div>
         ) : (

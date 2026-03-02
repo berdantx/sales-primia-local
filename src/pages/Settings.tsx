@@ -58,23 +58,19 @@ export default function Settings() {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
-        >
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Configurações</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
+            <p className="text-sm text-muted-foreground">
               Gerencie sua conta e preferências
             </p>
           </div>
           <Badge variant="secondary" className="text-sm">
             {roleLabels[role] || role}
           </Badge>
-        </motion.div>
+        </div>
 
         {/* Tabs */}
         <Tabs value={validTab} onValueChange={handleTabChange}>

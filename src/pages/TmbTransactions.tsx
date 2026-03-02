@@ -60,7 +60,8 @@ import {
   ArrowDown,
   Ban,
 } from 'lucide-react';
-import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
+import { ExecutiveKPICard } from '@/components/dashboard/ExecutiveKPICard';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { TmbTransactionDetailDialog } from '@/components/tmb/TmbTransactionDetailDialog';
 import { TmbTransactionCard } from '@/components/tmb/TmbTransactionCard';
 
@@ -296,59 +297,53 @@ function TmbTransactions() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        >
-          <ClientContextHeader 
-            title="Transações TMB"
-            description={`${filteredTransactions.length} transações encontradas`}
-          />
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="space-y-3">
+            <ActiveClientBlock />
+            <ClientContextHeader 
+              title="Transações TMB"
+              description={`${filteredTransactions.length} transações encontradas`}
+            />
+          </div>
           <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
-        </motion.div>
+        </div>
 
         {/* Summary KPIs */}
         {canViewFinancials ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4"
-          >
-             <ColoredKPICard
-              title="Faturamento Efetivado (BRL)"
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 sm:gap-6">
+            <ExecutiveKPICard
+              label="Faturamento Efetivado (BRL)"
               value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
               subtitle={`${stats?.totalTransactions || 0} transações efetivadas`}
               icon={DollarSign}
-              variant="green"
-              delay={0}
-              className="text-sm sm:text-base"
+              microLabel="CAIXA"
+              accentColor="border-t-emerald-400"
+              iconClassName="bg-emerald-500/10 text-emerald-600"
             />
-            <ColoredKPICard
-              title="Cancelamentos"
+            <ExecutiveKPICard
+              label="Cancelamentos"
               value={formatCurrency(stats?.cancelledTotal || 0, 'BRL')}
               subtitle={`${stats?.cancelledCount || 0} vendas canceladas`}
               icon={Ban}
-              variant="red"
-              delay={1}
-              className="text-sm sm:text-base"
+              microLabel="CANCELADO"
+              accentColor="border-t-amber-400"
+              iconClassName="bg-amber-500/10 text-amber-600"
             />
-            <ColoredKPICard
-              title="Total de Transações"
+            <ExecutiveKPICard
+              label="Total de Transações"
               value={((stats?.totalTransactions || 0) + (stats?.cancelledCount || 0)).toString()}
               subtitle="efetivadas + canceladas"
               icon={Receipt}
-              variant="purple"
-              delay={2}
-              className="text-sm sm:text-base"
+              microLabel="VOLUME"
+              accentColor="border-t-violet-400"
+              iconClassName="bg-violet-500/10 text-violet-600"
             />
-          </motion.div>
+          </div>
         ) : (
           <RestrictedFinancialSection />
         )}
