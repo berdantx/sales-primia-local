@@ -10,8 +10,11 @@ interface ExecutiveKPICardProps {
   label: string;
   value: string;
   badge?: string;
+  badgeClassName?: string;
   subtitle?: string;
+  subtitleClassName?: string;
   progress?: number; // 0-100
+  progressColor?: string;
   onClick?: () => void;
   className?: string;
   tooltipContent?: React.ReactNode;
@@ -21,8 +24,11 @@ export function ExecutiveKPICard({
   label,
   value,
   badge,
+  badgeClassName,
   subtitle,
+  subtitleClassName,
   progress,
+  progressColor,
   onClick,
   className,
   tooltipContent,
@@ -30,7 +36,7 @@ export function ExecutiveKPICard({
   const cardContent = (
     <div
       className={cn(
-        'bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-sm transition-shadow hover:shadow-md',
+        'bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
         onClick && 'cursor-pointer',
         tooltipContent && 'cursor-help',
         className
@@ -40,7 +46,7 @@ export function ExecutiveKPICard({
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm text-muted-foreground font-medium">{label}</span>
         {badge && (
-          <Badge variant="outline" className="text-[10px] font-normal h-5 px-2 text-muted-foreground border-border">
+          <Badge variant="outline" className={cn("text-[10px] font-normal h-5 px-2 text-muted-foreground border-border", badgeClassName)}>
             {badge}
           </Badge>
         )}
@@ -49,12 +55,12 @@ export function ExecutiveKPICard({
         {value}
       </p>
       {subtitle && (
-        <p className="text-xs text-muted-foreground mt-2">{subtitle}</p>
+        <p className={cn("text-xs text-muted-foreground mt-2", subtitleClassName)}>{subtitle}</p>
       )}
       {progress !== undefined && (
-        <div className="mt-3 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        <div className="mt-3 h-2 w-full rounded-full bg-muted overflow-hidden">
           <div
-            className="h-full rounded-full bg-primary transition-all duration-500"
+            className={cn("h-full rounded-full transition-all duration-500", progressColor || "bg-primary")}
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
         </div>

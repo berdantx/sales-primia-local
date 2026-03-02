@@ -127,7 +127,12 @@ export function RevenueEvolutionChart({ salesByDate, dollarRate }: RevenueEvolut
             dataKey="cumulative"
             stroke="hsl(var(--primary))"
             strokeWidth={2}
-            dot={false}
+            dot={(props: any) => {
+              if (props.index === chartData.length - 1) {
+                return <circle cx={props.cx} cy={props.cy} r={5} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={2} />;
+              }
+              return <circle cx={props.cx} cy={props.cy} r={0} />;
+            }}
             yAxisId="right"
           />
         </ComposedChart>
@@ -153,13 +158,19 @@ export function RevenueEvolutionChart({ salesByDate, dollarRate }: RevenueEvolut
           stroke="hsl(var(--primary))"
           strokeWidth={2}
           fill="url(#colorRevenue)"
+          dot={(props: any) => {
+            if (props.index === chartData.length - 1) {
+              return <circle cx={props.cx} cy={props.cy} r={5} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={2} />;
+            }
+            return <circle cx={props.cx} cy={props.cy} r={0} />;
+          }}
         />
       </AreaChart>
     );
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+    <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
       <div className="p-5 sm:p-6 pb-2 flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">

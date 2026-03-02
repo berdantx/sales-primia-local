@@ -42,35 +42,35 @@ export function TopProductsList({ transactions, dollarRate, limit = 5 }: TopProd
   const maxRevenue = products[0]?.revenue || 1;
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-sm">
+    <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-sm transition-all duration-200 hover:shadow-md">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Package className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.75} />
-          <h3 className="text-sm font-semibold text-foreground">O Que Está Puxando o Resultado</h3>
+          <h3 className="text-sm font-semibold text-foreground">Principais Alavancas de Receita</h3>
         </div>
         <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground">
           Top {Math.min(limit, products.length)}
         </Badge>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {products.map((product, idx) => (
           <div key={product.name}>
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="text-xs font-medium text-muted-foreground w-4 shrink-0">
+                <span className="text-sm font-bold text-foreground w-4 shrink-0">
                   {idx + 1}.
                 </span>
                 <span className="text-sm font-medium text-foreground truncate">
                   {product.name}
                 </span>
               </div>
-              <span className="text-sm font-bold text-foreground ml-2 shrink-0 tabular-nums">
+              <span className="text-base font-bold text-foreground ml-2 shrink-0 tabular-nums">
                 {formatCurrency(product.revenue, 'BRL')}
               </span>
             </div>
             <div className="flex items-center gap-2 pl-6">
-              <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+              <div className="flex-1 h-0.5 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary/40 transition-all"
                   style={{ width: `${(product.revenue / maxRevenue) * 100}%` }}
