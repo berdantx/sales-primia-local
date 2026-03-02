@@ -82,21 +82,21 @@ export function DashboardControlBar({
         {/* Row 1: Context + Status */}
         <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
           {/* ZONA 1 — CONTEXTO */}
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight whitespace-nowrap">
+           <div className="min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight whitespace-nowrap">
                 Centro de Comando
               </h1>
 
               {showClientSelector && clients && clients.length > 0 && !isLoadingClients && !isLoadingRole && (
                 <>
-                  <span className="text-muted-foreground/40 text-base">—</span>
+                  <span className="text-muted-foreground/30 text-lg font-light">—</span>
                   <DropdownMenu open={isClientOpen} onOpenChange={setIsClientOpen}>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-auto p-0 text-primary hover:text-primary/80 hover:bg-transparent font-semibold gap-1 text-sm sm:text-base"
+                        className="h-auto p-0 text-primary hover:text-primary/80 hover:bg-transparent font-bold gap-1.5 text-lg sm:text-xl"
                       >
                         {displayName}
                         <motion.span
