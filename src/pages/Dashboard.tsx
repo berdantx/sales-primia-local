@@ -19,6 +19,7 @@ import { TopProductsList } from '@/components/dashboard/TopProductsList';
 import { StrategicRecommendationCard } from '@/components/dashboard/StrategicRecommendationCard';
 import { CoproducerEarningsCard } from '@/components/dashboard/CoproducerEarningsCard';
 import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
+import { StrategicScoreCard } from '@/components/dashboard/StrategicScoreCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
 import { Upload, Target, DollarSign, TrendingUp, Users } from 'lucide-react';
@@ -345,7 +346,14 @@ export default function Dashboard() {
                     dollarRate={dollarRate?.rate}
                   />
                 </div>
-                <div className="lg:col-span-1">
+                <div className="lg:col-span-1 flex flex-col gap-5 sm:gap-6">
+                  <StrategicScoreCard
+                    rhythmPercent={rhythmStatus?.rhythmPercent || 0}
+                    goalProgress={goalProgressPercent}
+                    periodPercent={rhythmStatus?.periodPercent || 0}
+                    conversionRate={stats && leadCount && leadCount > 0 ? (stats.totalTransactions / leadCount) * 100 : 0}
+                    hasGoal={!!primaryGoal}
+                  />
                   <StrategicRecommendationCard
                     hasGoal={!!primaryGoal}
                     goalProgress={goalProgressPercent}

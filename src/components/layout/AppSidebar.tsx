@@ -177,7 +177,7 @@ export function AppSidebar() {
           if (visibleItems.length === 0 && visibleSubGroups.length === 0) return null;
 
           return (
-            <SidebarGroup key={group.label} className="pb-1">
+            <SidebarGroup key={group.label} className="pb-3">
               <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-foreground/50 uppercase mb-1.5">
                 {group.label}
               </SidebarGroupLabel>

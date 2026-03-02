@@ -101,18 +101,23 @@ export function StrategicRecommendationCard({
   };
 
   return (
-    <div className="bg-primary/[0.03] border border-primary/10 rounded-2xl p-5 sm:p-6 h-full transition-all duration-200">
-      <div className="flex items-center gap-2 mb-5">
-        <Lightbulb className="h-[18px] w-[18px] text-primary" strokeWidth={1.5} />
-        <h3 className="text-base font-bold text-foreground">Recomendações Estratégicas Ativas</h3>
+    <div className="bg-card border border-border/80 rounded-xl p-6 sm:p-7 h-full transition-all duration-200 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+      <div className="flex items-center gap-2.5 mb-4">
+        <div className="p-1.5 rounded-lg bg-primary/10">
+          <Lightbulb className="h-4 w-4 text-primary" strokeWidth={1.75} />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-foreground tracking-tight">Recomendações Estratégicas</h3>
+          <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wide uppercase">Direcionamento tático</p>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-5">
-        <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground border-primary/20">
-          Base: período atual
+      <div className="flex flex-wrap gap-1.5 mb-5">
+        <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground/70 border-border">
+          Período atual
         </Badge>
         {topProduct && (
-          <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground border-primary/20">
+          <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground/70 border-border">
             Top: {topProduct}
           </Badge>
         )}
@@ -120,21 +125,25 @@ export function StrategicRecommendationCard({
 
       <div className="space-y-0">
         {alerts.map((alert, i) => (
-          <div key={i} className={`py-3.5 ${i < alerts.length - 1 ? 'border-b border-border/30' : ''}`}>
+          <div key={i} className={`py-4 ${i < alerts.length - 1 ? 'border-b border-border/40' : ''}`}>
             <div className="flex items-start gap-3">
-              <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${colorMap[alert.color]}`} />
+              <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${colorMap[alert.color]} ring-2 ring-offset-1 ring-offset-card ${
+                alert.color === 'green' ? 'ring-emerald-500/20' : alert.color === 'yellow' ? 'ring-amber-500/20' : 'ring-red-500/20'
+              }`} />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-medium ${priorityColorMap[alert.priority]}`}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Badge variant="outline" className={`text-[10px] h-[18px] px-2 font-semibold ${priorityColorMap[alert.priority]}`}>
                     {alert.priority}
                   </Badge>
-                  <Badge variant="outline" className={`text-[9px] h-4 px-1.5 font-normal ${impactColorMap[alert.impact]}`}>
+                  <Badge variant="outline" className={`text-[10px] h-[18px] px-2 font-normal ${impactColorMap[alert.impact]}`}>
                     {alert.impact}
                   </Badge>
                 </div>
-                <p className="text-sm text-foreground leading-snug font-medium">{alert.text}</p>
+                <p className="text-[13px] text-foreground leading-snug font-semibold">{alert.text}</p>
                 {alert.action && (
-                  <p className="text-xs text-muted-foreground mt-0.5">→ {alert.action}</p>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <span className="text-primary/70">→</span> {alert.action}
+                  </p>
                 )}
               </div>
             </div>
