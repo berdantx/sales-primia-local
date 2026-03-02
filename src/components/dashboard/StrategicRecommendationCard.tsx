@@ -1,5 +1,7 @@
 import { Badge } from '@/components/ui/badge';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, ArrowRight } from 'lucide-react';
+
+type AlertArea = 'Conversão' | 'Ritmo' | 'Meta' | 'Timing' | 'Operação';
 
 interface Alert {
   color: 'green' | 'yellow' | 'red';
@@ -7,11 +9,12 @@ interface Alert {
   action?: string;
   priority: 'Alta' | 'Média' | 'Baixa';
   impact: 'Alto impacto' | 'Impacto moderado' | 'Impacto baixo';
+  area: AlertArea;
 }
 
 interface StrategicRecommendationCardProps {
   hasGoal: boolean;
-  goalProgress?: number; // 0-100
+  goalProgress?: number;
   topProduct?: string;
   leadCount?: number;
   totalRevenue?: number;
@@ -33,6 +36,7 @@ export function StrategicRecommendationCard({
       action: 'Criar uma meta para acompanhar progresso',
       priority: 'Alta',
       impact: 'Alto impacto',
+      area: 'Meta',
     });
   } else if (goalProgress < 30) {
     alerts.push({
@@ -41,6 +45,7 @@ export function StrategicRecommendationCard({
       action: 'Revisar estratégia de conversão',
       priority: 'Alta',
       impact: 'Alto impacto',
+      area: 'Ritmo',
     });
   } else if (goalProgress >= 80) {
     alerts.push({
@@ -49,6 +54,7 @@ export function StrategicRecommendationCard({
       action: 'Considerar aumento da meta',
       priority: 'Baixa',
       impact: 'Impacto moderado',
+      area: 'Meta',
     });
   }
 
@@ -59,6 +65,7 @@ export function StrategicRecommendationCard({
       action: 'Verificar landing pages e campanhas',
       priority: 'Alta',
       impact: 'Alto impacto',
+      area: 'Conversão',
     });
   }
 
@@ -69,6 +76,7 @@ export function StrategicRecommendationCard({
       action: 'Verificar status das transações',
       priority: 'Alta',
       impact: 'Alto impacto',
+      area: 'Operação',
     });
   }
 
@@ -79,6 +87,7 @@ export function StrategicRecommendationCard({
       action: 'Continue monitorando os indicadores',
       priority: 'Baixa',
       impact: 'Impacto baixo',
+      area: 'Operação',
     });
   }
 
@@ -98,6 +107,14 @@ export function StrategicRecommendationCard({
     'Alto impacto': 'bg-red-50/60 text-red-600 border-red-200/60',
     'Impacto moderado': 'bg-amber-50/60 text-amber-600 border-amber-200/60',
     'Impacto baixo': 'bg-muted text-muted-foreground border-border',
+  };
+
+  const areaColorMap: Record<AlertArea, string> = {
+    Conversão: 'bg-violet-50 text-violet-700 border-violet-200',
+    Ritmo: 'bg-blue-50 text-blue-700 border-blue-200',
+    Meta: 'bg-amber-50 text-amber-700 border-amber-200',
+    Timing: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    Operação: 'bg-muted text-foreground/70 border-border',
   };
 
   return (
@@ -131,18 +148,22 @@ export function StrategicRecommendationCard({
                 alert.color === 'green' ? 'ring-emerald-500/20' : alert.color === 'yellow' ? 'ring-amber-500/20' : 'ring-red-500/20'
               }`} />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1.5">
+                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                   <Badge variant="outline" className={`text-[10px] h-[18px] px-2 font-semibold ${priorityColorMap[alert.priority]}`}>
                     {alert.priority}
                   </Badge>
                   <Badge variant="outline" className={`text-[10px] h-[18px] px-2 font-normal ${impactColorMap[alert.impact]}`}>
                     {alert.impact}
                   </Badge>
+                  <Badge variant="outline" className={`text-[10px] h-[18px] px-2 font-medium ${areaColorMap[alert.area]}`}>
+                    {alert.area}
+                  </Badge>
                 </div>
                 <p className="text-[13px] text-foreground leading-snug font-semibold">{alert.text}</p>
                 {alert.action && (
-                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                    <span className="text-primary/70">→</span> {alert.action}
+                  <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
+                    <ArrowRight className="h-3 w-3 text-primary/60 shrink-0" strokeWidth={2} />
+                    <span>{alert.action}</span>
                   </p>
                 )}
               </div>

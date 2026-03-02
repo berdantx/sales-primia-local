@@ -171,6 +171,21 @@ export default function Dashboard() {
     return { rhythmPercent, periodPercent, isOnTrack: rhythmPercent >= 100 };
   }, [goalProgressData, primaryGoal]);
 
+  // Compute strategic score for control bar
+  const strategicScore = useMemo(() => {
+    if (!rhythmStatus) return null;
+    const rhythmScore = Math.min(rhythmStatus.rhythmPercent, 100);
+    const goalScore = primaryGoal ? goalProgressPercent : 50;
+    const convRate = stats && leadCount && leadCount > 0 ? (stats.totalTransactions / leadCount) * 100 : 0;
+    const conversionScore = Math.min(convRate * 10, 100);
+    const timingScore = (() => {
+      if (!primaryGoal || rhythmStatus.periodPercent === 0) return 50;
+      const ratio = goalProgressPercent / Math.max(rhythmStatus.periodPercent, 1);
+      return Math.min(ratio * 100, 100);
+    })();
+    return Math.round(rhythmScore * 0.35 + goalScore * 0.30 + conversionScore * 0.20 + timingScore * 0.15);
+  }, [rhythmStatus, primaryGoal, goalProgressPercent, stats, leadCount]);
+
   if (isLoading || isLoadingAccess) {
     return (
       <MainLayout>
@@ -206,6 +221,7 @@ export default function Dashboard() {
           onCurrencyViewChange={setCurrencyView}
           canViewFinancials={canViewFinancials}
           rhythmStatus={rhythmStatus}
+          strategicScore={strategicScore}
         />
 
         {/* Restricted notice */}

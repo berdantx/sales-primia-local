@@ -46,6 +46,7 @@ interface DashboardControlBarProps {
   onCurrencyViewChange: (v: CurrencyView) => void;
   canViewFinancials: boolean;
   rhythmStatus?: RhythmStatus | null;
+  strategicScore?: number | null;
 }
 
 export function DashboardControlBar({
@@ -57,6 +58,7 @@ export function DashboardControlBar({
   onCurrencyViewChange,
   canViewFinancials,
   rhythmStatus,
+  strategicScore,
 }: DashboardControlBarProps) {
   const [isClientOpen, setIsClientOpen] = useState(false);
   const { clientId, setClientId, platform, setPlatform } = useFilter();
@@ -171,6 +173,12 @@ export function DashboardControlBar({
                       {rhythmStatus.rhythmPercent.toFixed(0)}%
                     </span>
                     <span className="text-sm font-extrabold text-foreground">do ritmo</span>
+                    {strategicScore != null && (
+                      <>
+                        <span className="text-muted-foreground/30 mx-1">|</span>
+                        <span className="text-sm font-extrabold text-foreground">Score {strategicScore}</span>
+                      </>
+                    )}
                   </div>
                   <span className="text-xs text-muted-foreground mt-0.5">
                     {rhythmStatus.periodPercent}% do período decorrido
