@@ -127,7 +127,7 @@ const menuGroups: MenuGroup[] = [
   },
 ];
 
-const menuBtnClass = "h-10 text-[13px] font-normal text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-transparent data-[active=true]:bg-transparent data-[active=true]:text-sidebar-foreground data-[active=true]:border-l-2 data-[active=true]:border-l-primary data-[active=true]:font-medium";
+const menuBtnClass = "h-10 text-[13px] font-normal text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-transparent data-[active=true]:bg-primary/10 data-[active=true]:text-sidebar-foreground data-[active=true]:font-medium";
 
 export function AppSidebar() {
   const location = useLocation();
