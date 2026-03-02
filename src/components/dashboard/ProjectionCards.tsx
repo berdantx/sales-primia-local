@@ -141,7 +141,7 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
             <p className={`text-sm font-semibold mt-1.5 tabular-nums ${isAboveTarget ? 'text-emerald-600' : 'text-amber-600'}`}>
               {isAboveTarget
                 ? `Superávit projetado: ${formatCurrency(diferencaProjecao, currency)}`
-                : `Necessário aumentar o ritmo diário em ${formatCurrency(daysRemaining > 0 ? diferencaProjecao / daysRemaining : diferencaProjecao, currency)}.`}
+                : `Para atingir a meta, é necessário aumentar o ritmo diário em ${formatCurrency(daysRemaining > 0 ? diferencaProjecao / daysRemaining : diferencaProjecao, currency)}.`}
             </p>
           </div>
         </CardContent>
