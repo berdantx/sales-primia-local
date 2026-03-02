@@ -603,7 +603,7 @@ export default function DuplicateAudit() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         <div className="flex items-center justify-between">
           <ClientContextHeader 
             title="Auditoria de Duplicatas" 

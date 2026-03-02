@@ -56,7 +56,8 @@ import {
   ArrowDown,
   ArrowUpDown
 } from 'lucide-react';
-import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
+import { ExecutiveKPICard } from '@/components/dashboard/ExecutiveKPICard';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { HotmartTransactionDetailDialog } from '@/components/hotmart/HotmartTransactionDetailDialog';
 import { BillingTypeBadge } from '@/components/transactions/BillingTypeBadge';
 import { SourceBadge } from '@/components/transactions/SourceBadge';
@@ -448,22 +449,21 @@ function Transactions() {
 
   return (
     <MainLayout>
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-        >
-          <ClientContextHeader 
-            title="Transações"
-            description={`${filteredTransactions.length} transações encontradas`}
-          />
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="space-y-3">
+            <ActiveClientBlock />
+            <ClientContextHeader 
+              title="Transações"
+              description={`${filteredTransactions.length} transações encontradas`}
+            />
+          </div>
           <Button variant="outline" onClick={handleExportCSV} size="sm" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
-        </motion.div>
+        </div>
 
         {/* Period Selector */}
         <motion.div
@@ -499,92 +499,75 @@ function Transactions() {
 
         {/* Summary KPIs */}
         {canViewFinancials ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
-          >
-            <ColoredKPICard
-              title="Faturamento Total (BRL)"
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+            <ExecutiveKPICard
+              label="Faturamento Total (BRL)"
               value={formatCurrency(summaryStats.totalCombinedBRL, 'BRL')}
               subtitle={summaryStats.totalUSD > 0 && dollarRate 
-                ? `Inclui ${formatCurrency(summaryStats.totalUSD, 'USD')} convertidos (R$ ${dollarRate.rate.toFixed(2)})`
+                ? `Inclui ${formatCurrency(summaryStats.totalUSD, 'USD')} convertidos`
                 : `${summaryStats.countBRL} transações`
               }
               icon={DollarSign}
-              variant="green"
-              delay={0}
-              className="text-sm sm:text-base"
+              microLabel="CAIXA"
+              accentColor="border-t-emerald-400"
+              iconClassName="bg-emerald-500/10 text-emerald-600"
             />
-            <ColoredKPICard
-              title="Projeção Faturamento"
+            <ExecutiveKPICard
+              label="Projeção Faturamento"
               value={formatCurrency(summaryStats.totalProjectedCombinedBRL, 'BRL')}
               subtitle="Inclui recorrências"
               icon={TrendingUp}
-              variant="cyan"
-              delay={1}
-              className="text-sm sm:text-base"
+              microLabel="PROJEÇÃO"
+              accentColor="border-t-blue-400"
+              iconClassName="bg-blue-500/10 text-blue-600"
               tooltipContent={
-              <div className="space-y-2 text-sm min-w-[220px]">
-                <p className="font-medium border-b pb-1 mb-2">Composição do Valor</p>
-                
-                {/* Hotmart já processado */}
-                {summaryStats.realBRL > 0 && (
-                  <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">Já processado:</span>
-                    <span className="font-medium">{formatCurrency(summaryStats.realBRL, 'BRL')}</span>
-                  </div>
-                )}
-                
-                {/* Hotmart a receber - destaque em amber */}
-                {summaryStats.pendingBRL > 0 && (
-                  <div className="flex justify-between gap-4 text-amber-500">
-                    <span>A receber (recorrências):</span>
-                    <span className="font-medium">{formatCurrency(summaryStats.pendingBRL, 'BRL')}</span>
-                  </div>
-                )}
-                
-                {/* USD convertido - destaque em azul */}
-                {summaryStats.totalUSD > 0 && summaryStats.projectedUSDConvertedToBRL > 0 && (
-                  <div className="flex justify-between gap-4 text-blue-400">
-                    <span>USD convertido:</span>
-                    <span className="font-medium">{formatCurrency(summaryStats.projectedUSDConvertedToBRL, 'BRL')}</span>
-                  </div>
-                )}
-                
-                {/* Explicação de cálculo */}
-                <div className="border-t pt-2 mt-2 text-muted-foreground text-xs">
-                  <p className="font-medium text-foreground">Como é calculado:</p>
-                  <p>Soma dos valores já processados + parcelas futuras de transações parceladas.</p>
+                <div className="space-y-2 text-sm min-w-[220px]">
+                  <p className="font-medium border-b pb-1 mb-2">Composição do Valor</p>
+                  {summaryStats.realBRL > 0 && (
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground">Já processado:</span>
+                      <span className="font-medium">{formatCurrency(summaryStats.realBRL, 'BRL')}</span>
+                    </div>
+                  )}
+                  {summaryStats.pendingBRL > 0 && (
+                    <div className="flex justify-between gap-4 text-amber-500">
+                      <span>A receber:</span>
+                      <span className="font-medium">{formatCurrency(summaryStats.pendingBRL, 'BRL')}</span>
+                    </div>
+                  )}
+                  {summaryStats.totalUSD > 0 && summaryStats.projectedUSDConvertedToBRL > 0 && (
+                    <div className="flex justify-between gap-4 text-blue-400">
+                      <span>USD convertido:</span>
+                      <span className="font-medium">{formatCurrency(summaryStats.projectedUSDConvertedToBRL, 'BRL')}</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-            }
-          />
-          {summaryStats.totalUSD > 0 && (
-            <ColoredKPICard
-              title="Vendas em Dólares"
-              value={formatCurrency(summaryStats.totalUSD, 'USD')}
-              subtitle={dollarRate 
-                ? `≈ ${formatCurrency(summaryStats.usdConvertedToBRL, 'BRL')} (R$ ${dollarRate.rate.toFixed(2)})`
-                : `${summaryStats.countUSD} transações`
               }
-              icon={DollarSign}
-              variant="blue"
-              delay={2}
-              className="text-sm sm:text-base"
             />
-          )}
-          <ColoredKPICard
-            title="Total de Transações"
-            value={filteredTransactions.length.toString()}
-            subtitle="no período filtrado"
-            icon={Receipt}
-            variant="purple"
-            delay={3}
-            className="text-sm sm:text-base"
-          />
-        </motion.div>
+            {summaryStats.totalUSD > 0 && (
+              <ExecutiveKPICard
+                label="Vendas em Dólares"
+                value={formatCurrency(summaryStats.totalUSD, 'USD')}
+                subtitle={dollarRate 
+                  ? `≈ ${formatCurrency(summaryStats.usdConvertedToBRL, 'BRL')}`
+                  : `${summaryStats.countUSD} transações`
+                }
+                icon={DollarSign}
+                microLabel="USD"
+                accentColor="border-t-sky-400"
+                iconClassName="bg-sky-500/10 text-sky-600"
+              />
+            )}
+            <ExecutiveKPICard
+              label="Total de Transações"
+              value={filteredTransactions.length.toString()}
+              subtitle="no período filtrado"
+              icon={Receipt}
+              microLabel="VOLUME"
+              accentColor="border-t-violet-400"
+              iconClassName="bg-violet-500/10 text-violet-600"
+            />
+          </div>
         ) : (
           <RestrictedFinancialSection />
         )}

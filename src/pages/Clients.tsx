@@ -90,19 +90,15 @@ function Clients() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-              <Building2 className="h-7 w-7" />
+            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <Building2 className="h-6 w-6 text-primary" strokeWidth={1.75} />
               Gestão de Clientes
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground mt-1">
               {clients?.length || 0} clientes cadastrados
             </p>
           </div>
@@ -118,7 +114,7 @@ function Clients() {
               Novo Cliente
             </Button>
           </div>
-        </motion.div>
+        </div>
 
         {/* Search */}
         <Card>

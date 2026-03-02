@@ -57,7 +57,8 @@ import {
   Users,
   Link2
 } from 'lucide-react';
-import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
+import { ExecutiveKPICard } from '@/components/dashboard/ExecutiveKPICard';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { EduzzTransactionDetailDialog } from '@/components/eduzz/EduzzTransactionDetailDialog';
 import { EduzzTransactionCard } from '@/components/eduzz/EduzzTransactionCard';
 import { EduzzAdvancedFilters } from '@/components/dashboard/EduzzAdvancedFilters';
@@ -363,89 +364,76 @@ function EduzzTransactions() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        >
-          <ClientContextHeader 
-            title="Transações Eduzz"
-            description={`${filteredTransactions.length} transações encontradas`}
-          />
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="space-y-3">
+            <ActiveClientBlock />
+            <ClientContextHeader 
+              title="Transações Eduzz"
+              description={`${filteredTransactions.length} transações encontradas`}
+            />
+          </div>
           <Button variant="outline" onClick={handleExportCSV} className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
-        </motion.div>
+        </div>
 
-        {/* Summary KPIs */}
         {canViewFinancials ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3"
-          >
-            <ColoredKPICard
-              title="Faturamento BRL"
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-5 sm:gap-6">
+            <ExecutiveKPICard
+              label="Faturamento BRL"
               value={formatCurrency(stats?.totalBRL || 0, 'BRL')}
-              subtitle={`Transações em Reais`}
+              subtitle="Transações em Reais"
               icon={DollarSign}
-              variant="green"
-              delay={0}
-              className="text-sm sm:text-base"
+              microLabel="CAIXA"
+              accentColor="border-t-emerald-400"
+              iconClassName="bg-emerald-500/10 text-emerald-600"
             />
-            <ColoredKPICard
-              title="Faturamento USD"
+            <ExecutiveKPICard
+              label="Faturamento USD"
               value={formatCurrency(stats?.totalUSD || 0, 'USD')}
-              subtitle={`Transações em Dólar`}
+              subtitle="Transações em Dólar"
               icon={DollarSign}
-              variant="purple"
-              delay={0.5}
-              className="text-sm sm:text-base"
+              microLabel="USD"
+              accentColor="border-t-violet-400"
+              iconClassName="bg-violet-500/10 text-violet-600"
             />
-            <ColoredKPICard
-              title="Tráfego Pago"
+            <ExecutiveKPICard
+              label="Tráfego Pago"
               value={formatCurrency(trafficStats.paid.value, 'BRL')}
               subtitle={`${trafficStats.paid.count} (${trafficStats.paidPercent}%)`}
               icon={Megaphone}
-              variant="blue"
-              delay={1}
-              className={`text-sm sm:text-base cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${trafficTypeFilter === 'paid' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-              onClick={() => {
-                setTrafficTypeFilter(trafficTypeFilter === 'paid' ? null : 'paid');
-                setCurrentPage(1);
-              }}
+              microLabel="PAGO"
+              accentColor="border-t-blue-400"
+              iconClassName="bg-blue-500/10 text-blue-600"
+              className={trafficTypeFilter === 'paid' ? 'ring-2 ring-primary ring-offset-2' : ''}
+              onClick={() => { setTrafficTypeFilter(trafficTypeFilter === 'paid' ? null : 'paid'); setCurrentPage(1); }}
             />
-            <ColoredKPICard
-              title="Orgânico"
+            <ExecutiveKPICard
+              label="Orgânico"
               value={formatCurrency(trafficStats.organic.value, 'BRL')}
               subtitle={`${trafficStats.organic.count} (${trafficStats.organicPercent}%)`}
               icon={Users}
-              variant="yellow"
-              delay={2}
-              className={`text-sm sm:text-base cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${trafficTypeFilter === 'organic' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-              onClick={() => {
-                setTrafficTypeFilter(trafficTypeFilter === 'organic' ? null : 'organic');
-                setCurrentPage(1);
-              }}
+              microLabel="ORGÂNICO"
+              accentColor="border-t-amber-400"
+              iconClassName="bg-amber-500/10 text-amber-600"
+              className={trafficTypeFilter === 'organic' ? 'ring-2 ring-primary ring-offset-2' : ''}
+              onClick={() => { setTrafficTypeFilter(trafficTypeFilter === 'organic' ? null : 'organic'); setCurrentPage(1); }}
             />
-            <ColoredKPICard
-              title="Direto"
+            <ExecutiveKPICard
+              label="Direto"
               value={formatCurrency(trafficStats.direct.value, 'BRL')}
               subtitle={`${trafficStats.direct.count} (${trafficStats.directPercent}%)`}
               icon={Link2}
-              variant="cyan"
-              delay={3}
-              className={`text-sm sm:text-base cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${trafficTypeFilter === 'direct' ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-              onClick={() => {
-                setTrafficTypeFilter(trafficTypeFilter === 'direct' ? null : 'direct');
-                setCurrentPage(1);
-              }}
+              microLabel="DIRETO"
+              accentColor="border-t-sky-400"
+              iconClassName="bg-sky-500/10 text-sky-600"
+              className={trafficTypeFilter === 'direct' ? 'ring-2 ring-primary ring-offset-2' : ''}
+              onClick={() => { setTrafficTypeFilter(trafficTypeFilter === 'direct' ? null : 'direct'); setCurrentPage(1); }}
             />
-          </motion.div>
+          </div>
         ) : (
           <RestrictedFinancialSection />
         )}

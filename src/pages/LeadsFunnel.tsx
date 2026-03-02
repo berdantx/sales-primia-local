@@ -6,7 +6,8 @@ import { useConversionSummaryRpc } from '@/hooks/useConversionSummaryRpc';
 import { useFunnelEvolutionRpc } from '@/hooks/useFunnelEvolutionRpc';
 import { ConversionFunnelCard } from '@/components/leads/ConversionFunnelCard';
 import { FunnelEvolutionChart } from '@/components/leads/FunnelEvolutionChart';
-import { ColoredKPICard } from '@/components/dashboard/ColoredKPICard';
+import { ExecutiveKPICard } from '@/components/dashboard/ExecutiveKPICard';
+import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { LeadsPeriodFilter } from '@/components/leads/LeadsPeriodFilter';
 import { LandingPageComparisonCard } from '@/components/leads/LandingPageComparisonCard';
 import { TopAdsByConversionCard } from '@/components/leads/TopAdsByConversionCard';
@@ -110,7 +111,7 @@ function LeadsFunnel() {
 
   return (
     <MainLayout>
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Breadcrumb */}
         <Breadcrumb>
           <BreadcrumbList>
@@ -157,27 +158,24 @@ function LeadsFunnel() {
         </motion.div>
 
         {/* Conversion KPIs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4"
-        >
-          <ColoredKPICard
-            title="Total de Leads"
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+          <ExecutiveKPICard
+            label="Total de Leads"
             value={tc.totalLeads.toString()}
             subtitle="leads únicos"
             icon={Users}
-            variant="blue"
-            delay={0}
+            microLabel="VOLUME"
+            accentColor="border-t-violet-400"
+            iconClassName="bg-violet-500/10 text-violet-600"
           />
-          <ColoredKPICard
-            title="Leads Qualificados"
+          <ExecutiveKPICard
+            label="Leads Qualificados"
             value={tc.qualifiedLeads.toString()}
             subtitle={`${Number(tc.qualificationRate).toFixed(1)}% do total`}
             icon={Target}
-            variant="purple"
-            delay={1}
+            microLabel="QUALIFICADOS"
+            accentColor="border-t-blue-400"
+            iconClassName="bg-blue-500/10 text-blue-600"
             tooltipContent={
               <div className="text-xs space-y-1">
                 <p>Leads com UTMs completos:</p>
@@ -185,13 +183,14 @@ function LeadsFunnel() {
               </div>
             }
           />
-          <ColoredKPICard
-            title="Taxa de Conversão"
+          <ExecutiveKPICard
+            label="Taxa de Conversão"
             value={`${Number(tc.conversionRate).toFixed(2)}%`}
             subtitle="leads convertidos"
             icon={TrendingUp}
-            variant="green"
-            delay={2}
+            microLabel="CONVERSÃO"
+            accentColor="border-t-emerald-400"
+            iconClassName="bg-emerald-500/10 text-emerald-600"
             tooltipContent={
               <div className="text-xs space-y-1">
                 <p><strong>{tc.convertedLeads}</strong> de {tc.totalLeads} leads únicos</p>
@@ -199,54 +198,53 @@ function LeadsFunnel() {
               </div>
             }
           />
-          <ColoredKPICard
-            title="Conversão Qualificados"
+          <ExecutiveKPICard
+            label="Conversão Qualificados"
             value={`${Number(tc.qualifiedConversionRate).toFixed(2)}%`}
             subtitle="entre qualificados"
             icon={Percent}
-            variant="cyan"
-            delay={3}
+            microLabel="TAXA Q."
+            accentColor="border-t-sky-400"
+            iconClassName="bg-sky-500/10 text-sky-600"
             tooltipContent={
               <div className="text-xs space-y-1">
                 <p><strong>{tc.convertedLeads}</strong> convertidos de {tc.qualifiedLeads} qualificados</p>
               </div>
             }
           />
-        </motion.div>
+        </div>
 
         {/* Revenue KPIs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4"
-        >
-          <ColoredKPICard
-            title="Leads Convertidos"
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+          <ExecutiveKPICard
+            label="Leads Convertidos"
             value={tc.convertedLeads.toString()}
             subtitle="com compra confirmada"
             icon={ShoppingCart}
-            variant="cyan"
-            delay={0}
+            microLabel="CONVERTIDOS"
+            accentColor="border-t-sky-400"
+            iconClassName="bg-sky-500/10 text-sky-600"
           />
-          <ColoredKPICard
-            title="Receita Atribuída"
+          <ExecutiveKPICard
+            label="Receita Atribuída"
             value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(tc.totalRevenue)}
             subtitle="vendas de leads"
             icon={DollarSign}
-            variant="yellow"
-            delay={1}
+            microLabel="RECEITA"
+            accentColor="border-t-emerald-400"
+            iconClassName="bg-emerald-500/10 text-emerald-600"
           />
-          <ColoredKPICard
-            title="Ticket Médio"
+          <ExecutiveKPICard
+            label="Ticket Médio"
             value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(tc.averageTicket)}
             subtitle="por lead convertido"
             icon={BarChart3}
-            variant="orange"
-            delay={2}
+            microLabel="TICKET"
+            accentColor="border-t-amber-400"
+            iconClassName="bg-amber-500/10 text-amber-600"
             className="col-span-2 lg:col-span-1"
           />
-        </motion.div>
+        </div>
 
         {/* Funnel + Evolution */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

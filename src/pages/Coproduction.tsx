@@ -60,14 +60,14 @@ export default function Coproduction() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Handshake className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Handshake className="h-5 w-5 text-primary" strokeWidth={1.75} />
             {isMaster ? 'Coproduções' : 'Minhas Coproduções'}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {isMaster
               ? 'Visualize comissões por coprodutor'
               : 'Acompanhe suas comissões por produto e canal de venda'}
