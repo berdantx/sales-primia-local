@@ -185,7 +185,7 @@ export function DashboardControlBar({
         <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
           {/* PERÍODO */}
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium hidden sm:block">Período</span>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium hidden sm:block">Período</span>
             <div className="flex items-center gap-2">
               <Select value={period} onValueChange={(v) => onPeriodChange(v as PeriodFilter)}>
                 <SelectTrigger className="w-full sm:w-[130px] h-8 text-xs bg-background border-border/60 rounded-lg">
@@ -215,7 +215,7 @@ export function DashboardControlBar({
 
           {/* PLATAFORMAS */}
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium hidden sm:block">Plataforma</span>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium hidden sm:block">Plataforma</span>
             <PlatformFilter value={platform} onChange={setPlatform} />
           </div>
 
@@ -225,7 +225,7 @@ export function DashboardControlBar({
 
               {/* MOEDA */}
               <div className="flex flex-col gap-1">
-                <span className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium hidden sm:block">Moeda</span>
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium hidden sm:block">Moeda</span>
                 <CurrencyViewToggle value={currencyView} onChange={onCurrencyViewChange} />
               </div>
             </>
