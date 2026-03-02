@@ -16,8 +16,10 @@ interface ExecutiveKPICardProps {
   subtitleClassName?: string;
   progress?: number; // 0-100
   progressColor?: string;
+  progressHint?: string;
   onClick?: () => void;
   className?: string;
+  valueClassName?: string;
   tooltipContent?: React.ReactNode;
   icon?: LucideIcon;
   accentColor?: string;
@@ -33,8 +35,10 @@ export function ExecutiveKPICard({
   subtitleClassName,
   progress,
   progressColor,
+  progressHint,
   onClick,
   className,
+  valueClassName,
   tooltipContent,
   icon: Icon,
   accentColor,
@@ -44,7 +48,7 @@ export function ExecutiveKPICard({
     <div
       className={cn(
         'bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
-        accentColor && 'border-l-[3px]',
+        accentColor && 'border-l-4',
         accentColor,
         onClick && 'cursor-pointer',
         tooltipContent && 'cursor-help',
@@ -67,18 +71,23 @@ export function ExecutiveKPICard({
           )}
         </div>
       </div>
-      <p className="text-3xl font-bold tracking-tight text-foreground leading-none mb-1">
+      <p className={cn("text-3xl font-bold tracking-tight text-foreground leading-none mb-1", valueClassName)}>
         {value}
       </p>
       {subtitle && (
         <p className={cn("text-xs text-muted-foreground mt-2", subtitleClassName)}>{subtitle}</p>
       )}
       {progress !== undefined && (
-        <div className="mt-3 h-2 w-full rounded-full bg-muted overflow-hidden">
-          <div
-            className={cn("h-full rounded-full transition-all duration-500", progressColor || "bg-primary")}
-            style={{ width: `${Math.min(progress, 100)}%` }}
-          />
+        <div className="mt-3">
+          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className={cn("h-full rounded-full transition-all duration-500", progressColor || "bg-primary")}
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            />
+          </div>
+          {progressHint && (
+            <p className="text-xs text-muted-foreground mt-1.5">{progressHint}</p>
+          )}
         </div>
       )}
     </div>
