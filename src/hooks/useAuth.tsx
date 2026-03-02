@@ -43,23 +43,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Fail-safe: avoid infinite loading screen if auth handshake stalls
+    const loadingTimeout = window.setTimeout(() => {
+      if (isMounted) {
+        setLoading(false);
+      }
+    }, 4000);
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
+        if (!isMounted) return;
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        window.clearTimeout(loadingTimeout);
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (!isMounted) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        window.clearTimeout(loadingTimeout);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setLoading(false);
+        window.clearTimeout(loadingTimeout);
+      });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      window.clearTimeout(loadingTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
