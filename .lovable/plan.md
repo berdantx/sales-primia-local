@@ -1,101 +1,63 @@
 
 
-# Plano: Nova Dashboard Executiva Premium
+# Plano: Refinamento Final da Dashboard Executiva Premium
 
-## Visão Geral
+## O que já está implementado
+A Dashboard, KPIs, gráficos e sidebar já foram criados nas iterações anteriores. Os componentes `ExecutiveKPICard`, `StrategicRecommendationCard`, `TopProductsList`, `RevenueEvolutionChart` já existem e estão funcionais.
 
-Recriar a Dashboard principal (`/`) seguindo fielmente a estrutura da imagem de referência: layout premium Apple enterprise, hierarquia clara, máximo 4 KPIs + 2 gráficos, bloco de top produtos, e sidebar reestruturada com a navegação fornecida.
+## O que precisa ser ajustado
 
-## Tarefas
-
-### 1. Reestruturar AppSidebar com navegação fornecida
-
+### 1. Sidebar — Grupos colapsáveis Vendas e Análise dentro de CORE
 **Arquivo:** `src/components/layout/AppSidebar.tsx`
 
-- Substituir a estrutura `menuGroups` atual pela navegação exata fornecida (CORE, OPERACAO, ADMIN)
-- Ícones: `LayoutDashboard`, `TrendingUp`, `BarChart3`, `Target`, `Wallet`, `FileUp`, `Ban`, `Activity`, `Users`, `Database`, `Link2`, `ShieldCheck`
-- Footer fixo: Configurações (`Settings`), Minha Conta (`User`), Sair (`LogOut`)
-- Bloco superior: logo + nome do sistema + nome do cliente (via `ClientIndicator` ou `useClients`)
-- Visual: badges discretos para grupos (CORE em azul suave, OP cinza, ADMIN vermelho discreto), espaçamento generoso, hover suave, item ativo com borda lateral azul sutil
-- Mapeamento de roles: `produtor` → `master`, `coprodutor` → `user`, `admin` → `admin` (manter compatibilidade com `useUserRole`)
-- Rotas mantidas: `/transactions` → "Vendas", `/leads` → dentro de "Análise", etc. (sem mudar rotas reais, só labels e agrupamento)
+A sidebar atual tem Vendas e Análise como links diretos. O prompt exige que sejam **sub-grupos colapsáveis** dentro de CORE:
 
-### 2. Simplificar Header
+```text
+CORE
+  Painel          → /
+  ▸ Vendas        (colapsável)
+      Hotmart     → /transactions
+      TMB         → /tmb-transactions
+      Eduzz       → /eduzz-transactions
+      Internacional → /international-sales
+      Comparativo → /comparative
+  ▸ Análise       (colapsável)
+      Leads       → /leads
+      Funil       → /leads/funnel
 
-**Arquivo:** `src/components/layout/Header.tsx`
+OPERAÇÃO
+  Metas           → /goals
+  Coprodução      → /coproduction
+  Importar Dados  → /upload
+  Cancel. TMB     → /tmb-cancellations
+  Cancel. Eduzz   → /eduzz-cancellations
 
-- Remover botões de ação (Histórico, Metas, Importar) — tudo está no sidebar agora
-- Manter: SidebarTrigger, logo (menor), separador, e no canto direito: badges de filtro inline (Plataforma, Moeda, USD rate, "Atualizado há X min")
-- Layout limpo, uma linha, sem dropdown mobile de ações
+ADMIN
+  Equipe          → /users
+  Clientes        → /clients
+  Integrações     → /webhook-config
+  Auditoria       → /duplicate-audit
+```
 
-### 3. Recriar Dashboard.tsx
+- Usar `Collapsible` do Radix para cada sub-grupo
+- `defaultOpen` baseado em rota ativa dentro do sub-grupo
+- Itens internos indentados com `pl-9`
+- Badges discretos nos labels de grupo (CORE azul, OP cinza, ADM vermelho suave)
+- Adicionar ícones `Globe`, `GitCompare`, `Layers` de lucide-react para novos itens
+- Footer: Configurações + email/role do usuário + botão Sair (já existe, apenas adicionar label de role "Master"/"Admin"/"Cliente")
 
-**Arquivo:** `src/pages/Dashboard.tsx` (rewrite completo)
+### 2. PlatformSharePieChart — Estilo executivo clean
+**Arquivo:** `src/components/dashboard/PlatformSharePieChart.tsx`
 
-Estrutura de blocos na ordem exata da imagem:
+- Remover wrapper `motion.div` e `Card`/`CardHeader`/`CardContent`
+- Usar estilo consistente: `bg-card border border-border rounded-2xl shadow-sm`
+- Adicionar ícone `Layers` no header (como os outros blocos)
+- Badge "Distribuição" no canto superior direito
+- Border-radius do tooltip: `12px`
 
-**A) Header da página**
-- Título grande: "Visão Geral do Lançamento"
-- Subtítulo: "O que importa agora: caixa, previsibilidade e direção de decisão."
-- Canto direito: "Status do dia" com último evento
+### 3. Nenhuma mudança no Dashboard.tsx
+O `Dashboard.tsx` já implementa corretamente a estrutura do plano: 4 KPIs, gráfico de evolução, recomendação IA, top produtos, pie chart, e coprodução. Não precisa de alteração.
 
-**B) 4 KPIs grandes (primeira dobra)**
-Novo componente `ExecutiveKPICard` (sem fundo colorido forte, estilo clean):
-1. **Receita Confirmada** — badge "Caixa", valor grande, subtexto "Vendas pagas/efetivadas"
-2. **Receita Projetada** — badge "Previsão", valor grande, subtexto "Inclui parcelas futuras e recorrência"
-3. **Meta do Período** — percentual em badge, valor grande, subtexto "Faltam R$ X", barra de progresso fina
-4. **Leads no Período** — badge "Aquisição", valor grande, subtexto "Com UTMs e origem"
-
-Dados: reutilizar `useCombinedStats`, `useProjectionStats`, `useActiveGoals`, `useLeadCount`, `useDollarRate` — mesma lógica atual
-
-**C) Bloco "Evolução Essencial" (2/3 largura)**
-- Gráfico principal: "Evolução de Receita (Confirmada vs Projetada)" — `LineChart` do Recharts, últimos 30 dias
-- Gráfico secundário: "Participação por Plataforma" — `PieChart` simplificado (Hotmart + TMB + Eduzz)
-- Dados: `salesByDate` do `useCombinedStats` + pie chart com totais por plataforma
-
-**D) Bloco "Direção do Que Fazer Agora" (1/3 largura, ao lado)**
-Novo componente `StrategicRecommendationCard`:
-- Card com fundo `bg-blue-50 border-blue-100`
-- Título "Recomendação Estratégica (IA)"
-- Conteúdo estático/template por enquanto (placeholder inteligente baseado nos dados)
-- 3 tags: Prioridade, Base temporal, Impacto estimado
-- Lista de alertas com pontos coloridos (amarelo/vermelho/verde) e ação sugerida
-
-**E) Bloco "O Que Está Puxando o Resultado" (2/3 largura)**
-Reutilizar dados do `ProductDrilldownCard` mas com layout minimal novo:
-- Lista dos top 3-5 produtos
-- Nome à esquerda, receita à direita, vendas abaixo
-- Badge "Top 5"
-
-**F) Bloco "Coprodução" (1/3 largura, ao lado)**
-Resumo do `CoproducerEarningsCard` — visão produtor vs coprodutor, link para detalhamento
-
-### 4. Criar novos componentes
-
-**Novos arquivos:**
-- `src/components/dashboard/ExecutiveKPICard.tsx` — Card KPI clean (sem fundo colorido, sombra leve, badge discreto, número grande `text-3xl font-bold`, label `text-sm text-muted-foreground`)
-- `src/components/dashboard/StrategicRecommendationCard.tsx` — Card de recomendação IA com alertas
-- `src/components/dashboard/TopProductsList.tsx` — Lista minimal de top produtos
-- `src/components/dashboard/CoproductionSummaryCard.tsx` — Resumo coprodução
-
-### 5. Diretrizes visuais aplicadas
-
-- Cards: `bg-card border border-border shadow-sm rounded-[16px]`
-- KPIs: número `text-3xl font-bold`, label `text-sm text-muted-foreground`
-- Badges: `variant="outline"` ou custom com cores suaves (não chamativos)
-- Espaçamento: `space-y-6` entre seções, `gap-6` em grids
-- Barra de progresso da meta: `h-2 rounded-full bg-muted` com fill `bg-primary`
-- Fundo geral: `bg-background` (#F7FAFC)
-- Sem framer-motion pesado (apenas fade-in sutil)
-- Sem gradientes nos cards KPI
-- Border radius: `rounded-2xl` (16px) nos cards principais
-
-### 6. Compatibilidade
-
-- Manter todas as rotas existentes funcionando (não alterar `App.tsx`)
-- Manter todos os hooks de dados existentes
-- Sidebar: mapear roles `produtor`/`coprodutor`/`admin` para os roles existentes (`master`/`user`/`admin`)
-- Mobile: sidebar continua como drawer (Sheet), conteúdo 100% largura
-- Manter `canViewFinancials` para restrição de dados financeiros
-- Manter empty state quando não há dados
+### 4. Nenhuma mudança no App.tsx
+Todas as rotas existentes são mantidas. A sidebar apenas reorganiza a navegação visualmente.
 
