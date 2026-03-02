@@ -3,10 +3,10 @@ import { cn } from '@/lib/utils';
 import { Activity } from 'lucide-react';
 
 interface StrategicScoreCardProps {
-  rhythmPercent?: number; // 0-200+
-  goalProgress?: number; // 0-100
-  periodPercent?: number; // 0-100
-  conversionRate?: number; // 0-100
+  rhythmPercent?: number;
+  goalProgress?: number;
+  periodPercent?: number;
+  conversionRate?: number;
   hasGoal: boolean;
 }
 
@@ -53,7 +53,7 @@ export function StrategicScoreCard({
     ? 'stroke-amber-500'
     : 'stroke-red-500';
 
-  const radius = 40;
+  const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const arcPercent = Math.min(score, 100) / 100;
   const dashOffset = circumference * (1 - arcPercent);
@@ -66,30 +66,30 @@ export function StrategicScoreCard({
   ];
 
   return (
-    <div className="bg-card border border-border/80 rounded-xl p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="bg-card border border-border/80 rounded-xl p-6 sm:p-7 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-all duration-200 h-full flex flex-col">
+      <div className="flex items-center gap-2 mb-5">
         <Activity className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
         <div>
-          <h3 className="text-sm font-bold text-foreground tracking-tight">Score Estratégico</h3>
-          <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wide uppercase">Índice global de performance</p>
+          <h3 className="text-sm font-bold text-foreground tracking-tight">Score Estratégico de Lançamento</h3>
+          <p className="text-[10px] text-muted-foreground/60 font-medium tracking-wide uppercase">Síntese baseada em ritmo, meta, conversão e timing</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
-        {/* Arc gauge */}
-        <div className="relative w-[108px] h-[108px] flex-shrink-0">
+      <div className="flex flex-col items-center gap-5 flex-1">
+        {/* Arc gauge — central and dominant */}
+        <div className="relative w-[130px] h-[130px] flex-shrink-0">
           <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
             <circle
               cx="50" cy="50" r={radius}
               fill="none"
               stroke="hsl(var(--muted))"
-              strokeWidth="7"
+              strokeWidth="8"
             />
             <circle
               cx="50" cy="50" r={radius}
               fill="none"
               className={arcColor}
-              strokeWidth="7"
+              strokeWidth="8"
               strokeLinecap="round"
               strokeDasharray={circumference}
               strokeDashoffset={dashOffset}
@@ -97,16 +97,17 @@ export function StrategicScoreCard({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={cn("text-3xl font-extrabold tracking-tighter", scoreColor)}>
+            <span className={cn("text-4xl font-extrabold tracking-tighter", scoreColor)}>
               {score}
             </span>
-            <span className="text-[8px] text-muted-foreground/40 font-medium tracking-wide">/ 100</span>
+            <span className="text-[7px] text-muted-foreground/30 font-medium tracking-widest">/ 100</span>
           </div>
         </div>
 
+        <p className={cn("text-[11px] font-bold tracking-tight text-center", scoreColor)}>{scoreLabel}</p>
+
         {/* Factors */}
-        <div className="flex-1 space-y-2">
-          <p className={cn("text-[11px] font-bold mb-3 tracking-tight", scoreColor)}>{scoreLabel}</p>
+        <div className="w-full space-y-2.5 mt-auto">
           {factors.map((f) => (
             <div key={f.label} className="flex items-center gap-2">
               <span className="text-[11px] text-muted-foreground w-16 shrink-0">{f.label}</span>

@@ -57,8 +57,8 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.4 }}
     >
-      <Card className="rounded-2xl border-border shadow-sm">
-        <CardContent className="p-6 sm:p-8">
+      <Card className="rounded-2xl border-border shadow-sm h-full">
+        <CardContent className="p-5 sm:p-6">
           {/* Header */}
           <div className="mb-6">
             <h3 className="text-base sm:text-lg font-semibold">Ritmo Necessário para Fechamento</h3>
