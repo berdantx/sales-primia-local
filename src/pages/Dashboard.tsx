@@ -3,7 +3,7 @@ import { calculateGoalProgress } from '@/lib/calculations/goalCalculations';
 import { ProjectionCards } from '@/components/dashboard/ProjectionCards';
 import { DateRange } from 'react-day-picker';
 import { useCombinedStats, PlatformType } from '@/hooks/useCombinedStats';
-import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
+import { DashboardControlBar } from '@/components/dashboard/DashboardControlBar';
 import { useActiveGoals } from '@/hooks/useGoals';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useLeadCount } from '@/hooks/useLeads';
@@ -19,23 +19,14 @@ import { TopProductsList } from '@/components/dashboard/TopProductsList';
 import { StrategicRecommendationCard } from '@/components/dashboard/StrategicRecommendationCard';
 import { CoproducerEarningsCard } from '@/components/dashboard/CoproducerEarningsCard';
 import { RestrictedFinancialSection } from '@/components/dashboard/RestrictedFinancialSection';
-import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
-import { PlatformFilter } from '@/components/dashboard/PlatformFilter';
-import { CurrencyViewToggle, CurrencyView } from '@/components/dashboard/CurrencyViewToggle';
-import { ExportReportDialog } from '@/components/export/ExportReportDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
-import { Upload, Target, Calendar, DollarSign, TrendingUp, Users } from 'lucide-react';
+import { Upload, Target, DollarSign, TrendingUp, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC } from '@/lib/dateUtils';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { CurrencyView } from '@/components/dashboard/CurrencyViewToggle';
+
 
 type PeriodFilter = '1d' | '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 
@@ -45,7 +36,7 @@ export default function Dashboard() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
   const [currencyView, setCurrencyView] = useState<CurrencyView>('combined');
 
-  const { billingType, paymentMethod, sckCode, product, clientId, platform, setPlatform } = useFilter();
+  const { billingType, paymentMethod, sckCode, product, clientId, platform } = useFilter();
 
   const dateRange = useMemo(() => {
     if (period === 'all') return { startDate: undefined, endDate: undefined };
@@ -165,6 +156,18 @@ export default function Dashboard() {
 
   const isRevenueFullyRealized = Math.abs(revenue.confirmed - revenue.projected) < 1;
 
+  // Compute rhythm status for control bar
+  const rhythmStatus = useMemo(() => {
+    if (!goalProgressData || !primaryGoal) return null;
+    const { daysElapsed, totalDays, daysRemaining, remaining, totalSold } = goalProgressData;
+    const safeDays = Math.max(1, Math.min(daysElapsed, totalDays || daysElapsed));
+    const ritmoAtual = totalSold / safeDays;
+    const ritmoNecessario = daysRemaining > 0 ? remaining / daysRemaining : 0;
+    const rhythmPercent = ritmoNecessario > 0 ? (ritmoAtual / ritmoNecessario) * 100 : (totalSold >= primaryGoal.target_value ? 100 : 0);
+    const periodPercent = totalDays > 0 ? Math.min(Math.round((daysElapsed / totalDays) * 100), 100) : 0;
+    return { rhythmPercent, periodPercent, isOnTrack: rhythmPercent >= 100 };
+  }, [goalProgressData, primaryGoal]);
+
   if (isLoading || isLoadingAccess) {
     return (
       <MainLayout>
@@ -190,53 +193,17 @@ export default function Dashboard() {
   return (
     <MainLayout>
       <div className="space-y-6 max-w-[1400px] mx-auto">
-        {/* Page Header */}
-        <ClientContextHeader
-          title="Centro de Comando do Lançamento"
-          description="Infraestrutura estratégica para decisões de alto impacto."
+        {/* Control Bar */}
+        <DashboardControlBar
+          period={period}
+          onPeriodChange={setPeriod}
+          customDateRange={customDateRange}
+          onCustomDateRangeChange={setCustomDateRange}
+          currencyView={currencyView}
+          onCurrencyViewChange={setCurrencyView}
+          canViewFinancials={canViewFinancials}
+          rhythmStatus={rhythmStatus}
         />
-
-        {/* Filter Bar */}
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 p-3 bg-card rounded-2xl border border-border shadow-sm">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground hidden sm:block" />
-            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
-              <SelectTrigger className="w-full sm:w-[140px] h-8 text-xs sm:text-sm bg-background border-border">
-                <SelectValue placeholder="Período" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1d">Último dia</SelectItem>
-                <SelectItem value="7d">Últimos 7 dias</SelectItem>
-                <SelectItem value="30d">Últimos 30 dias</SelectItem>
-                <SelectItem value="90d">Últimos 90 dias</SelectItem>
-                <SelectItem value="365d">Último ano</SelectItem>
-                <SelectItem value="all">Tudo</SelectItem>
-                <SelectItem value="custom">Personalizado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {period === 'custom' && (
-            <DateRangePicker
-              dateRange={customDateRange}
-              onDateRangeChange={setCustomDateRange}
-              className="w-full sm:w-[240px]"
-            />
-          )}
-
-          <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
-          <PlatformFilter value={platform} onChange={setPlatform} />
-
-          {canViewFinancials && (
-            <>
-              <div className="h-px w-full sm:h-6 sm:w-px bg-border" />
-              <CurrencyViewToggle value={currencyView} onChange={setCurrencyView} />
-            </>
-          )}
-
-          <div className="flex-1" />
-          <ExportReportDialog defaultClientId={clientId} />
-        </div>
 
         {/* Restricted notice */}
         {!canViewFinancials && hasData && (
