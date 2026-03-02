@@ -159,11 +159,11 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border px-4 py-5">
         {!collapsed ? (
           <div className="flex items-center gap-3">
-            <img src={currentLogo} alt={branding.appName || 'Logo'} className="h-8 w-auto object-contain max-w-[140px]" />
+            <img src={currentLogo} alt={branding.appName || 'Logo'} className="h-12 w-auto object-contain max-w-[180px]" />
           </div>
         ) : (
           <div className="flex justify-center">
-            <img src={currentLogo} alt={branding.appName || 'Logo'} className="h-7 w-auto object-contain" />
+            <img src={currentLogo} alt={branding.appName || 'Logo'} className="h-10 w-auto object-contain" />
           </div>
         )}
       </SidebarHeader>
