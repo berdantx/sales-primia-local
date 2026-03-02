@@ -257,7 +257,7 @@ export default function Dashboard() {
             {canViewFinancials && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
                 <ExecutiveKPICard
-                  microLabel="CAIXA REAL"
+                  microLabel="CAIXA CONSOLIDADO"
                   label="Receita Confirmada"
                   value={formatCurrency(revenue.confirmed, 'BRL')}
                   badge={isRevenueFullyRealized ? "100% realizado" : "Caixa"}
@@ -275,8 +275,7 @@ export default function Dashboard() {
                   badgeClassName={isRevenueFullyRealized ? "bg-muted text-foreground/70 border-border" : "bg-blue-50 text-blue-700 border-blue-200"}
                   subtitle={isRevenueFullyRealized ? "Sem valores pendentes" : "Inclui parcelas futuras"}
                   subtitleClassName="text-foreground/60"
-                  className={!isRevenueFullyRealized ? "opacity-90" : undefined}
-                  valueClassName="text-foreground/90 text-[1.7rem]"
+                  valueClassName="text-foreground/70 text-xl font-semibold"
                   icon={TrendingUp}
                   accentColor="border-l-blue-400/60"
                   iconClassName="bg-blue-100 text-blue-600"
@@ -307,8 +306,6 @@ export default function Dashboard() {
                 <ExecutiveKPICard
                   label="Meta do Período"
                   value={primaryGoal ? formatCurrency(primaryGoal.target_value, primaryGoal.currency) : '—'}
-                  badge={primaryGoal ? `${Math.round(goalProgress)}%` : undefined}
-                  badgeClassName={primaryGoal ? "bg-amber-50 text-amber-700 border-amber-200 font-semibold" : undefined}
                   subtitle={primaryGoal ? `Faltam ${formatCurrency(goalRemaining, primaryGoal.currency)}` : 'Nenhuma meta ativa'}
                   subtitleClassName={primaryGoal ? "font-medium" : undefined}
                   progress={primaryGoal ? goalProgress : undefined}
@@ -323,9 +320,14 @@ export default function Dashboard() {
                   microLabel="AQUISIÇÃO"
                   label="Leads no Período"
                   value={formatNumber(leadCount || 0)}
-                  badge="Aquisição"
-                  badgeClassName="bg-violet-50 text-violet-700 border-violet-200"
-                  subtitle={stats && stats.totalTransactions > 0 && leadCount ? `Conversão: ${((stats.totalTransactions / leadCount) * 100).toFixed(1)}%` : "Com UTMs e origem"}
+                  subtitle={(() => {
+                    const lines: string[] = [];
+                    if (stats && stats.totalTransactions > 0 && leadCount && leadCount > 0) {
+                      lines.push(`Conversão: ${((stats.totalTransactions / leadCount) * 100).toFixed(1)}%`);
+                    }
+                    lines.push("Com UTMs e origem");
+                    return lines.join(' · ');
+                  })()}
                   onClick={() => navigate('/leads')}
                   icon={Users}
                   accentColor="border-l-violet-400/60"
