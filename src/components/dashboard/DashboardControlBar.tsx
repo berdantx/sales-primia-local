@@ -166,11 +166,11 @@ export function DashboardControlBar({
                 }`} />
                 <div className="flex flex-col leading-tight">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-sm font-bold text-foreground">{riskLabel.text}</span>
-                    <span className="text-sm font-bold text-foreground">
+                    <span className="text-sm font-extrabold text-foreground">{riskLabel.text}</span>
+                    <span className="text-sm font-extrabold text-foreground">
                       {rhythmStatus.rhythmPercent.toFixed(0)}%
                     </span>
-                    <span className="text-sm text-muted-foreground">do ritmo</span>
+                    <span className="text-sm font-medium text-muted-foreground">do ritmo</span>
                   </div>
                   <span className="text-[11px] text-muted-foreground/70 mt-0.5">
                     {rhythmStatus.periodPercent}% do período decorrido
