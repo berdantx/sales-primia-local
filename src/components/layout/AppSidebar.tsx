@@ -178,7 +178,7 @@ export function AppSidebar() {
 
           return (
             <SidebarGroup key={group.label} className="pb-1">
-              <SidebarGroupLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              <SidebarGroupLabel className="text-[12px] font-bold tracking-wider text-foreground/70 uppercase mb-1">
                 {group.label}
               </SidebarGroupLabel>
               <SidebarGroupContent>
