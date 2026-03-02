@@ -21,8 +21,9 @@ import { DateRangePicker } from '@/components/dashboard/DateRangePicker';
 import { PlatformFilter } from '@/components/dashboard/PlatformFilter';
 import { CurrencyViewToggle, CurrencyView } from '@/components/dashboard/CurrencyViewToggle';
 import { ExportReportDialog } from '@/components/export/ExportReportDialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
-import { Loader2, Upload, Target, Calendar } from 'lucide-react';
+import { Upload, Target, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC } from '@/lib/dateUtils';
@@ -124,11 +125,40 @@ export default function Dashboard() {
     return totals;
   }, [combinedTransactions]);
 
+  // Goal progress color
+  const getProgressColor = (prog: number) => {
+    if (primaryGoal) {
+      // Check if behind expected rhythm
+      const now = new Date();
+      const start = new Date(primaryGoal.start_date);
+      const end = new Date(primaryGoal.end_date);
+      const totalDays = Math.max((end.getTime() - start.getTime()) / 86400000, 1);
+      const elapsedDays = Math.max((now.getTime() - start.getTime()) / 86400000, 0);
+      const expectedProgress = (elapsedDays / totalDays) * 100;
+      if (prog < expectedProgress * 0.7) return 'bg-amber-300';
+    }
+    if (prog >= 80) return 'bg-emerald-300';
+    if (prog >= 40) return 'bg-blue-300';
+    return 'bg-muted-foreground/30';
+  };
+
+  const isRevenueFullyRealized = Math.abs(revenue.confirmed - revenue.projected) < 1;
+
   if (isLoading || isLoadingAccess) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="space-y-6 max-w-[1400px] mx-auto">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-12 w-full rounded-2xl" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-[140px] rounded-2xl" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+            <Skeleton className="lg:col-span-2 h-[320px] rounded-2xl" />
+            <Skeleton className="h-[320px] rounded-2xl" />
+          </div>
         </div>
       </MainLayout>
     );
@@ -141,8 +171,8 @@ export default function Dashboard() {
       <div className="space-y-6 max-w-[1400px] mx-auto">
         {/* Page Header */}
         <ClientContextHeader
-          title="Visão Geral do Lançamento"
-          description="O que importa agora: caixa, previsibilidade e direção de decisão."
+          title="Centro de Comando do Lançamento"
+          description="O que importa agora: caixa, ritmo e direção estratégica."
         />
 
         {/* Filter Bar */}
@@ -215,14 +245,17 @@ export default function Dashboard() {
                 <ExecutiveKPICard
                   label="Receita Confirmada"
                   value={formatCurrency(revenue.confirmed, 'BRL')}
-                  badge="Caixa"
-                  subtitle="Vendas pagas e efetivadas"
+                  badge={isRevenueFullyRealized ? "100% realizado" : "Caixa"}
+                  badgeClassName={isRevenueFullyRealized ? "bg-emerald-50 text-emerald-700 border-emerald-200" : undefined}
+                  subtitle={isRevenueFullyRealized ? "Vendas pagas e efetivadas" : "Vendas pagas e efetivadas"}
                 />
                 <ExecutiveKPICard
                   label="Receita Projetada"
                   value={formatCurrency(revenue.projected, 'BRL')}
-                  badge="Previsão"
-                  subtitle="Inclui parcelas futuras e recorrência"
+                  badge={isRevenueFullyRealized ? "Consolidado" : "Previsão"}
+                  badgeClassName={isRevenueFullyRealized ? "bg-muted text-foreground/70 border-border" : "bg-blue-50 text-blue-700 border-blue-200"}
+                  subtitle={isRevenueFullyRealized ? "Sem valores pendentes" : "Inclui parcelas futuras"}
+                  className={!isRevenueFullyRealized ? "opacity-90" : undefined}
                   tooltipContent={
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between gap-4">
@@ -251,8 +284,11 @@ export default function Dashboard() {
                   label="Meta do Período"
                   value={primaryGoal ? formatCurrency(primaryGoal.target_value, primaryGoal.currency) : '—'}
                   badge={primaryGoal ? `${Math.round(goalProgress)}%` : undefined}
+                  badgeClassName={primaryGoal ? "font-semibold" : undefined}
                   subtitle={primaryGoal ? `Faltam ${formatCurrency(goalRemaining, primaryGoal.currency)}` : 'Nenhuma meta ativa'}
+                  subtitleClassName={primaryGoal ? "font-medium" : undefined}
                   progress={primaryGoal ? goalProgress : undefined}
+                  progressColor={primaryGoal ? getProgressColor(goalProgress) : undefined}
                   onClick={!primaryGoal ? () => navigate('/goals') : undefined}
                 />
                 <ExecutiveKPICard

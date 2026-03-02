@@ -76,27 +76,27 @@ export function StrategicRecommendationCard({
   };
 
   return (
-    <div className="bg-primary/[0.03] border border-primary/10 rounded-2xl p-5 sm:p-6 h-full">
+    <div className="bg-primary/[0.05] border border-primary/10 rounded-2xl p-5 sm:p-6 h-full transition-all duration-200 hover:shadow-md">
       <div className="flex items-center gap-2 mb-4">
         <Lightbulb className="h-[18px] w-[18px] text-primary" strokeWidth={1.75} />
-        <h3 className="text-sm font-semibold text-foreground">Recomendação Estratégica</h3>
+        <h3 className="text-base font-bold text-foreground">Direcionamento Estratégico do Sistema</h3>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-5">
-        <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground">
+        <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground border-primary/20">
           Prioridade
         </Badge>
-        <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground">
+        <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground border-primary/20">
           Base: período atual
         </Badge>
         {topProduct && (
-          <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground">
+          <Badge variant="outline" className="text-[10px] h-5 px-2 text-muted-foreground border-primary/20">
             Top: {topProduct}
           </Badge>
         )}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {alerts.map((alert, i) => (
           <div key={i} className="flex items-start gap-2.5">
             <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${colorMap[alert.color]}`} />
