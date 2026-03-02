@@ -194,7 +194,7 @@ export default function Dashboard() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 max-w-[1400px] mx-auto">
+        <div className="space-y-8 max-w-[1400px] mx-auto">
         {/* Control Bar */}
         <DashboardControlBar
           period={period}
@@ -231,7 +231,7 @@ export default function Dashboard() {
           <>
             {/* 4 Executive KPI Cards */}
             {canViewFinancials && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
                 <ExecutiveKPICard
                   microLabel="CAIXA CONSOLIDADO"
                   label="Receita Confirmada"
@@ -240,7 +240,7 @@ export default function Dashboard() {
                   badgeClassName={isRevenueFullyRealized ? "bg-emerald-50 text-emerald-700 border-emerald-200" : undefined}
                   subtitle={isRevenueFullyRealized ? "Vendas pagas e efetivadas" : "Vendas pagas e efetivadas"}
                   icon={DollarSign}
-                  accentColor="border-l-emerald-400/60"
+                  accentColor="border-t-emerald-400/60"
                   iconClassName="bg-emerald-100 text-emerald-600"
                 />
                 <ExecutiveKPICard
@@ -253,7 +253,7 @@ export default function Dashboard() {
                   subtitleClassName="text-foreground/60"
                   valueClassName="text-foreground/70 text-xl font-semibold"
                   icon={TrendingUp}
-                  accentColor="border-l-blue-400/60"
+                  accentColor="border-t-blue-400/60"
                   iconClassName="bg-blue-100 text-blue-600"
                   tooltipContent={
                     <div className="space-y-1.5 text-xs">
@@ -289,7 +289,7 @@ export default function Dashboard() {
                   progressHint={primaryGoal ? getGoalRhythmHint(goalProgressPercent, primaryGoal) : undefined}
                   onClick={!primaryGoal ? () => navigate('/goals') : undefined}
                   icon={Target}
-                  accentColor="border-l-amber-500/70"
+                  accentColor="border-t-amber-500/70"
                   iconClassName="bg-amber-100 text-amber-700"
                 />
                 <ExecutiveKPICard
@@ -306,7 +306,7 @@ export default function Dashboard() {
                   })()}
                   onClick={() => navigate('/leads')}
                   icon={Users}
-                  accentColor="border-l-violet-400/60"
+                  accentColor="border-t-violet-400/60"
                   iconClassName="bg-violet-100 text-violet-600"
                 />
               </div>
@@ -338,7 +338,7 @@ export default function Dashboard() {
 
             {/* Charts: Evolution (2/3) + Recommendation (1/3) */}
             {canViewFinancials && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
                 <div className="lg:col-span-2">
                   <RevenueEvolutionChart
                     salesByDate={salesByDate || {}}
@@ -359,7 +359,7 @@ export default function Dashboard() {
 
             {/* Platform Pie Chart + Top Products */}
             {canViewFinancials && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
                 <div className="lg:col-span-2">
                   <TopProductsList
                     transactions={combinedTransactions}
