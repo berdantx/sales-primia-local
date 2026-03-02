@@ -90,10 +90,10 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
             <div className="flex items-center gap-2">
               <span className={`inline-block h-2.5 w-2.5 rounded-full flex-shrink-0 ${isRitmoAlinhado ? 'bg-emerald-500' : 'bg-amber-500'}`} />
               <span className={`text-sm font-semibold ${isRitmoAlinhado ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {isRitmoAlinhado ? 'Ritmo alinhado com a meta' : 'Ritmo abaixo do necessário'}
+                {isRitmoAlinhado ? 'Ritmo sustenta o fechamento da meta' : 'Ritmo atual não sustenta o fechamento da meta'}
               </span>
             </div>
-            <p className={`text-sm ml-[18px] ${isRitmoAlinhado ? 'text-emerald-600/80' : 'text-amber-600/80'}`}>
+            <p className={`text-sm ml-[18px] ${isRitmoAlinhado ? 'text-emerald-600/70' : 'text-amber-600/70'}`}>
               O ritmo atual está{' '}
               <span className="font-semibold tabular-nums">{gapFormatted}%</span>{' '}
               {isRitmoAlinhado ? 'acima' : 'abaixo'} do exigido.
@@ -104,19 +104,21 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
           <Separator className="my-6 bg-muted/40" />
 
           <div>
-            <span className="text-xs text-muted-foreground uppercase tracking-wide">
-              Projeção de Fechamento no Ritmo Atual
+            <span className="text-[10px] text-muted-foreground/70 uppercase tracking-wide block">
+              Fechamento Projetado
             </span>
-            <p className="text-2xl sm:text-3xl font-bold mt-2 tabular-nums">
+            <p className="text-2xl sm:text-3xl font-bold mt-1.5 tabular-nums tracking-tight">
               {formatCurrency(projecaoFechamento, currency)}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground/60 mt-1">
               {isAboveTarget
                 ? 'Mantido o ritmo atual, a meta será atingida.'
                 : 'Mantido o ritmo atual, a meta não será atingida.'}
             </p>
             <p className={`text-sm font-semibold mt-1.5 tabular-nums ${isAboveTarget ? 'text-emerald-600' : 'text-amber-600'}`}>
-              {isAboveTarget ? 'Superávit' : 'Déficit'} projetado: {formatCurrency(diferencaProjecao, currency)}
+              {isAboveTarget
+                ? `Superávit projetado: ${formatCurrency(diferencaProjecao, currency)}`
+                : `Necessário acelerar ${formatCurrency(diferencaProjecao, currency)} para atingir a meta.`}
             </p>
           </div>
         </CardContent>
