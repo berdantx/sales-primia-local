@@ -135,11 +135,8 @@ function Leads() {
   const [isBackfilling, setIsBackfilling] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState('30days');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 30),
-    to: new Date(),
-  });
+  const [selectedPeriod, setSelectedPeriod] = useState('all');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [topMode, setTopMode] = useState<ViewMode>('ads');
   const [trendGroupBy, setTrendGroupBy] = useState<GroupBy>('day');
   const [chartTab, setChartTab] = useState<'daily' | 'evolution'>('daily');
@@ -278,8 +275,8 @@ function Leads() {
     setTrafficTypeFilter('all');
     setTestFilter('hide');
     setQualifiedFilter('all');
-    setSelectedPeriod('30days');
-    setDateRange({ from: subDays(new Date(), 30), to: new Date() });
+    setSelectedPeriod('all');
+    setDateRange(undefined);
     setCurrentPage(0);
     setSelectedTopItem(null);
   };
@@ -297,7 +294,7 @@ function Leads() {
     trafficTypeFilter !== 'all' ||
     testFilter !== 'hide' || 
     qualifiedFilter !== 'all' || 
-    selectedPeriod !== '30days' || 
+    selectedPeriod !== 'all' || 
     selectedTopItem
   );
 
