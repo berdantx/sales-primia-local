@@ -5,6 +5,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { LucideIcon } from 'lucide-react';
 
 interface ExecutiveKPICardProps {
   label: string;
@@ -18,6 +19,9 @@ interface ExecutiveKPICardProps {
   onClick?: () => void;
   className?: string;
   tooltipContent?: React.ReactNode;
+  icon?: LucideIcon;
+  accentColor?: string;
+  iconClassName?: string;
 }
 
 export function ExecutiveKPICard({
@@ -32,11 +36,16 @@ export function ExecutiveKPICard({
   onClick,
   className,
   tooltipContent,
+  icon: Icon,
+  accentColor,
+  iconClassName,
 }: ExecutiveKPICardProps) {
   const cardContent = (
     <div
       className={cn(
         'bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
+        accentColor && 'border-l-[3px]',
+        accentColor,
         onClick && 'cursor-pointer',
         tooltipContent && 'cursor-help',
         className
@@ -45,11 +54,18 @@ export function ExecutiveKPICard({
     >
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm text-muted-foreground font-medium">{label}</span>
-        {badge && (
-          <Badge variant="outline" className={cn("text-[10px] font-normal h-5 px-2 text-muted-foreground border-border", badgeClassName)}>
-            {badge}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {badge && (
+            <Badge variant="outline" className={cn("text-[10px] font-normal h-5 px-2 text-muted-foreground border-border", badgeClassName)}>
+              {badge}
+            </Badge>
+          )}
+          {Icon && (
+            <div className={cn("p-2 rounded-xl", iconClassName)}>
+              <Icon className="h-4 w-4" strokeWidth={1.75} />
+            </div>
+          )}
+        </div>
       </div>
       <p className="text-3xl font-bold tracking-tight text-foreground leading-none mb-1">
         {value}

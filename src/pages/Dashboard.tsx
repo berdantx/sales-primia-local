@@ -23,7 +23,7 @@ import { CurrencyViewToggle, CurrencyView } from '@/components/dashboard/Currenc
 import { ExportReportDialog } from '@/components/export/ExportReportDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency, formatNumber } from '@/lib/calculations/goalCalculations';
-import { Upload, Target, Calendar } from 'lucide-react';
+import { Upload, Target, Calendar, DollarSign, TrendingUp, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { getDateRangeBrasiliaUTC, startOfDayBrasiliaUTC, endOfDayBrasiliaUTC } from '@/lib/dateUtils';
@@ -248,6 +248,9 @@ export default function Dashboard() {
                   badge={isRevenueFullyRealized ? "100% realizado" : "Caixa"}
                   badgeClassName={isRevenueFullyRealized ? "bg-emerald-50 text-emerald-700 border-emerald-200" : undefined}
                   subtitle={isRevenueFullyRealized ? "Vendas pagas e efetivadas" : "Vendas pagas e efetivadas"}
+                  icon={DollarSign}
+                  accentColor="border-l-emerald-400"
+                  iconClassName="bg-emerald-500/10 text-emerald-600"
                 />
                 <ExecutiveKPICard
                   label="Receita Projetada"
@@ -256,6 +259,9 @@ export default function Dashboard() {
                   badgeClassName={isRevenueFullyRealized ? "bg-muted text-foreground/70 border-border" : "bg-blue-50 text-blue-700 border-blue-200"}
                   subtitle={isRevenueFullyRealized ? "Sem valores pendentes" : "Inclui parcelas futuras"}
                   className={!isRevenueFullyRealized ? "opacity-90" : undefined}
+                  icon={TrendingUp}
+                  accentColor="border-l-blue-400"
+                  iconClassName="bg-blue-500/10 text-blue-600"
                   tooltipContent={
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between gap-4">
@@ -290,6 +296,9 @@ export default function Dashboard() {
                   progress={primaryGoal ? goalProgress : undefined}
                   progressColor={primaryGoal ? getProgressColor(goalProgress) : undefined}
                   onClick={!primaryGoal ? () => navigate('/goals') : undefined}
+                  icon={Target}
+                  accentColor="border-l-amber-400"
+                  iconClassName="bg-amber-500/10 text-amber-600"
                 />
                 <ExecutiveKPICard
                   label="Leads no Período"
@@ -297,6 +306,9 @@ export default function Dashboard() {
                   badge="Aquisição"
                   subtitle="Com UTMs e origem"
                   onClick={() => navigate('/leads')}
+                  icon={Users}
+                  accentColor="border-l-violet-400"
+                  iconClassName="bg-violet-500/10 text-violet-600"
                 />
               </div>
             )}
