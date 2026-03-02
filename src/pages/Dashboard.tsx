@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { DateRange } from 'react-day-picker';
 import { useCombinedStats, PlatformType } from '@/hooks/useCombinedStats';
+import { ClientContextHeader } from '@/components/layout/ClientContextHeader';
 import { useActiveGoals } from '@/hooks/useGoals';
 import { useDollarRate } from '@/hooks/useDollarRate';
 import { useLeadCount } from '@/hooks/useLeads';
@@ -139,14 +140,10 @@ export default function Dashboard() {
     <MainLayout>
       <div className="space-y-6 max-w-[1400px] mx-auto">
         {/* Page Header */}
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Visão Geral do Lançamento
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            O que importa agora: caixa, previsibilidade e direção de decisão.
-          </p>
-        </div>
+        <ClientContextHeader
+          title="Visão Geral do Lançamento"
+          description="O que importa agora: caixa, previsibilidade e direção de decisão."
+        />
 
         {/* Filter Bar */}
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 p-3 bg-card rounded-2xl border border-border shadow-sm">
