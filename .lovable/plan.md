@@ -1,137 +1,98 @@
-Berdan, tá **bem bom**. O Lovable pegou a essência certinha ✅  
-Eu só faria uns **ajustes finos** (pra ficar ainda mais “executivo” e menos “calculadora”), sem mudar a estrutura.
+## ✅ PROMPT PARA O LOVABLE — AJUSTES FINOS (PERCEPÇÃO INSTITUCIONAL)
 
-Abaixo vai o **prompt final** pra você mandar pro Lovable, já incorporando o plano dele + melhorias de título/labels + regras pra não virar número jogado.
+**Contexto:** Refine o bloco **“Ritmo Necessário para Fechamento”** para ficar mais **finance terminal / institucional**, sem mudar a estrutura nem adicionar novas fontes de dados. Tudo deve ficar contido em `src/components/dashboard/ProjectionCards.tsx`.
 
----
+### 1) Separador vertical entre colunas (desktop)
 
-## ✅ PROMPT PARA O LOVABLE (VERSÃO FINAL) — “RITMO NECESSÁRIO” (HIGH TICKET)
+No layout desktop onde existem as 2 colunas **Ritmo Necessário** e **Ritmo Atual**, adicionar um separador vertical bem fino para reforçar leitura de “tabela comparativa”.
 
-Quero seguir exatamente o plano abaixo (transformar o bloco de projeções em um motor estratégico de ritmo), porém com alguns ajustes finos de linguagem, layout e cálculo para ficar mais premium e orientado a decisão.
+**Regras:**
 
-### 1) Atualizar `GoalProgress` (cálculo completo)
+- Só aparece em `sm:` ou `md:` pra cima.
+- Cor sutil (`border-border` com opacidade leve).
+- Não deve “gritar”.
 
-**Arquivo:** `src/lib/calculations/goalCalculations.ts`
+**Implementação sugerida (livre):**
 
-- Adicionar `daysElapsed` e `totalDays` no `GoalProgress`.
-- Garantir também `daysRemaining` (se já existir, manter).
-- `daysElapsed` nunca pode ser 0 (se for, usar 1 para evitar divisão por zero).
-
-**Regras de cálculo**
-
-- `ritmoNecessarioDiario` = `remaining / daysRemaining`
-- `ritmoAtualDiario` = `totalSold / daysElapsed`
-- `projecaoFechamento` = `ritmoAtualDiario * totalDays`
-
-**Derivados**
-
-- semanal = diário × 7
-- mensal = diário × 30 (ok manter 30 fixo)
-
-### 2) Reescrever `ProjectionCards` como um ÚNICO card
-
-**Arquivo:** `src/components/dashboard/ProjectionCards.tsx`
-
-Substituir os 3 cards antigos por um card único com o seguinte layout:
-
-#### Título (novo)
-
-**"Ritmo Necessário para Fechamento"**
-
-#### Subtítulo (novo)
-
-**"Ritmo exigido vs ritmo atual, com projeção de fechamento."**
+- Grid com `divide-x` + `divide-border/60` (aplicado apenas no breakpoint desktop)  
+OU
+- Container `relative` + linha `absolute` central.
 
 ---
 
-### 3) Layout interno (grade limpa e executiva)
+### 2) Dar hierarquia para o “Diário” (mais acionável)
 
-- Card com `rounded-2xl`, borda fina `border-border`, sombra sutil `shadow-sm`.
-- Grid 2 colunas no desktop, 1 coluna no mobile.
+O número de **Diário** é o mais importante.  
+Aumentar ligeiramente o peso visual APENAS dessa linha.
 
-#### Coluna esquerda: **Ritmo Necessário**
+**Regras:**
 
-Label pequena (muted):  
-“Ritmo Necessário”
-
-Linhas:
-
-- Diário: R$ X
-- Semanal: R$ X
-- Mensal: R$ X
-
-#### Coluna direita: **Ritmo Atual**
-
-Label pequena (muted):  
-“Ritmo Atual”
-
-Linhas:
-
-- Diário: R$ X
-- Semanal: R$ X
-- Mensal: R$ X
+- Linha “Diário” fica mais proeminente:
+  - Valor: `text-xl font-bold`
+  - Label: `font-medium`
+- “Semanal” e “Mensal” continuam:
+  - Valor: `text-lg font-semibold` (ou `text-base font-semibold`)
+- Não mudar espaçamento geral.
 
 ---
 
-### 4) Status de ritmo (uma linha clara)
+### 3) “Verdict zone” com faixa sutil (diagnóstico)
 
-Abaixo das colunas, mostrar 1 status:
+A seção do diagnóstico (bolinha + texto “Ritmo atual não sustenta…”, etc.) deve virar uma área com leve destaque, estilo “zona de veredito”.
 
-- Se `ritmoAtualDiario < ritmoNecessarioDiario`:  
-Texto: **"Ritmo abaixo do necessário"**  
-Classe: `text-amber-600 text-sm font-medium`
-- Caso contrário:  
-Texto: **"Ritmo alinhado com a meta"**  
-Classe: `text-emerald-600 text-sm font-medium`
+**Regras:**
 
-**Observação:** não usar vermelho. Não usar alerta grande.
-
----
-
-### 5) Linha divisória + Projeção (principal diferencial)
-
-Adicionar divisória sutil e uma seção final:
-
-Label muted:  
-**"Projeção de Fechamento no Ritmo Atual"**
-
-Valor grande:  
-**R$ XXXXX** (large, bold)
-
-Texto auxiliar:  
-“Se o ritmo atual for mantido até o fim do período.”
-
-Comparativo:
-
-- Se `projecaoFechamento < goal`:  
-“Faltariam R$ X para atingir a meta.”  
-`text-amber-600 text-sm`
-- Se `projecaoFechamento >= goal`:  
-“Meta será superada no ritmo atual.”  
-`text-emerald-600 text-sm`
+- Envolver essa seção com um strip/pill:
+  - `rounded-xl px-4 py-3`
+  - background sutil e sem saturação forte
+- Cores:
+  - Se status “ok”: `bg-emerald-50 text-emerald-700 border-emerald-200`
+  - Se status “atenção”: `bg-amber-50 text-amber-700 border-amber-200`
+- Borda fina (`border`) e sem sombra.
+- Dark mode deve ter equivalente:
+  - `dark:bg-emerald-950/20` ou `dark:bg-amber-950/20`
+  - `dark:border-.../30`
 
 ---
 
-### 6) Ajustes premium de tipografia e espaçamento
+### 4) Indicador micro do gap (visual reinforcement)
 
-- Números: `text-lg` ou `text-xl` com `font-semibold`
-- Labels: `text-xs text-muted-foreground uppercase tracking-wide`
-- Espaçamento interno: confortável (não compacto demais)
-- Manter estética “ferramenta financeira”, sem enfeites
+Ao lado do texto percentual do gap (ex: “16% abaixo do exigido”), adicionar um mini indicador visual **sem novo dado**:
 
----
+- Uma barrinha horizontal muito discreta (tipo `h-1 w-16 rounded-full bg-muted`), preenchida proporcionalmente pela razão `ritmoAtual/ritmoNecessario`.
+- A cor do fill segue o status:
+  - emerald se alinhado
+  - amber se abaixo
 
-### 7) Regras visuais (obrigatórias)
+**Regras:**
 
-- Fundo neutro
-- Sem gradientes
-- Sem cores fortes nos cards
-- Apenas `amber` e `emerald` para status
-- Nada de ícones grandes (se usar, só um mini e bem discreto)
+- Pequeno, inline, quase “HUD”.
+- Não pode virar gráfico.
+- Sem animações exageradas.
 
 ---
 
-### 8) Compatibilidade
+### 5) Seção “Fechamento Projetado” com contexto da meta
 
-Não alterar como `GoalSummarySection` renderiza `ProjectionCards`.  
-O componente deve continuar aceitando as props atuais (apenas enriquecendo com o novo cálculo via `GoalProgress`).
+No bloco inferior “Fechamento Projetado”, abaixo do valor grande, exibir uma linha de referência com o valor da meta para comparação instantânea.
+
+**Adicionar:**
+
+- Linha: `Meta: R$ 10.000.000,00` (valor já existe no contexto da dashboard; reutilizar props/dados existentes, sem fetch novo)
+- Estilo sutil:
+  - `text-sm text-muted-foreground`
+  - Espaçamento curto (ex: `mt-1`)
+
+---
+
+### Regras gerais (importante)
+
+- Não alterar a estrutura do layout fora deste bloco.
+- Não adicionar novas consultas, apenas UI.
+- Manter estética “clean e premium”, sem gradientes pesados.
+- Manter fontes e tokens do design system atual.
+- Tudo deve ficar em `ProjectionCards.tsx`.
+
+---
+
+&nbsp;
