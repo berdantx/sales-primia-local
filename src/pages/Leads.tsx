@@ -7,7 +7,7 @@ import { useLeadsPaginated } from '@/hooks/useLeadsPaginated';
 import { useLeadStatsOptimized } from '@/hooks/useLeadStatsOptimized';
 import { useTopAdsOptimized } from '@/hooks/useTopAdsOptimized';
 import { useClients } from '@/hooks/useClients';
-import { LeadsSummaryDialog } from '@/components/leads/LeadsSummaryDialog';
+
 import { useLandingPageStats } from '@/hooks/useLandingPageStats';
 import { useLandingPageConversion } from '@/hooks/useLandingPageConversion';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
@@ -147,7 +147,7 @@ function Leads() {
   const [qualifiedFilter, setQualifiedFilter] = useState<string>('all');
   const [showCharts, setShowCharts] = useState(false);
   const [hideUnidentifiedGeo, setHideUnidentifiedGeo] = useState(false);
-  const [showSummary, setShowSummary] = useState(true);
+  
   const [activeTab, setActiveTab] = useState('strategic');
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
@@ -436,12 +436,6 @@ function Leads() {
 
   return (
     <MainLayout>
-      <LeadsSummaryDialog
-        open={showSummary}
-        onOpenChange={setShowSummary}
-        clientId={clientId}
-        clientName={clientName}
-      />
 
       <div className="space-y-6 sm:space-y-8">
         {/* ── HEADER INSTITUCIONAL ── */}
