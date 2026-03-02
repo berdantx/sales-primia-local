@@ -78,12 +78,14 @@ export default function Dashboard() {
     const hotmartProjectedBRL = projectionStats?.totalProjectedBRL || hotmartRealBRL;
     const tmbBRL = tmbStats?.totalBRL || 0;
     const eduzzBRL = eduzzStats?.totalBRL || 0;
-    const usdConverted = dollarRate ? hotmartUSD * dollarRate.rate : 0;
+    const eduzzUSD = eduzzStats?.totalUSD || 0;
+    const totalUSD = hotmartUSD + eduzzUSD;
+    const usdConverted = dollarRate ? totalUSD * dollarRate.rate : 0;
 
     const confirmed = hotmartRealBRL + tmbBRL + eduzzBRL + usdConverted;
     const projected = hotmartProjectedBRL + tmbBRL + eduzzBRL + usdConverted;
 
-    return { confirmed, projected, hotmartBRL: hotmartRealBRL + usdConverted, tmbBRL, eduzzBRL };
+    return { confirmed, projected, hotmartBRL: hotmartRealBRL + (dollarRate ? hotmartUSD * dollarRate.rate : 0), tmbBRL, eduzzBRL: eduzzBRL + (dollarRate ? eduzzUSD * dollarRate.rate : 0), totalUSD };
   }, [projectionStats, hotmartStats, tmbStats, eduzzStats, dollarRate]);
 
   // Goal progress
@@ -265,10 +267,10 @@ export default function Dashboard() {
                           <span className="font-medium text-yellow-500">{formatCurrency(revenue.projected - revenue.confirmed, 'BRL')}</span>
                         </div>
                       )}
-                      {dollarRate && (hotmartStats?.totalByCurrency?.['USD'] || 0) > 0 && (
+                      {dollarRate && revenue.totalUSD > 0 && (
                         <div className="flex justify-between gap-4">
                           <span className="text-blue-400">USD convertido:</span>
-                          <span className="font-medium text-blue-400">{formatCurrency((hotmartStats?.totalByCurrency?.['USD'] || 0) * dollarRate.rate, 'BRL')}</span>
+                          <span className="font-medium text-blue-400">{formatCurrency(revenue.totalUSD * dollarRate.rate, 'BRL')}</span>
                         </div>
                       )}
                       <p className="text-[10px] text-muted-foreground pt-1 border-t border-border">
