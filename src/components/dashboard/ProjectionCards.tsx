@@ -45,9 +45,9 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
   
 
   const RhythmLine = ({ label, value, highlight = false }: { label: string; value: number; highlight?: boolean }) => (
-    <div className="flex items-center justify-between py-1.5">
+    <div className="flex items-center justify-between py-1">
       <span className={`text-sm ${highlight ? 'font-medium' : ''} text-muted-foreground`}>{label}</span>
-      <span className={`tabular-nums ${highlight ? 'text-xl font-bold' : 'text-base font-semibold'}`}>{formatCurrency(value, currency)}</span>
+      <span className={`tabular-nums ${highlight ? 'text-lg font-bold' : 'text-sm font-semibold'}`}>{formatCurrency(value, currency)}</span>
     </div>
   );
 
@@ -60,33 +60,30 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
       <Card className="rounded-2xl border-border shadow-sm h-full">
         <CardContent className="p-5 sm:p-6">
           {/* Header */}
-          <div className="mb-6">
-            <h3 className="text-base sm:text-lg font-semibold">Ritmo Necessário para Fechamento</h3>
-            <p className="text-xs text-muted-foreground mt-1">
+          <div className="mb-4">
+            <h3 className="text-base font-semibold">Ritmo Necessário para Fechamento</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
               Ritmo exigido vs ritmo atual, com projeção de fechamento.
             </p>
           </div>
 
           {/* Two-column rhythm comparison */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-0 sm:divide-x sm:divide-border/40">
-            {/* Coluna Esquerda — Ritmo Necessário */}
-            <div className="sm:pr-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-0 sm:divide-x sm:divide-border/40">
+            <div className="sm:pr-6">
               <span className="text-xs text-muted-foreground uppercase tracking-wide">
                 Ritmo Necessário
               </span>
-              <div className="mt-3 space-y-0">
+              <div className="mt-2 space-y-0">
                 <RhythmLine label="Diário" value={ritmoNecessarioDiario} highlight />
                 <RhythmLine label="Semanal" value={ritmoNecessarioSemanal} />
                 <RhythmLine label="Mensal" value={ritmoNecessarioMensal} />
               </div>
             </div>
-
-            {/* Coluna Direita — Ritmo Atual */}
-            <div className="sm:pl-8">
+            <div className="sm:pl-6">
               <span className="text-xs text-muted-foreground uppercase tracking-wide">
                 Ritmo Atual
               </span>
-              <div className="mt-3 space-y-0">
+              <div className="mt-2 space-y-0">
                 <RhythmLine label="Diário" value={ritmoAtualDiario} highlight />
                 <RhythmLine label="Semanal" value={ritmoAtualSemanal} />
                 <RhythmLine label="Mensal" value={ritmoAtualMensal} />
@@ -95,17 +92,17 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
           </div>
 
           {/* Verdict Zone */}
-          <div className={`mt-6 rounded-xl px-4 py-3 border ${isRitmoAlinhado ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800/30' : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800/30'}`}>
+          <div className={`mt-4 rounded-xl px-3 py-2.5 border ${isRitmoAlinhado ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800/30' : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800/30'}`}>
             <div className="flex items-center gap-2">
-              <span className={`inline-block h-2.5 w-2.5 rounded-full flex-shrink-0 ${isRitmoAlinhado ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-              <span className={`text-sm font-semibold ${isRitmoAlinhado ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+              <span className={`inline-block h-2 w-2 rounded-full flex-shrink-0 ${isRitmoAlinhado ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+              <span className={`text-[13px] font-semibold ${isRitmoAlinhado ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
                 {isExpired
                   ? (metaAtingida ? 'Meta atingida no período' : 'Período encerrado — meta não atingida')
                   : (isRitmoAlinhado ? 'Ritmo sustenta o fechamento da meta' : 'Ritmo atual não sustenta o fechamento da meta')}
               </span>
             </div>
-            <div className="flex items-center gap-3 ml-[18px] mt-1.5">
-              <p className={`text-sm ${isRitmoAlinhado ? 'text-emerald-700/70 dark:text-emerald-400/70' : 'text-amber-700/70 dark:text-amber-400/70'}`}>
+            <div className="flex items-center gap-3 ml-[14px] mt-1">
+              <p className={`text-xs ${isRitmoAlinhado ? 'text-emerald-700/70 dark:text-emerald-400/70' : 'text-amber-700/70 dark:text-amber-400/70'}`}>
                 {isExpired
                   ? (metaAtingida
                     ? `Meta superada em ${formatCurrency(totalSold - metaTotal, currency)}.`
@@ -141,16 +138,16 @@ export function ProjectionCards({ progress, currency }: ProjectionCardsProps) {
           </div>
 
           {/* Divider + Projeção */}
-          <Separator className="my-6 bg-muted/40" />
+          <Separator className="my-4 bg-muted/40" />
 
           <div>
             <span className="text-xs text-muted-foreground/80 uppercase tracking-wide block">
               {isExpired ? 'Resultado Final' : 'Fechamento Projetado'}
             </span>
-            <p className="text-2xl sm:text-3xl font-bold mt-1.5 tabular-nums tracking-tight">
+            <p className="text-xl sm:text-2xl font-bold mt-1 tabular-nums tracking-tight">
               {formatCurrency(isExpired ? totalSold : projecaoFechamento, currency)}
             </p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mt-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
               Meta: {formatCurrency(metaTotal, currency)}
             </p>
             {!isExpired && (
