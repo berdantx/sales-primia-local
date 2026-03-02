@@ -79,8 +79,8 @@ export function StrategicScoreCard({
       <div className="flex items-center gap-2 mb-5">
         <Activity className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
         <div>
-          <h3 className="text-[13px] font-extrabold text-foreground tracking-tight uppercase">IGPL</h3>
-          <p className="text-[11px] text-muted-foreground/60 font-medium tracking-wide">Índice Global de Performance de Lançamento</p>
+          <h3 className="text-sm font-extrabold text-foreground tracking-tight uppercase">IGPL</h3>
+          <p className="text-xs text-muted-foreground/60 font-medium tracking-wide">Índice Global de Performance de Lançamento</p>
         </div>
       </div>
 
@@ -106,7 +106,7 @@ export function StrategicScoreCard({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[9px] font-bold text-muted-foreground/40 tracking-[0.25em] uppercase mb-0.5">IGPL</span>
+            <span className="text-[10px] font-bold text-muted-foreground/40 tracking-[0.25em] uppercase mb-0.5">IGPL</span>
             <span className={cn("text-5xl font-extrabold tracking-tighter", scoreColor)}>
               {score}
             </span>
@@ -114,18 +114,18 @@ export function StrategicScoreCard({
           </div>
         </div>
 
-        <p className={cn("text-[10px] font-bold tracking-[0.15em] text-center uppercase", scoreColor)}>{statusLabel}</p>
+        <p className={cn("text-xs font-bold tracking-[0.15em] text-center uppercase", scoreColor)}>{statusLabel}</p>
 
         {/* Micro-frase interpretativa */}
-        <p className="text-[11px] text-muted-foreground/70 text-center leading-relaxed italic px-2 max-w-[220px]">
+        <p className="text-xs text-muted-foreground/70 text-center leading-relaxed italic px-2 max-w-[240px]">
           {microPhrase}
         </p>
 
         {/* Factors */}
-        <div className="w-full space-y-2.5 mt-auto">
+        <div className="w-full space-y-3 mt-auto">
           {factors.map((f) => (
             <div key={f.label} className="flex items-center gap-2">
-              <span className="text-[11px] text-muted-foreground w-16 shrink-0">{f.label}</span>
+              <span className="text-xs text-muted-foreground w-20 shrink-0">{f.label}</span>
               <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
                   className={cn(
@@ -135,7 +135,7 @@ export function StrategicScoreCard({
                   style={{ width: `${f.value}%` }}
                 />
               </div>
-              <span className="text-[11px] text-muted-foreground/70 w-7 text-right font-medium">{f.value}</span>
+              <span className="text-xs text-muted-foreground/70 w-7 text-right font-medium tabular-nums">{f.value}</span>
             </div>
           ))}
         </div>
@@ -150,7 +150,7 @@ export function StrategicScoreCard({
           ].map((band) => (
             <div key={band.label} className="flex items-center gap-1">
               <div className={cn("w-1.5 h-1.5 rounded-full", band.color)} />
-              <span className="text-[9px] text-muted-foreground/50 font-medium">{band.label}</span>
+              <span className="text-[10px] text-muted-foreground/50 font-medium">{band.label}</span>
             </div>
           ))}
         </div>
