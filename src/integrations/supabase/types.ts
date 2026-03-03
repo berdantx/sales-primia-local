@@ -1953,6 +1953,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_client_lead_counts: { Args: never; Returns: Json }
       get_conversion_summary: {
         Args: { p_client_id: string; p_end_date: string; p_start_date: string }
         Returns: Json
