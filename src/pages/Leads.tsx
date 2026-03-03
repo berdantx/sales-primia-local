@@ -506,7 +506,31 @@ function Leads() {
                 <><MapPin className="h-4 w-4 mr-1.5" /><span className="hidden sm:inline">Atualizar Geo</span><span className="sm:hidden">Geo</span></>
               )}
             </Button>
-            <ClientSideExportDialog />
+            <ClientSideExportDialog 
+              activeFilters={{
+                source: sourceFilter !== 'all' ? sourceFilter : undefined,
+                utmSource: utmSourceFilter !== 'all' ? utmSourceFilter : undefined,
+                utmMedium: utmMediumFilter !== 'all' ? utmMediumFilter : undefined,
+                utmCampaign: utmCampaignFilter !== 'all' ? utmCampaignFilter : undefined,
+                utmContent: utmContentFilter !== 'all' ? utmContentFilter : undefined,
+                utmTerm: utmTermFilter !== 'all' ? utmTermFilter : undefined,
+                trafficType: trafficTypeFilter !== 'all' ? trafficTypeFilter : undefined,
+                country: countryFilter !== 'all' ? countryFilter : undefined,
+                pageUrl: pageFilter !== 'all' ? pageFilter : undefined,
+                search: search || undefined,
+              }}
+              filterOptions={{
+                sources: filterOptions.sources,
+                utmSources: filterOptions.utmSources,
+                utmMediums: filterOptions.utmMediums,
+                utmCampaigns: filterOptions.utmCampaigns,
+                utmContents: filterOptions.utmContents,
+                utmTerms: filterOptions.utmTerms,
+                trafficTypes: filterOptions.trafficTypes,
+                countries: filterOptions.countries,
+                pages: filterOptions.pages,
+              }}
+            />
           </div>
         </div>
 

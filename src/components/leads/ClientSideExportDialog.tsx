@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { format, subDays, subYears } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Download, FileSpreadsheet, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, FileSpreadsheet, X, CheckCircle2, AlertCircle, Loader2, Filter, Search } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -31,11 +32,38 @@ const PERIOD_OPTIONS: { value: PeriodOption; label: string }[] = [
   { value: 'custom', label: 'Personalizado' },
 ];
 
-interface ClientSideExportDialogProps {
-  trigger?: React.ReactNode;
+export interface ExportActiveFilters {
+  source?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  trafficType?: string;
+  country?: string;
+  pageUrl?: string;
+  search?: string;
 }
 
-export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps) {
+export interface ExportFilterOptions {
+  sources?: string[];
+  utmSources?: string[];
+  utmMediums?: string[];
+  utmCampaigns?: string[];
+  utmContents?: string[];
+  utmTerms?: string[];
+  trafficTypes?: string[];
+  countries?: string[];
+  pages?: string[];
+}
+
+interface ClientSideExportDialogProps {
+  trigger?: React.ReactNode;
+  activeFilters?: ExportActiveFilters;
+  filterOptions?: ExportFilterOptions;
+}
+
+export function ClientSideExportDialog({ trigger, activeFilters, filterOptions }: ClientSideExportDialogProps) {
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState<PeriodOption>('30days');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>({
@@ -44,6 +72,19 @@ export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps)
   const [excludeTests, setExcludeTests] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedFields, setSelectedFields] = useState<string[]>([...ALL_FIELD_KEYS]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Advanced filter states
+  const [source, setSource] = useState<string>('all');
+  const [utmSource, setUtmSource] = useState<string>('all');
+  const [utmMedium, setUtmMedium] = useState<string>('all');
+  const [utmCampaign, setUtmCampaign] = useState<string>('all');
+  const [utmContent, setUtmContent] = useState<string>('all');
+  const [utmTerm, setUtmTerm] = useState<string>('all');
+  const [trafficType, setTrafficType] = useState<string>('all');
+  const [country, setCountry] = useState<string>('all');
+  const [pageUrl, setPageUrl] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   const { clientId } = useFilter();
   const { data: clients } = useClients();
@@ -53,8 +94,37 @@ export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps)
     if (open) {
       reset();
       setSelectedFields([...ALL_FIELD_KEYS]);
+      // Reset advanced filters
+      setSource('all');
+      setUtmSource('all');
+      setUtmMedium('all');
+      setUtmCampaign('all');
+      setUtmContent('all');
+      setUtmTerm('all');
+      setTrafficType('all');
+      setCountry('all');
+      setPageUrl('all');
+      setSearchTerm('');
+      setShowAdvanced(false);
     }
   }, [open, reset]);
+
+  const applyPageFilters = () => {
+    if (!activeFilters) return;
+    if (activeFilters.source) setSource(activeFilters.source);
+    if (activeFilters.utmSource) setUtmSource(activeFilters.utmSource);
+    if (activeFilters.utmMedium) setUtmMedium(activeFilters.utmMedium);
+    if (activeFilters.utmCampaign) setUtmCampaign(activeFilters.utmCampaign);
+    if (activeFilters.utmContent) setUtmContent(activeFilters.utmContent);
+    if (activeFilters.utmTerm) setUtmTerm(activeFilters.utmTerm);
+    if (activeFilters.trafficType) setTrafficType(activeFilters.trafficType);
+    if (activeFilters.country) setCountry(activeFilters.country);
+    if (activeFilters.pageUrl) setPageUrl(activeFilters.pageUrl);
+    if (activeFilters.search) setSearchTerm(activeFilters.search);
+    setShowAdvanced(true);
+  };
+
+  const hasPageFilters = activeFilters && Object.values(activeFilters).some(v => v && v !== 'all');
 
   const selectedClientName = useMemo(() => {
     if (!clientId) return 'Todos os clientes';
@@ -95,6 +165,19 @@ export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps)
     );
   };
 
+  const advancedFilterCount = [
+    source !== 'all',
+    utmSource !== 'all',
+    utmMedium !== 'all',
+    utmCampaign !== 'all',
+    utmContent !== 'all',
+    utmTerm !== 'all',
+    trafficType !== 'all',
+    country !== 'all',
+    pageUrl !== 'all',
+    searchTerm !== '',
+  ].filter(Boolean).length;
+
   const handleExport = async () => {
     if (selectedFields.length === 0) {
       toast.error('Selecione pelo menos um campo para exportar');
@@ -106,6 +189,16 @@ export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps)
       endDate: dateRange?.to,
       excludeTests,
       selectedFields,
+      source: source !== 'all' ? source : undefined,
+      utmSource: utmSource !== 'all' ? utmSource : undefined,
+      utmMedium: utmMedium !== 'all' ? utmMedium : undefined,
+      utmCampaign: utmCampaign !== 'all' ? utmCampaign : undefined,
+      utmContent: utmContent !== 'all' ? utmContent : undefined,
+      utmTerm: utmTerm !== 'all' ? utmTerm : undefined,
+      trafficType: trafficType !== 'all' ? trafficType : undefined,
+      country: country !== 'all' ? country : undefined,
+      pageUrl: pageUrl !== 'all' ? pageUrl : undefined,
+      search: searchTerm || undefined,
     });
     if (result) {
       toast.success('Exportação concluída!', {
@@ -134,6 +227,29 @@ export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps)
 
   const isProgressView = isExporting || progress.status === 'complete' || progress.status === 'error' || progress.status === 'cancelled';
 
+  const renderFilterSelect = (
+    label: string,
+    value: string,
+    onChange: (v: string) => void,
+    options: string[] | undefined,
+    placeholder?: string,
+  ) => (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-8 text-xs">
+          <SelectValue placeholder={placeholder || 'Todos'} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos</SelectItem>
+          {(options || []).map(opt => (
+            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -144,7 +260,7 @@ export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps)
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg" onPointerDownOutside={(e) => isExporting && e.preventDefault()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh]" onPointerDownOutside={(e) => isExporting && e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
@@ -184,7 +300,7 @@ export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps)
           </div>
         ) : (
           <>
-            <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
               {/* Period Selector */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
@@ -225,6 +341,70 @@ export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps)
                   </Popover>
                 </div>
               )}
+
+              {/* Advanced Filters Toggle */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-sm font-medium flex items-center gap-2 hover:bg-transparent"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                  >
+                    <Filter className="h-4 w-4" />
+                    Filtros avançados
+                    {advancedFilterCount > 0 && (
+                      <span className="bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
+                        {advancedFilterCount}
+                      </span>
+                    )}
+                  </Button>
+                  {hasPageFilters && (
+                    <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={applyPageFilters}>
+                      Usar filtros da página
+                    </Button>
+                  )}
+                </div>
+
+                {showAdvanced && (
+                  <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+                    {/* Search */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Buscar por nome/email</Label>
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder="nome ou email..."
+                          className="h-8 text-xs pl-7"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Traffic Type */}
+                    {renderFilterSelect('Tipo de tráfego', trafficType, setTrafficType, filterOptions?.trafficTypes)}
+
+                    {/* Source */}
+                    {renderFilterSelect('Fonte', source, setSource, filterOptions?.sources)}
+
+                    {/* UTMs in grid */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {renderFilterSelect('UTM Source', utmSource, setUtmSource, filterOptions?.utmSources)}
+                      {renderFilterSelect('UTM Medium', utmMedium, setUtmMedium, filterOptions?.utmMediums)}
+                      {renderFilterSelect('UTM Campaign', utmCampaign, setUtmCampaign, filterOptions?.utmCampaigns)}
+                      {renderFilterSelect('UTM Content', utmContent, setUtmContent, filterOptions?.utmContents)}
+                    </div>
+                    {renderFilterSelect('UTM Term', utmTerm, setUtmTerm, filterOptions?.utmTerms)}
+
+                    {/* Country & Page */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {renderFilterSelect('País', country, setCountry, filterOptions?.countries)}
+                      {renderFilterSelect('Página', pageUrl, setPageUrl, filterOptions?.pages)}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Field Selection */}
               <div className="space-y-2">
@@ -280,6 +460,9 @@ export function ClientSideExportDialog({ trigger }: ClientSideExportDialogProps)
                   <p><span className="text-muted-foreground">Período:</span> <span className="font-medium">{formattedDateRange}</span></p>
                   <p><span className="text-muted-foreground">Cliente:</span> <span className="font-medium">{selectedClientName}</span></p>
                   <p><span className="text-muted-foreground">Campos:</span> <span className="font-medium">{selectedFields.length} de {ALL_FIELD_KEYS.length} selecionados</span></p>
+                  {advancedFilterCount > 0 && (
+                    <p><span className="text-muted-foreground">Filtros:</span> <span className="font-medium">{advancedFilterCount} filtro{advancedFilterCount > 1 ? 's' : ''} aplicado{advancedFilterCount > 1 ? 's' : ''}</span></p>
+                  )}
                   {excludeTests && <p className="text-muted-foreground italic">Leads de teste serão excluídos</p>}
                 </div>
               </div>

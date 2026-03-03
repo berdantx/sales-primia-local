@@ -1891,18 +1891,38 @@ export type Database = {
       count_leads_for_export: {
         Args: {
           p_client_id?: string
+          p_country?: string
           p_end_date?: string
+          p_page_url?: string
+          p_search?: string
+          p_source?: string
           p_start_date?: string
+          p_traffic_type?: string
+          p_utm_campaign?: string
+          p_utm_content?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_utm_term?: string
         }
         Returns: number
       }
       export_leads_batch: {
         Args: {
           p_client_id?: string
+          p_country?: string
           p_end_date?: string
           p_limit?: number
           p_offset?: number
+          p_page_url?: string
+          p_search?: string
+          p_source?: string
           p_start_date?: string
+          p_traffic_type?: string
+          p_utm_campaign?: string
+          p_utm_content?: string
+          p_utm_medium?: string
+          p_utm_source?: string
+          p_utm_term?: string
         }
         Returns: {
           city: string
