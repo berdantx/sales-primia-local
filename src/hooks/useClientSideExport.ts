@@ -34,6 +34,16 @@ interface ExportFilters {
   endDate?: Date;
   excludeTests?: boolean;
   selectedFields?: string[];
+  source?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  trafficType?: string;
+  country?: string;
+  pageUrl?: string;
+  search?: string;
 }
 
 interface ExportProgress {
@@ -90,6 +100,16 @@ export function useClientSideExport() {
           p_client_id: filters.clientId || null,
           p_start_date: filters.startDate?.toISOString() || null,
           p_end_date: filters.endDate?.toISOString() || null,
+          p_source: filters.source || null,
+          p_utm_source: filters.utmSource || null,
+          p_utm_medium: filters.utmMedium || null,
+          p_utm_campaign: filters.utmCampaign || null,
+          p_utm_content: filters.utmContent || null,
+          p_utm_term: filters.utmTerm || null,
+          p_traffic_type: filters.trafficType || null,
+          p_country: filters.country || null,
+          p_page_url: filters.pageUrl || null,
+          p_search: filters.search || null,
         });
 
       if (countError) throw new Error(`Erro ao contar leads: ${countError.message}`);
@@ -119,6 +139,16 @@ export function useClientSideExport() {
             p_end_date: filters.endDate?.toISOString() || null,
             p_offset: page * BATCH_SIZE,
             p_limit: BATCH_SIZE,
+            p_source: filters.source || null,
+            p_utm_source: filters.utmSource || null,
+            p_utm_medium: filters.utmMedium || null,
+            p_utm_campaign: filters.utmCampaign || null,
+            p_utm_content: filters.utmContent || null,
+            p_utm_term: filters.utmTerm || null,
+            p_traffic_type: filters.trafficType || null,
+            p_country: filters.country || null,
+            p_page_url: filters.pageUrl || null,
+            p_search: filters.search || null,
           });
 
         if (error) throw new Error(`Erro ao buscar leads: ${error.message}`);
