@@ -1,19 +1,54 @@
 
 
-## Problema
+## Plano: Exportação de Leads com Filtros Avançados (UTMs, Tráfego, etc.)
 
-Ao acessar `/leads`, o `dateRange` é inicializado com os últimos 30 dias (`subDays(new Date(), 30)`). Isso faz com que tanto o `totalCount` (vindo do RPC `get_leads_paginated`) quanto as estatísticas do IAQL reflitam apenas esse período restrito — mostrando poucos leads em vez do total real do cliente (50k+).
+### Problema Atual
+O dialog de exportação (`ClientSideExportDialog`) só permite filtrar por **cliente**, **período** e **excluir testes**. As RPCs `count_leads_for_export` e `export_leads_batch` também só aceitam esses 3 parâmetros. Não é possível exportar, por exemplo, apenas leads orgânicos ou de uma campanha específica.
 
-## Solução
+### Solução
 
-Alterar o estado inicial de `dateRange` e `selectedPeriod` em `src/pages/Leads.tsx` para carregar **todos os leads** por padrão:
+**1. Atualizar as RPCs no banco de dados**
 
-1. Mudar `selectedPeriod` de `'30days'` para `'all'`
-2. Mudar `dateRange` de `{ from: subDays(new Date(), 30), to: new Date() }` para `undefined`
+Criar uma migration que altere `count_leads_for_export` e `export_leads_batch` para aceitar parâmetros adicionais:
+- `p_source` (fonte)
+- `p_utm_source`, `p_utm_medium`, `p_utm_campaign`, `p_utm_content`, `p_utm_term`
+- `p_traffic_type` (paid/organic/direct)
+- `p_country`
+- `p_page_url`
+- `p_search` (busca por email/nome)
 
-Isso fará com que os filtros de data sejam `null` nas chamadas RPC, retornando todos os registros. O componente `LeadsCompactFilters` já deve suportar o período "all" — verificarei e ajustarei se necessário.
+Todos opcionais (NULL = sem filtro).
 
-## Verificação necessária
+**2. Atualizar o hook `useClientSideExport`**
 
-Confirmar que `LeadsCompactFilters` e o `LeadsPeriodFilter` tratam corretamente o valor `'all'` para `selectedPeriod` e `undefined` para `dateRange`.
+Expandir a interface `ExportFilters` para incluir os novos campos e passá-los às RPCs.
+
+**3. Atualizar o `ClientSideExportDialog`**
+
+Adicionar seções de filtro no dialog:
+- **Tipo de tráfego**: Pago / Orgânico / Direto (select)
+- **Fonte** (select com opções disponíveis)
+- **UTM Source / Medium / Campaign / Content / Term** (selects)
+- **País** (select)
+- **Página** (select)
+- **Busca por email/nome** (input)
+
+Opção de **"Usar filtros ativos da página"** que pré-preenche o dialog com os filtros que o usuário já tem aplicados na página de Leads.
+
+**4. Carregar opções de filtro**
+
+Reutilizar os dados de `useLeadStatsOptimized` (que já retorna `bySource`, `byUtmSource`, etc.) para popular os selects do dialog, ou buscar as opções via query leve.
+
+### Detalhes Técnicos
+
+- As RPCs serão atualizadas com `CREATE OR REPLACE FUNCTION` adicionando os novos parâmetros com default NULL
+- Cada novo parâmetro adiciona uma cláusula `AND` condicional no WHERE
+- O dialog receberá as opções de filtro e filtros ativos como props opcionais
+- O resumo da exportação mostrará todos os filtros aplicados
+
+### Arquivos Afetados
+- **Migration SQL**: novas versões de `count_leads_for_export` e `export_leads_batch`
+- `src/hooks/useClientSideExport.ts` — expandir `ExportFilters` e chamadas RPC
+- `src/components/leads/ClientSideExportDialog.tsx` — adicionar UI de filtros avançados
+- `src/pages/Leads.tsx` — passar filtros ativos como props ao dialog
 
