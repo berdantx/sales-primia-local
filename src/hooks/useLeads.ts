@@ -2,6 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
+/**
+ * Lead type definition - used across the app for type safety.
+ * Data fetching should use useLeadsPaginated or useLeadStatsOptimized instead.
+ */
 export interface Lead {
   id: string;
   created_at: string | null;
@@ -26,12 +30,10 @@ export interface Lead {
   page_url: string | null;
   series_id: string | null;
   raw_payload: unknown;
-  // Geolocation fields
   country: string | null;
   country_code: string | null;
   city: string | null;
   region: string | null;
-  // Traffic classification
   traffic_type?: string | null;
 }
 
@@ -44,70 +46,6 @@ export interface LeadFilters {
   clientId?: string | null;
 }
 
-export function useLeads(filters?: LeadFilters) {
-  const { user } = useAuth();
-
-  const filterKey = filters ? {
-    startDate: filters.startDate?.toISOString(),
-    endDate: filters.endDate?.toISOString(),
-    source: filters.source,
-    utmSource: filters.utmSource,
-    search: filters.search,
-    clientId: filters.clientId,
-  } : null;
-
-  return useQuery({
-    queryKey: ['leads', user?.id, filterKey],
-    queryFn: async () => {
-      const PAGE_SIZE = 1000;
-      let allData: Lead[] = [];
-      let from = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        let query = supabase
-          .from('leads')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .range(from, from + PAGE_SIZE - 1);
-
-        if (filters?.clientId) {
-          query = query.eq('client_id', filters.clientId);
-        }
-        if (filters?.startDate) {
-          query = query.gte('created_at', filters.startDate.toISOString());
-        }
-        if (filters?.endDate) {
-          query = query.lte('created_at', filters.endDate.toISOString());
-        }
-        if (filters?.source) {
-          query = query.eq('source', filters.source);
-        }
-        if (filters?.utmSource) {
-          query = query.eq('utm_source', filters.utmSource);
-        }
-        if (filters?.search) {
-          query = query.or(`email.ilike.%${filters.search}%,first_name.ilike.%${filters.search}%,last_name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          allData = [...allData, ...(data as Lead[])];
-          from += PAGE_SIZE;
-          hasMore = data.length === PAGE_SIZE;
-        } else {
-          hasMore = false;
-        }
-      }
-
-      return allData;
-    },
-    enabled: !!user,
-  });
-}
-
 export interface LeadStats {
   total: number;
   bySource: Record<string, number>;
@@ -117,51 +55,10 @@ export interface LeadStats {
   byCity: Record<string, number>;
 }
 
-export function useLeadStats(filters?: LeadFilters) {
-  const { data: leads, isLoading } = useLeads(filters);
-
-  const stats: LeadStats | null = leads ? {
-    total: leads.length,
-    
-    bySource: leads.reduce((acc, lead) => {
-      const source = lead.source || 'desconhecido';
-      acc[source] = (acc[source] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    
-    byUtmSource: leads.reduce((acc, lead) => {
-      const utmSource = lead.utm_source || 'direto';
-      acc[utmSource] = (acc[utmSource] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    
-    byDay: leads.reduce((acc, lead) => {
-      // Supabase pode retornar "2026-01-19 02:28:53" (com espaço) ou "2026-01-19T02:28:53"
-      const date = lead.created_at ? lead.created_at.split(/[T ]/)[0] : 'unknown';
-      acc[date] = (acc[date] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    
-    byCountry: leads.reduce((acc, lead) => {
-      const country = lead.country || 'Desconhecido';
-      acc[country] = (acc[country] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    
-    byCity: leads.reduce((acc, lead) => {
-      if (lead.city) {
-        const cityLabel = lead.region ? `${lead.city}, ${lead.region}` : lead.city;
-        acc[cityLabel] = (acc[cityLabel] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>),
-  } : null;
-
-  return { stats, isLoading };
-}
-
-// Lightweight hook just for lead count (for Dashboard KPI)
-// Uses RPC function for better performance on large datasets
+/**
+ * Lightweight hook just for lead count (for Dashboard KPI).
+ * Uses RPC function for better performance on large datasets.
+ */
 export function useLeadCount(filters?: { startDate?: Date; endDate?: Date; clientId?: string | null }) {
   const { user } = useAuth();
 
@@ -174,8 +71,6 @@ export function useLeadCount(filters?: { startDate?: Date; endDate?: Date; clien
   return useQuery({
     queryKey: ['leads-count', user?.id, filterKey],
     queryFn: async () => {
-      // Use RPC function for optimized counting with filters
-      // This avoids the expensive count(*) that causes timeouts
       const { data, error } = await supabase.rpc('get_lead_stats', {
         p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
@@ -204,11 +99,10 @@ export function useLeadCount(filters?: { startDate?: Date; endDate?: Date; clien
         return count || 0;
       }
 
-      // Extract total from RPC response
       const result = data as { total?: number } | null;
       return result?.total || 0;
     },
     enabled: !!user,
-    staleTime: 60000, // Cache for 1 minute to reduce database load
+    staleTime: 60000,
   });
 }
