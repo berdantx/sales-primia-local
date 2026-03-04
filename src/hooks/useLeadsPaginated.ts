@@ -65,8 +65,12 @@ export function useLeadsPaginated({
         p_limit: pageSize,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useLeadsPaginated] RPC error:', error.message, error.details, error.hint);
+        throw error;
+      }
 
+      console.log('[useLeadsPaginated] RPC response type:', typeof data, 'keys:', data ? Object.keys(data as object) : 'null');
       const result = data as unknown as { leads: Lead[]; totalCount: number };
       let filteredData = result.leads || [];
       const totalCount = result.totalCount || 0;
