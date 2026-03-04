@@ -27,9 +27,6 @@ import { generatePdfReport } from '@/lib/export/generatePdfReport';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useTmbTransactions } from '@/hooks/useTmbTransactions';
 import { useEduzzTransactions } from '@/hooks/useEduzzTransactions';
-import { useTransactionStatsOptimized } from '@/hooks/useTransactionStatsOptimized';
-import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsOptimized';
-import { useEduzzTransactionStatsOptimized } from '@/hooks/useEduzzTransactionStatsOptimized';
 import { useClients } from '@/hooks/useClients';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useFilterOptions } from '@/hooks/useFilterOptions';
@@ -154,11 +151,8 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
   const { data: hotmartTransactions, isLoading: loadingHotmart } = useTransactions(filters);
   const { data: tmbTransactions, isLoading: loadingTmb } = useTmbTransactions(filters);
   const { data: eduzzTransactions, isLoading: loadingEduzz } = useEduzzTransactions(filters);
-  const { data: hotmartStats, isLoading: loadingHotmartStats } = useTransactionStatsOptimized(filters);
-  const { data: tmbStats, isLoading: loadingTmbStats } = useTmbTransactionStatsOptimized(filters);
-  const { data: eduzzStats, isLoading: loadingEduzzStats } = useEduzzTransactionStatsOptimized(filters);
 
-  const isLoading = loadingHotmart || loadingTmb || loadingEduzz || loadingHotmartStats || loadingTmbStats || loadingEduzzStats;
+  const isLoading = loadingHotmart || loadingTmb || loadingEduzz;
 
   const selectedClient = clients?.find((c) => c.id === selectedClientId);
 
@@ -204,6 +198,23 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
 
   const transactionCount = filteredHotmart.length + filteredTmb.length + filteredEduzz.length;
 
+  // Recalculate stats from filtered data so summary matches UTM-filtered transactions
+  const computedHotmartStats = useMemo(() => {
+    const brl = filteredHotmart.filter(t => t.currency === 'BRL').reduce((s, t) => s + Number(t.computed_value), 0);
+    const usd = filteredHotmart.filter(t => t.currency === 'USD').reduce((s, t) => s + Number(t.computed_value), 0);
+    return { totalBRL: brl, totalUSD: usd, totalTransactions: filteredHotmart.length };
+  }, [filteredHotmart]);
+
+  const computedTmbStats = useMemo(() => {
+    const total = filteredTmb.reduce((s, t) => s + Number(t.ticket_value), 0);
+    return { totalBRL: total, totalTransactions: filteredTmb.length };
+  }, [filteredTmb]);
+
+  const computedEduzzStats = useMemo(() => {
+    const total = filteredEduzz.reduce((s, t) => s + Number(t.sale_value), 0);
+    return { totalBRL: total, totalTransactions: filteredEduzz.length };
+  }, [filteredEduzz]);
+
   const handleExport = async () => {
     try {
       setIsExporting(true);
@@ -212,19 +223,9 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
         hotmartTransactions: filteredHotmart,
         tmbTransactions: filteredTmb,
         eduzzTransactions: filteredEduzz,
-        hotmartStats: {
-          totalBRL: hotmartStats?.totalByCurrency?.BRL || 0,
-          totalUSD: hotmartStats?.totalByCurrency?.USD || 0,
-          totalTransactions: hotmartStats?.totalTransactions || 0,
-        },
-        tmbStats: {
-          totalBRL: tmbStats?.totalBRL || 0,
-          totalTransactions: tmbStats?.totalTransactions || 0,
-        },
-        eduzzStats: {
-          totalBRL: eduzzStats?.totalBRL || 0,
-          totalTransactions: eduzzStats?.totalTransactions || 0,
-        },
+        hotmartStats: computedHotmartStats,
+        tmbStats: computedTmbStats,
+        eduzzStats: computedEduzzStats,
       };
 
       const exportOptions = {
