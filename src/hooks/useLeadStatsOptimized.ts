@@ -52,6 +52,11 @@ export function useLeadStatsOptimized(filters?: LeadStatsFilters) {
         p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
+        p_traffic_type: filters?.trafficType || null,
+        p_source: filters?.source || null,
+        p_utm_source: filters?.utmSource || null,
+        p_utm_medium: filters?.utmMedium || null,
+        p_utm_campaign: filters?.utmCampaign || null,
       });
 
       if (error) throw error;
