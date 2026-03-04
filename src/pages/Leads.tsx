@@ -145,7 +145,7 @@ function Leads() {
   const [showCharts, setShowCharts] = useState(false);
   const [hideUnidentifiedGeo, setHideUnidentifiedGeo] = useState(false);
   
-  const [activeTab, setActiveTab] = useState('strategic');
+  const [activeTab, setActiveTab] = useState('crm');
   const { clientId, isReady } = useFilter();
   const queryClient = useQueryClient();
 
