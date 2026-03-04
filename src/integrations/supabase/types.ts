@@ -2024,11 +2024,38 @@ export type Database = {
         }
         Returns: Json
       }
-      get_lead_stats: {
+      get_lead_stats:
+        | {
+            Args: {
+              p_client_id?: string
+              p_end_date?: string
+              p_source?: string
+              p_start_date?: string
+              p_traffic_type?: string
+              p_utm_campaign?: string
+              p_utm_medium?: string
+              p_utm_source?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_client_id: string
+              p_end_date?: string
+              p_start_date?: string
+            }
+            Returns: Json
+          }
+      get_lead_stats_cached: {
         Args: {
-          p_client_id: string
+          p_client_id?: string
           p_end_date?: string
+          p_source?: string
           p_start_date?: string
+          p_traffic_type?: string
+          p_utm_campaign?: string
+          p_utm_medium?: string
+          p_utm_source?: string
         }
         Returns: Json
       }

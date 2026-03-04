@@ -21,6 +21,11 @@ export interface LeadStatsFilters {
   startDate?: Date;
   endDate?: Date;
   clientId?: string | null;
+  trafficType?: string;
+  source?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
 }
 
 export function useLeadStatsOptimized(filters?: LeadStatsFilters) {
@@ -30,12 +35,20 @@ export function useLeadStatsOptimized(filters?: LeadStatsFilters) {
     startDate: filters.startDate?.toISOString(),
     endDate: filters.endDate?.toISOString(),
     clientId: filters.clientId,
+    trafficType: filters.trafficType,
+    source: filters.source,
+    utmSource: filters.utmSource,
+    utmMedium: filters.utmMedium,
+    utmCampaign: filters.utmCampaign,
   } : null;
 
   return useQuery({
     queryKey: ['lead-stats-optimized', user?.id, filterKey],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_lead_stats', {
+      const hasDateFilter = !!filters?.startDate || !!filters?.endDate;
+      const hasAdvancedFilter = !!filters?.trafficType || !!filters?.source || !!filters?.utmSource || !!filters?.utmMedium || !!filters?.utmCampaign;
+      const rpcName = (hasDateFilter || hasAdvancedFilter) ? 'get_lead_stats' : 'get_lead_stats_cached';
+      const { data, error } = await supabase.rpc(rpcName as 'get_lead_stats', {
         p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
