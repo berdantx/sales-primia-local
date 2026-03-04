@@ -37,6 +37,7 @@ interface EduzzTransaction {
   status: string;
   payment_method: string | null;
   currency: string | null;
+  utm_source: string | null;
 }
 
 interface CsvExportOptions {
@@ -99,13 +100,13 @@ function generateTmbCSV(transactions: TmbTransaction[]): string {
 function generateEduzzCSV(transactions: EduzzTransaction[]): string {
   const headers = [
     'ID Venda', 'Produto', 'Cliente', 'Email', 'Valor', 'Moeda',
-    'Data Venda', 'Status', 'Método Pagamento',
+    'Data Venda', 'Status', 'Método Pagamento', 'UTM Source',
   ];
   const rows = transactions.map((t) => [
     escapeCSV(t.sale_id), escapeCSV(t.product), escapeCSV(t.buyer_name),
     escapeCSV(t.buyer_email), escapeCSV(t.sale_value), escapeCSV(t.currency),
     escapeCSV(formatDateForExport(t.sale_date)),
-    escapeCSV(t.status), escapeCSV(t.payment_method),
+    escapeCSV(t.status), escapeCSV(t.payment_method), escapeCSV(t.utm_source),
   ]);
   return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 }
