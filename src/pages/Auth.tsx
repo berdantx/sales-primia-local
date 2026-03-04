@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { usePrefetchOnLogin } from '@/hooks/usePrefetchOnLogin';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,7 @@ import { suggestDomainCorrection, EmailSuggestion as EmailSuggestionType } from 
 import { EmailSuggestion } from '@/components/auth/EmailSuggestion';
 import { useBrandingSettings } from '@/hooks/useBrandingSettings';
 import { useTheme } from 'next-themes';
+import { supabase } from '@/integrations/supabase/client';
 import defaultLogo from '@/assets/default-logo.png';
 
 const features = [
@@ -49,6 +51,7 @@ export default function Auth() {
   const { signIn, signUp, user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const prefetchOnLogin = usePrefetchOnLogin();
   const { settings: branding } = useBrandingSettings();
   const { resolvedTheme } = useTheme();
 
@@ -127,6 +130,12 @@ export default function Auth() {
           : error.message,
         variant: 'destructive',
       });
+    } else {
+      // Prefetch key data in background while redirecting
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user?.id) {
+        prefetchOnLogin(data.session.user.id);
+      }
     }
   };
 
