@@ -7,9 +7,8 @@ import { useLeadsPaginated } from '@/hooks/useLeadsPaginated';
 import { useLeadStatsOptimized } from '@/hooks/useLeadStatsOptimized';
 import { useTopAdsOptimized } from '@/hooks/useTopAdsOptimized';
 import { useClients } from '@/hooks/useClients';
-
-import { useLandingPageStats } from '@/hooks/useLandingPageStats';
-import { useLandingPageConversion } from '@/hooks/useLandingPageConversion';
+import { useLandingPageStatsRpc } from '@/hooks/useLandingPageStatsRpc';
+import { useConversionSummaryRpc } from '@/hooks/useConversionSummaryRpc';
 import { TopAdsCard } from '@/components/leads/TopAdsCard';
 import { AdTrendChartOptimized } from '@/components/leads/AdTrendChartOptimized';
 import { LeadsByCountryChart } from '@/components/leads/LeadsByCountryChart';
@@ -31,7 +30,7 @@ import { LeadsTable } from '@/components/leads/LeadsTable';
 import { LeadsCompactFilters } from '@/components/leads/LeadsCompactFilters';
 import { LeadsActiveFilters } from '@/components/leads/LeadsActiveFilters';
 import { LeadsByDayChart } from '@/components/leads/LeadsByDayChart';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { differenceInDays, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -203,24 +202,84 @@ function Leads() {
     pageSize: ITEMS_PER_PAGE,
   });
 
-  const { stats: landingPageStats, totalPagesCount, hiddenPagesCount } = useLandingPageStats({ 
-    leads: paginatedData?.leads || [], 
-    limit: 10,
-    minLeads: 5,
-    showAll: showAllPages 
+  const { data: landingPageStatsRpc, isLoading: isLoadingLandingPages } = useLandingPageStatsRpc({
+    clientId,
+    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
+    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
+    minLeads: showAllPages ? 1 : 5,
+    limit: showAllPages ? 200 : 20,
   });
+
+  const landingPageStats = useMemo(() => {
+    const pages = landingPageStatsRpc?.stats || [];
+    const totalLeadsWithPage = pages.reduce((sum, p) => sum + p.leadCount, 0);
+    const now = new Date();
+
+    return pages
+      .map((page) => {
+        const firstLeadDate = page.firstLeadDate ? new Date(page.firstLeadDate) : null;
+        const lastLeadDate = page.lastLeadDate ? new Date(page.lastLeadDate) : null;
+        const activeDays = firstLeadDate && lastLeadDate
+          ? Math.max(1, differenceInDays(lastLeadDate, firstLeadDate) + 1)
+          : 1;
+        const isNew = firstLeadDate ? differenceInDays(now, firstLeadDate) < 7 : false;
+
+        return {
+          normalizedUrl: page.normalizedUrl,
+          displayName: page.displayName,
+          leadCount: page.leadCount,
+          percentage: totalLeadsWithPage > 0 ? (page.leadCount / totalLeadsWithPage) * 100 : 0,
+          firstLeadDate,
+          lastLeadDate,
+          dailyAverage: page.leadCount / activeDays,
+          activeDays,
+          isNew,
+          trend: (isNew ? 'new' : 'stable') as 'up' | 'down' | 'stable' | 'new',
+          trendPercentage: 0,
+          leadsByDay: {},
+        };
+      })
+      .sort((a, b) => b.leadCount - a.leadCount);
+  }, [landingPageStatsRpc?.stats]);
+
+  const totalPagesCount = landingPageStatsRpc?.totalPages || 0;
+  const hiddenPagesCount = showAllPages ? 0 : (landingPageStatsRpc?.hiddenPages || 0);
 
   const topItemNames = useMemo(() => 
     topAdsData?.items?.map(item => item.name) || [], 
     [topAdsData]
   );
-  
-  const { conversionStats, totalConversion, isLoading: isLoadingConversion } = useLandingPageConversion({
+
+  const { data: conversionSummary, isLoading: isLoadingConversion } = useConversionSummaryRpc({
     clientId,
-    leads: paginatedData?.leads || [],
-    startDate: dateRange?.from,
-    endDate: dateRange?.to,
+    startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
+    endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
   });
+
+  const conversionStats = useMemo(() => {
+    return (conversionSummary?.pageConversions || []).map((page) => ({
+      normalizedUrl: page.normalizedUrl,
+      displayName: page.displayName,
+      totalLeads: page.totalLeads,
+      uniqueEmails: page.totalLeads,
+      convertedLeads: page.convertedLeads,
+      conversionRate: page.conversionRate,
+      totalRevenue: page.totalRevenue,
+      averageTicket: page.averageTicket,
+      currency: 'BRL',
+    }));
+  }, [conversionSummary?.pageConversions]);
+
+  const totalConversion = useMemo(() => ({
+    totalLeads: conversionSummary?.totalLeads || 0,
+    qualifiedLeads: conversionSummary?.qualifiedLeads || 0,
+    totalConverted: conversionSummary?.convertedLeads || 0,
+    conversionRate: conversionSummary?.conversionRate || 0,
+    qualificationRate: conversionSummary?.qualificationRate || 0,
+    qualifiedConversionRate: conversionSummary?.qualifiedConversionRate || 0,
+    totalRevenue: conversionSummary?.totalRevenue || 0,
+    averageTicket: conversionSummary?.averageTicket || 0,
+  }), [conversionSummary]);
 
   const filterOptions = useMemo(() => {
     const countries = Object.keys(stats?.byCountry || {})
@@ -797,12 +856,12 @@ function Leads() {
             )}
 
             {/* Landing Pages */}
-            {showCharts && landingPageStats.length > 1 && (
+            {showCharts && landingPageStats.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
                 <LandingPageComparisonCard
                   stats={landingPageStats}
                   conversionStats={conversionStats}
-                  isLoading={isLoadingLeads || isLoadingConversion}
+                  isLoading={isLoadingLandingPages || isLoadingConversion}
                   selectedPage={pageFilter !== 'all' ? pageFilter : null}
                   onPageClick={(page) => { setPageFilter(page || 'all'); setCurrentPage(0); }}
                   showAllPages={showAllPages}
@@ -819,7 +878,7 @@ function Leads() {
                       <LandingPageTrendChart
                         stats={landingPageStats.slice(0, 5)}
                         dateRange={dateRange}
-                        isLoading={isLoadingLeads}
+                        isLoading={isLoadingLandingPages}
                         embedded
                       />
                     </div>
