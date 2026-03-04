@@ -28,6 +28,8 @@ export interface LeadStatsFilters {
   utmCampaign?: string;
 }
 
+let hasCachedLeadStatsRpc: boolean | null = null;
+
 export function useLeadStatsOptimized(filters?: LeadStatsFilters) {
   const { user } = useAuth();
 
@@ -47,8 +49,8 @@ export function useLeadStatsOptimized(filters?: LeadStatsFilters) {
     queryFn: async () => {
       const hasDateFilter = !!filters?.startDate || !!filters?.endDate;
       const hasAdvancedFilter = !!filters?.trafficType || !!filters?.source || !!filters?.utmSource || !!filters?.utmMedium || !!filters?.utmCampaign;
-      const rpcName = (hasDateFilter || hasAdvancedFilter) ? 'get_lead_stats' : 'get_lead_stats_cached';
-      const { data, error } = await supabase.rpc(rpcName as 'get_lead_stats', {
+
+      const params = {
         p_client_id: filters?.clientId || null,
         p_start_date: filters?.startDate?.toISOString() || null,
         p_end_date: filters?.endDate?.toISOString() || null,
@@ -57,7 +59,21 @@ export function useLeadStatsOptimized(filters?: LeadStatsFilters) {
         p_utm_source: filters?.utmSource || null,
         p_utm_medium: filters?.utmMedium || null,
         p_utm_campaign: filters?.utmCampaign || null,
-      });
+      };
+
+      const shouldUseCachedRpc = !hasDateFilter && !hasAdvancedFilter && hasCachedLeadStatsRpc !== false;
+      const preferredRpc = shouldUseCachedRpc ? 'get_lead_stats_cached' : 'get_lead_stats';
+      let { data, error } = await supabase.rpc(preferredRpc as 'get_lead_stats', params);
+
+      // Fallback automático caso a RPC de cache ainda não exista no backend
+      if (error && preferredRpc === 'get_lead_stats_cached') {
+        hasCachedLeadStatsRpc = false;
+        const fallback = await supabase.rpc('get_lead_stats', params);
+        data = fallback.data;
+        error = fallback.error;
+      } else if (!error && preferredRpc === 'get_lead_stats_cached') {
+        hasCachedLeadStatsRpc = true;
+      }
 
       if (error) throw error;
 
