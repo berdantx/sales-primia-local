@@ -20,7 +20,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Download, FileSpreadsheet, FileText, Loader2, CalendarIcon, Building2, FileDown, Filter } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
 import { generateExcelReport } from '@/lib/export/generateExcelReport';
 import { generateCsvReport } from '@/lib/export/generateCsvReport';
 import { generatePdfReport } from '@/lib/export/generatePdfReport';
@@ -96,7 +96,6 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
   const [utmMedium, setUtmMedium] = useState('');
   const [utmCampaign, setUtmCampaign] = useState('');
   const [utmContent, setUtmContent] = useState('');
-  const [utmOpen, setUtmOpen] = useState(false);
 
   const { data: clients } = useClients();
   const { isMaster } = useUserRole();
@@ -282,7 +281,7 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
@@ -290,116 +289,124 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-4">
-          {/* Client Selection - Only for masters */}
-          {isMaster && clients && clients.length > 0 && (
-            <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
+          {/* LEFT COLUMN - Filters */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Filtros</h3>
+
+            {/* Client Selection - Only for masters */}
+            {isMaster && clients && clients.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Cliente
+                </Label>
+                <Select
+                  value={selectedClientId || 'all'}
+                  onValueChange={(value) => setSelectedClientId(value === 'all' ? null : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os clientes</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Period Selection */}
+            <div className="space-y-1.5">
               <Label className="text-sm font-medium flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Cliente
+                <CalendarIcon className="h-4 w-4" />
+                Período
               </Label>
               <Select
-                value={selectedClientId || 'all'}
-                onValueChange={(value) => setSelectedClientId(value === 'all' ? null : value)}
+                value={period}
+                onValueChange={(value) => setPeriod(value as PeriodOption)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um cliente" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os clientes</SelectItem>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
+                  {PERIOD_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
 
-          {/* Period Selection */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4" />
-              Período
-            </Label>
-            <Select
-              value={period}
-              onValueChange={(value) => setPeriod(value as PeriodOption)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PERIOD_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Custom Date Range Picker */}
-            {period === 'custom' && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      'w-full justify-start text-left font-normal',
-                      !customDateRange && 'text-muted-foreground'
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {customDateRange?.from ? (
-                      customDateRange.to ? (
-                        <>
-                          {format(customDateRange.from, 'dd/MM/yyyy', { locale: ptBR })} -{' '}
-                          {format(customDateRange.to, 'dd/MM/yyyy', { locale: ptBR })}
-                        </>
+              {period === 'custom' && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !customDateRange && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {customDateRange?.from ? (
+                        customDateRange.to ? (
+                          <>
+                            {format(customDateRange.from, 'dd/MM/yyyy', { locale: ptBR })} -{' '}
+                            {format(customDateRange.to, 'dd/MM/yyyy', { locale: ptBR })}
+                          </>
+                        ) : (
+                          format(customDateRange.from, 'dd/MM/yyyy', { locale: ptBR })
+                        )
                       ) : (
-                        format(customDateRange.from, 'dd/MM/yyyy', { locale: ptBR })
-                      )
-                    ) : (
-                      <span>Selecione o período</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={customDateRange?.from}
-                    selected={customDateRange}
-                    onSelect={setCustomDateRange}
-                    numberOfMonths={2}
-                    locale={ptBR}
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
+                        <span>Selecione o período</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={customDateRange?.from}
+                      selected={customDateRange}
+                      onSelect={setCustomDateRange}
+                      numberOfMonths={2}
+                      locale={ptBR}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
 
-          {/* UTM Filters */}
-          <Collapsible open={utmOpen} onOpenChange={setUtmOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between text-sm font-medium">
-                <span className="flex items-center gap-2">
+            {/* UTM Filters - inline, no collapsible */}
+            <div className="space-y-3 border rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium flex items-center gap-2">
                   <Filter className="h-4 w-4" />
                   Filtros por UTM
-                  {hasUtmFilter && (
-                    <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
-                      Ativo
-                    </span>
-                  )}
-                </span>
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pt-3">
-              <div className="grid grid-cols-2 gap-3">
+                </Label>
+                {hasUtmFilter && (
+                  <div className="flex items-center gap-2">
+                    <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">Ativo</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-6 px-2"
+                      onClick={() => { setUtmSource(''); setUtmMedium(''); setUtmCampaign(''); setUtmContent(''); }}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <Label className="text-xs">UTM Source</Label>
+                  <Label className="text-xs text-muted-foreground">Source</Label>
                   <Select value={utmSource || 'all'} onValueChange={(v) => setUtmSource(v === 'all' ? '' : v)}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Todos" />
@@ -413,7 +420,7 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">UTM Medium</Label>
+                  <Label className="text-xs text-muted-foreground">Medium</Label>
                   <Select value={utmMedium || 'all'} onValueChange={(v) => setUtmMedium(v === 'all' ? '' : v)}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Todos" />
@@ -427,7 +434,7 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">UTM Campaign</Label>
+                  <Label className="text-xs text-muted-foreground">Campaign</Label>
                   <Select value={utmCampaign || 'all'} onValueChange={(v) => setUtmCampaign(v === 'all' ? '' : v)}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Todos" />
@@ -441,7 +448,7 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">UTM Content</Label>
+                  <Label className="text-xs text-muted-foreground">Content</Label>
                   <Select value={utmContent || 'all'} onValueChange={(v) => setUtmContent(v === 'all' ? '' : v)}>
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Todos" />
@@ -455,147 +462,110 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
                   </Select>
                 </div>
               </div>
-              {hasUtmFilter && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => { setUtmSource(''); setUtmMedium(''); setUtmCampaign(''); setUtmContent(''); }}
-                >
-                  Limpar filtros UTM
-                </Button>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN - Format, Sections, Summary */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Exportação</h3>
+
+            {/* Format Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Formato</Label>
+              <RadioGroup
+                value={exportFormat}
+                onValueChange={(value) => setExportFormat(value as ExportFormat)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="excel" id="format-excel" />
+                  <Label htmlFor="format-excel" className="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                    Excel
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="csv" id="format-csv" />
+                  <Label htmlFor="format-csv" className="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    CSV
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="pdf" id="format-pdf" />
+                  <Label htmlFor="format-pdf" className="flex items-center gap-1.5 cursor-pointer text-sm">
+                    <FileDown className="h-4 w-4 text-red-600" />
+                    PDF
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* Section Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Seções a incluir</Label>
+              <div className="grid grid-cols-1 gap-2">
+                {exportFormat === 'excel' && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="summary" checked={options.includeSummary} onCheckedChange={() => toggleOption('includeSummary')} />
+                    <Label htmlFor="summary" className="cursor-pointer text-sm">Resumo de KPIs</Label>
+                  </div>
+                )}
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="hotmart" checked={options.includeHotmart} onCheckedChange={() => toggleOption('includeHotmart')} />
+                  <Label htmlFor="hotmart" className="cursor-pointer text-sm">Transações Hotmart</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="tmb" checked={options.includeTmb} onCheckedChange={() => toggleOption('includeTmb')} />
+                  <Label htmlFor="tmb" className="cursor-pointer text-sm">Transações TMB</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="eduzz" checked={options.includeEduzz} onCheckedChange={() => toggleOption('includeEduzz')} />
+                  <Label htmlFor="eduzz" className="cursor-pointer text-sm">Transações Eduzz</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="combined" checked={options.includeCombined} onCheckedChange={() => toggleOption('includeCombined')} />
+                  <Label htmlFor="combined" className="cursor-pointer text-sm">Transações Consolidadas</Label>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview Info */}
+            <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg space-y-1">
+              <p className="font-medium mb-1.5">Resumo da exportação:</p>
+              {selectedClient && (
+                <p>📋 Cliente: <span className="font-medium">{selectedClient.name}</span></p>
               )}
-            </CollapsibleContent>
-          </Collapsible>
-
-          {/* Format Selection */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Formato</Label>
-            <RadioGroup
-              value={exportFormat}
-              onValueChange={(value) => setExportFormat(value as ExportFormat)}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="excel" id="format-excel" />
-                <Label htmlFor="format-excel" className="flex items-center gap-2 cursor-pointer">
-                  <FileSpreadsheet className="h-4 w-4 text-green-600" />
-                  Excel (.xlsx)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="csv" id="format-csv" />
-                <Label htmlFor="format-csv" className="flex items-center gap-2 cursor-pointer">
-                  <FileText className="h-4 w-4 text-blue-600" />
-                  CSV
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="pdf" id="format-pdf" />
-                <Label htmlFor="format-pdf" className="flex items-center gap-2 cursor-pointer">
-                  <FileDown className="h-4 w-4 text-red-600" />
-                  PDF
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Section Selection */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Seções a incluir</Label>
-            
-            {exportFormat === 'excel' && (
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="summary"
-                  checked={options.includeSummary}
-                  onCheckedChange={() => toggleOption('includeSummary')}
-                />
-                <Label htmlFor="summary" className="cursor-pointer">
-                  Resumo de KPIs
-                </Label>
-              </div>
-            )}
-
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="hotmart"
-                checked={options.includeHotmart}
-                onCheckedChange={() => toggleOption('includeHotmart')}
-              />
-              <Label htmlFor="hotmart" className="cursor-pointer">
-                Transações Hotmart
-              </Label>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="tmb"
-                checked={options.includeTmb}
-                onCheckedChange={() => toggleOption('includeTmb')}
-              />
-              <Label htmlFor="tmb" className="cursor-pointer">
-                Transações TMB
-              </Label>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="eduzz"
-                checked={options.includeEduzz}
-                onCheckedChange={() => toggleOption('includeEduzz')}
-              />
-              <Label htmlFor="eduzz" className="cursor-pointer">
-                Transações Eduzz
-              </Label>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="combined"
-                checked={options.includeCombined}
-                onCheckedChange={() => toggleOption('includeCombined')}
-              />
-              <Label htmlFor="combined" className="cursor-pointer">
-                Transações Consolidadas
-              </Label>
+              <p>📅 Período: <span className="font-medium">{formatPeriodDisplay()}</span></p>
+              {hasUtmFilter && (
+                <p>🔍 UTM: <span className="font-medium">
+                  {[utmSource && `source=${utmSource}`, utmMedium && `medium=${utmMedium}`, utmCampaign && `campaign=${utmCampaign}`, utmContent && `content=${utmContent}`].filter(Boolean).join(', ')}
+                </span></p>
+              )}
+              <p>📊 Transações: <span className="font-medium">{isLoading ? '...' : transactionCount}</span></p>
+              <p>📁 Formato: <span className="font-medium">{exportFormat.toUpperCase()}</span></p>
             </div>
           </div>
-
-          {/* Preview Info */}
-          <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg space-y-1">
-            <p className="font-medium mb-2">Resumo da exportação:</p>
-            {selectedClient && (
-              <p>📋 Cliente: <span className="font-medium">{selectedClient.name}</span></p>
-            )}
-            <p>📅 Período: <span className="font-medium">{formatPeriodDisplay()}</span></p>
-            {hasUtmFilter && (
-              <p>🔍 Filtro UTM: <span className="font-medium">
-                {[utmSource && `source=${utmSource}`, utmMedium && `medium=${utmMedium}`, utmCampaign && `campaign=${utmCampaign}`, utmContent && `content=${utmContent}`].filter(Boolean).join(', ')}
-              </span></p>
-            )}
-            <p>📊 Transações: <span className="font-medium">{isLoading ? '...' : transactionCount}</span></p>
-            <p>📁 Formato: <span className="font-medium">{exportFormat.toUpperCase()}</span></p>
-          </div>
-
-          <Button
-            onClick={handleExport}
-            disabled={isLoading || isExporting || !hasAnySelected || (period === 'custom' && !customDateRange?.from)}
-            className="w-full"
-          >
-            {isExporting || isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {isLoading ? 'Carregando dados...' : 'Exportando...'}
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Baixar Relatório {exportFormat === 'excel' ? 'Excel' : exportFormat === 'pdf' ? 'PDF' : 'CSV'}
-              </>
-            )}
-          </Button>
         </div>
+
+        {/* Full-width export button */}
+        <Button
+          onClick={handleExport}
+          disabled={isLoading || isExporting || !hasAnySelected || (period === 'custom' && !customDateRange?.from)}
+          className="w-full"
+        >
+          {isExporting || isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {isLoading ? 'Carregando dados...' : 'Exportando...'}
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4 mr-2" />
+              Baixar Relatório {exportFormat === 'excel' ? 'Excel' : exportFormat === 'pdf' ? 'PDF' : 'CSV'}
+            </>
+          )}
+        </Button>
       </DialogContent>
     </Dialog>
   );
