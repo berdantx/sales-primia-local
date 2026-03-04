@@ -20,7 +20,6 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Download, FileSpreadsheet, FileText, Loader2, CalendarIcon, Building2, FileDown, Filter } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { generateExcelReport } from '@/lib/export/generateExcelReport';
 import { generateCsvReport } from '@/lib/export/generateCsvReport';
@@ -33,6 +32,9 @@ import { useTmbTransactionStatsOptimized } from '@/hooks/useTmbTransactionStatsO
 import { useEduzzTransactionStatsOptimized } from '@/hooks/useEduzzTransactionStatsOptimized';
 import { useClients } from '@/hooks/useClients';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useFilterOptions } from '@/hooks/useFilterOptions';
+import { useTmbFilterOptions } from '@/hooks/useTmbFilterOptions';
+import { useEduzzFilterOptions } from '@/hooks/useEduzzFilterOptions';
 import { toast } from 'sonner';
 import { format, subDays, subMonths, subYears, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -98,6 +100,38 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
 
   const { data: clients } = useClients();
   const { isMaster } = useUserRole();
+  const { data: hotmartOptions } = useFilterOptions();
+  const { data: tmbOptions } = useTmbFilterOptions();
+  const { data: eduzzOptions } = useEduzzFilterOptions();
+
+  // Unify UTM options from all platforms
+  const allSources = useMemo(() => {
+    const set = new Set<string>();
+    hotmartOptions?.sckCodes?.forEach((o) => o.value && set.add(o.value));
+    tmbOptions?.utm_sources?.forEach((o) => o.value && set.add(o.value));
+    eduzzOptions?.utm_sources?.forEach((o) => o.value && set.add(o.value));
+    return Array.from(set).sort();
+  }, [hotmartOptions, tmbOptions, eduzzOptions]);
+
+  const allMediums = useMemo(() => {
+    const set = new Set<string>();
+    tmbOptions?.utm_mediums?.forEach((o) => o.value && set.add(o.value));
+    eduzzOptions?.utm_mediums?.forEach((o) => o.value && set.add(o.value));
+    return Array.from(set).sort();
+  }, [tmbOptions, eduzzOptions]);
+
+  const allCampaigns = useMemo(() => {
+    const set = new Set<string>();
+    tmbOptions?.utm_campaigns?.forEach((o) => o.value && set.add(o.value));
+    eduzzOptions?.utm_campaigns?.forEach((o) => o.value && set.add(o.value));
+    return Array.from(set).sort();
+  }, [tmbOptions, eduzzOptions]);
+
+  const allContents = useMemo(() => {
+    const set = new Set<string>();
+    eduzzOptions?.utm_contents?.forEach((o) => o.value && set.add(o.value));
+    return Array.from(set).sort();
+  }, [eduzzOptions]);
 
   // Calculate date range based on selection
   const dateRange = useMemo(() => {
@@ -135,7 +169,7 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
     if (!hasUtmFilter) return true;
     const match = (filter: string, value: string | null | undefined) => {
       if (!filter) return true;
-      return (value || '').toLowerCase().includes(filter.toLowerCase());
+      return (value || '').toLowerCase() === filter.toLowerCase();
     };
     return (
       match(utmSource, fields.source) &&
@@ -366,39 +400,59 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">UTM Source</Label>
-                  <Input
-                    placeholder="ex: pagina-de-vendas"
-                    value={utmSource}
-                    onChange={(e) => setUtmSource(e.target.value)}
-                    className="h-8 text-sm"
-                  />
+                  <Select value={utmSource || 'all'} onValueChange={(v) => setUtmSource(v === 'all' ? '' : v)}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {allSources.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">UTM Medium</Label>
-                  <Input
-                    placeholder="ex: cpc"
-                    value={utmMedium}
-                    onChange={(e) => setUtmMedium(e.target.value)}
-                    className="h-8 text-sm"
-                  />
+                  <Select value={utmMedium || 'all'} onValueChange={(v) => setUtmMedium(v === 'all' ? '' : v)}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {allMediums.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">UTM Campaign</Label>
-                  <Input
-                    placeholder="ex: black-friday"
-                    value={utmCampaign}
-                    onChange={(e) => setUtmCampaign(e.target.value)}
-                    className="h-8 text-sm"
-                  />
+                  <Select value={utmCampaign || 'all'} onValueChange={(v) => setUtmCampaign(v === 'all' ? '' : v)}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {allCampaigns.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">UTM Content</Label>
-                  <Input
-                    placeholder="ex: banner-01"
-                    value={utmContent}
-                    onChange={(e) => setUtmContent(e.target.value)}
-                    className="h-8 text-sm"
-                  />
+                  <Select value={utmContent || 'all'} onValueChange={(v) => setUtmContent(v === 'all' ? '' : v)}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {allContents.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               {hasUtmFilter && (
