@@ -1,43 +1,31 @@
 
 
-## Diagnóstico
+## Plano: Filtro por UTM no Relatório de Exportação
 
-Analisei o fluxo completo: RPCs, hooks, componentes de filtro e exportação. A infraestrutura técnica já existe e funciona — as RPCs `get_leads_paginated`, `count_leads_for_export` e `export_leads_batch` todas suportam `p_traffic_type`. O banco tem 17.718 leads orgânicos, 118.039 pagos e 584 diretos.
+### Problema
+O diálogo de exportação de relatórios não permite filtrar transações por UTM. Você quer poder exportar apenas vendas de uma UTM específica (ex: "pagina-de-vendas").
 
-**Problema identificado**: Quando o usuário abre o dialog de exportação, todos os filtros são resetados (linhas 93-109 do `ClientSideExportDialog`). Existe um botão "Usar filtros da página" mas ele é pouco visível e não é aplicado automaticamente. Isso faz parecer que não é possível exportar com os filtros ativos.
+### Solução
+Adicionar campos de filtro por UTM (source, medium, campaign, content) no `ExportReportDialog`. A filtragem será feita client-side sobre os dados já carregados, sem necessidade de alterar os hooks ou o banco.
 
-Há também um problema de UX: os KPIs e contagens nos filtros não refletem o filtro de tráfego aplicado, pois `statsFilters` só inclui cliente e período — não inclui traffic type, UTMs, etc.
+### Mudanças
 
-## Plano
+**1. `src/components/export/ExportReportDialog.tsx`**
+- Adicionar estados para `utmSource`, `utmMedium`, `utmCampaign`, `utmContent` (campos de texto livres)
+- Adicionar uma seção "Filtros por UTM" com inputs de texto no diálogo, antes da seleção de formato
+- Antes de exportar, filtrar as transações carregadas:
+  - **Hotmart**: filtrar por `sck_code` (campo equivalente a UTM na Hotmart)
+  - **TMB**: filtrar por `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`
+  - **Eduzz**: filtrar por `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`
+- Atualizar o resumo de exportação para mostrar os filtros UTM ativos
+- Atualizar a contagem de transações para refletir os dados filtrados
 
-### 1. Auto-aplicar filtros da página ao abrir o dialog de exportação
+**2. Exportação (sem alterações nos geradores)**
+Os geradores de Excel/CSV/PDF já recebem arrays de transações — basta passar os arrays filtrados.
 
-No `ClientSideExportDialog`, quando o dialog abrir e houver `activeFilters` com valores, aplicar automaticamente esses filtros em vez de resetar tudo. Remover a necessidade de clicar em "Usar filtros da página".
-
-**Arquivo**: `src/components/leads/ClientSideExportDialog.tsx`
-- No `useEffect` de `open`, se `activeFilters` tiver valores, pré-preencher os estados internos do dialog
-- Manter o botão "Usar filtros da página" como fallback caso o usuário limpe e queira reaplicar
-
-### 2. Melhorar velocidade de carregamento — usar `get_lead_stats_cached`
-
-O hook `useLeadStatsOptimized` ainda chama `get_lead_stats` diretamente. Atualizar para usar `get_lead_stats_cached` (criada na migration anterior) quando não há filtro de período, aproveitando a Materialized View.
-
-**Arquivo**: `src/hooks/useLeadStatsOptimized.ts`
-- Chamar `get_lead_stats_cached` em vez de `get_lead_stats` quando `startDate` e `endDate` forem null
-
-### 3. Atualizar stats com filtros de tráfego (opcional mas recomendado)
-
-Passar os filtros ativos (traffic type, source, etc.) para a query de stats, para que KPIs e contagens reflitam a visão filtrada.
-
-**Arquivo**: `src/pages/Leads.tsx`
-- Expandir `statsFilters` para incluir os filtros ativos da página
-**Arquivo**: RPC `get_lead_stats` — adicionar parâmetros opcionais de filtro
-
----
-
-### Resumo de arquivos afetados
-- `src/components/leads/ClientSideExportDialog.tsx` — auto-aplicar filtros ao abrir
-- `src/hooks/useLeadStatsOptimized.ts` — usar RPC cached
-- `src/pages/Leads.tsx` — expandir statsFilters (se aprovar item 3)
-- Migration SQL — adicionar filtros à `get_lead_stats` (se aprovar item 3)
+### Detalhes Técnicos
+- Filtragem case-insensitive usando `.toLowerCase().includes()`
+- Busca parcial (substring match) para facilitar o uso
+- Campos opcionais — se nenhum UTM for preenchido, exporta tudo como hoje
+- A seção de UTM ficará em um `Collapsible` para não poluir o diálogo quando não for necessária
 
