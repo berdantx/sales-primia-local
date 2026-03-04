@@ -19,7 +19,9 @@ import {
 } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Download, FileSpreadsheet, FileText, Loader2, CalendarIcon, Building2, FileDown } from 'lucide-react';
+import { Download, FileSpreadsheet, FileText, Loader2, CalendarIcon, Building2, FileDown, Filter } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { generateExcelReport } from '@/lib/export/generateExcelReport';
 import { generateCsvReport } from '@/lib/export/generateCsvReport';
 import { generatePdfReport } from '@/lib/export/generatePdfReport';
@@ -88,6 +90,11 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
     includeSummary: true,
     includeCombined: true,
   });
+  const [utmSource, setUtmSource] = useState('');
+  const [utmMedium, setUtmMedium] = useState('');
+  const [utmCampaign, setUtmCampaign] = useState('');
+  const [utmContent, setUtmContent] = useState('');
+  const [utmOpen, setUtmOpen] = useState(false);
 
   const { data: clients } = useClients();
   const { isMaster } = useUserRole();
@@ -121,16 +128,57 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
   const isLoading = loadingHotmart || loadingTmb || loadingEduzz || loadingHotmartStats || loadingTmbStats || loadingEduzzStats;
 
   const selectedClient = clients?.find((c) => c.id === selectedClientId);
-  const transactionCount = (hotmartTransactions?.length || 0) + (tmbTransactions?.length || 0) + (eduzzTransactions?.length || 0);
+
+  const hasUtmFilter = utmSource || utmMedium || utmCampaign || utmContent;
+
+  const matchesUtm = (fields: Record<string, string | null | undefined>) => {
+    if (!hasUtmFilter) return true;
+    const match = (filter: string, value: string | null | undefined) => {
+      if (!filter) return true;
+      return (value || '').toLowerCase().includes(filter.toLowerCase());
+    };
+    return (
+      match(utmSource, fields.source) &&
+      match(utmMedium, fields.medium) &&
+      match(utmCampaign, fields.campaign) &&
+      match(utmContent, fields.content)
+    );
+  };
+
+  const filteredHotmart = useMemo(() => {
+    if (!hotmartTransactions) return [];
+    if (!hasUtmFilter) return hotmartTransactions;
+    return hotmartTransactions.filter((t) =>
+      matchesUtm({ source: (t as any).sck_code })
+    );
+  }, [hotmartTransactions, utmSource, utmMedium, utmCampaign, utmContent]);
+
+  const filteredTmb = useMemo(() => {
+    if (!tmbTransactions) return [];
+    if (!hasUtmFilter) return tmbTransactions;
+    return tmbTransactions.filter((t) =>
+      matchesUtm({ source: t.utm_source, medium: t.utm_medium, campaign: t.utm_campaign, content: (t as any).utm_content })
+    );
+  }, [tmbTransactions, utmSource, utmMedium, utmCampaign, utmContent]);
+
+  const filteredEduzz = useMemo(() => {
+    if (!eduzzTransactions) return [];
+    if (!hasUtmFilter) return eduzzTransactions;
+    return eduzzTransactions.filter((t) =>
+      matchesUtm({ source: t.utm_source, medium: (t as any).utm_medium, campaign: (t as any).utm_campaign, content: (t as any).utm_content })
+    );
+  }, [eduzzTransactions, utmSource, utmMedium, utmCampaign, utmContent]);
+
+  const transactionCount = filteredHotmart.length + filteredTmb.length + filteredEduzz.length;
 
   const handleExport = async () => {
     try {
       setIsExporting(true);
 
       const exportData = {
-        hotmartTransactions: hotmartTransactions || [],
-        tmbTransactions: tmbTransactions || [],
-        eduzzTransactions: eduzzTransactions || [],
+        hotmartTransactions: filteredHotmart,
+        tmbTransactions: filteredTmb,
+        eduzzTransactions: filteredEduzz,
         hotmartStats: {
           totalBRL: hotmartStats?.totalByCurrency?.BRL || 0,
           totalUSD: hotmartStats?.totalByCurrency?.USD || 0,
@@ -299,6 +347,73 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
             )}
           </div>
 
+          {/* UTM Filters */}
+          <Collapsible open={utmOpen} onOpenChange={setUtmOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between text-sm font-medium">
+                <span className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filtros por UTM
+                  {hasUtmFilter && (
+                    <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                      Ativo
+                    </span>
+                  )}
+                </span>
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">UTM Source</Label>
+                  <Input
+                    placeholder="ex: pagina-de-vendas"
+                    value={utmSource}
+                    onChange={(e) => setUtmSource(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">UTM Medium</Label>
+                  <Input
+                    placeholder="ex: cpc"
+                    value={utmMedium}
+                    onChange={(e) => setUtmMedium(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">UTM Campaign</Label>
+                  <Input
+                    placeholder="ex: black-friday"
+                    value={utmCampaign}
+                    onChange={(e) => setUtmCampaign(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">UTM Content</Label>
+                  <Input
+                    placeholder="ex: banner-01"
+                    value={utmContent}
+                    onChange={(e) => setUtmContent(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+              {hasUtmFilter && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => { setUtmSource(''); setUtmMedium(''); setUtmCampaign(''); setUtmContent(''); }}
+                >
+                  Limpar filtros UTM
+                </Button>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+
           {/* Format Selection */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Formato</Label>
@@ -400,6 +515,11 @@ export function ExportReportDialog({ trigger, defaultClientId }: ExportReportDia
               <p>📋 Cliente: <span className="font-medium">{selectedClient.name}</span></p>
             )}
             <p>📅 Período: <span className="font-medium">{formatPeriodDisplay()}</span></p>
+            {hasUtmFilter && (
+              <p>🔍 Filtro UTM: <span className="font-medium">
+                {[utmSource && `source=${utmSource}`, utmMedium && `medium=${utmMedium}`, utmCampaign && `campaign=${utmCampaign}`, utmContent && `content=${utmContent}`].filter(Boolean).join(', ')}
+              </span></p>
+            )}
             <p>📊 Transações: <span className="font-medium">{isLoading ? '...' : transactionCount}</span></p>
             <p>📁 Formato: <span className="font-medium">{exportFormat.toUpperCase()}</span></p>
           </div>
