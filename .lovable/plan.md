@@ -1,54 +1,43 @@
 
 
-## Plano: Exportação de Leads com Filtros Avançados (UTMs, Tráfego, etc.)
+## Diagnóstico
 
-### Problema Atual
-O dialog de exportação (`ClientSideExportDialog`) só permite filtrar por **cliente**, **período** e **excluir testes**. As RPCs `count_leads_for_export` e `export_leads_batch` também só aceitam esses 3 parâmetros. Não é possível exportar, por exemplo, apenas leads orgânicos ou de uma campanha específica.
+Analisei o fluxo completo: RPCs, hooks, componentes de filtro e exportação. A infraestrutura técnica já existe e funciona — as RPCs `get_leads_paginated`, `count_leads_for_export` e `export_leads_batch` todas suportam `p_traffic_type`. O banco tem 17.718 leads orgânicos, 118.039 pagos e 584 diretos.
 
-### Solução
+**Problema identificado**: Quando o usuário abre o dialog de exportação, todos os filtros são resetados (linhas 93-109 do `ClientSideExportDialog`). Existe um botão "Usar filtros da página" mas ele é pouco visível e não é aplicado automaticamente. Isso faz parecer que não é possível exportar com os filtros ativos.
 
-**1. Atualizar as RPCs no banco de dados**
+Há também um problema de UX: os KPIs e contagens nos filtros não refletem o filtro de tráfego aplicado, pois `statsFilters` só inclui cliente e período — não inclui traffic type, UTMs, etc.
 
-Criar uma migration que altere `count_leads_for_export` e `export_leads_batch` para aceitar parâmetros adicionais:
-- `p_source` (fonte)
-- `p_utm_source`, `p_utm_medium`, `p_utm_campaign`, `p_utm_content`, `p_utm_term`
-- `p_traffic_type` (paid/organic/direct)
-- `p_country`
-- `p_page_url`
-- `p_search` (busca por email/nome)
+## Plano
 
-Todos opcionais (NULL = sem filtro).
+### 1. Auto-aplicar filtros da página ao abrir o dialog de exportação
 
-**2. Atualizar o hook `useClientSideExport`**
+No `ClientSideExportDialog`, quando o dialog abrir e houver `activeFilters` com valores, aplicar automaticamente esses filtros em vez de resetar tudo. Remover a necessidade de clicar em "Usar filtros da página".
 
-Expandir a interface `ExportFilters` para incluir os novos campos e passá-los às RPCs.
+**Arquivo**: `src/components/leads/ClientSideExportDialog.tsx`
+- No `useEffect` de `open`, se `activeFilters` tiver valores, pré-preencher os estados internos do dialog
+- Manter o botão "Usar filtros da página" como fallback caso o usuário limpe e queira reaplicar
 
-**3. Atualizar o `ClientSideExportDialog`**
+### 2. Melhorar velocidade de carregamento — usar `get_lead_stats_cached`
 
-Adicionar seções de filtro no dialog:
-- **Tipo de tráfego**: Pago / Orgânico / Direto (select)
-- **Fonte** (select com opções disponíveis)
-- **UTM Source / Medium / Campaign / Content / Term** (selects)
-- **País** (select)
-- **Página** (select)
-- **Busca por email/nome** (input)
+O hook `useLeadStatsOptimized` ainda chama `get_lead_stats` diretamente. Atualizar para usar `get_lead_stats_cached` (criada na migration anterior) quando não há filtro de período, aproveitando a Materialized View.
 
-Opção de **"Usar filtros ativos da página"** que pré-preenche o dialog com os filtros que o usuário já tem aplicados na página de Leads.
+**Arquivo**: `src/hooks/useLeadStatsOptimized.ts`
+- Chamar `get_lead_stats_cached` em vez de `get_lead_stats` quando `startDate` e `endDate` forem null
 
-**4. Carregar opções de filtro**
+### 3. Atualizar stats com filtros de tráfego (opcional mas recomendado)
 
-Reutilizar os dados de `useLeadStatsOptimized` (que já retorna `bySource`, `byUtmSource`, etc.) para popular os selects do dialog, ou buscar as opções via query leve.
+Passar os filtros ativos (traffic type, source, etc.) para a query de stats, para que KPIs e contagens reflitam a visão filtrada.
 
-### Detalhes Técnicos
+**Arquivo**: `src/pages/Leads.tsx`
+- Expandir `statsFilters` para incluir os filtros ativos da página
+**Arquivo**: RPC `get_lead_stats` — adicionar parâmetros opcionais de filtro
 
-- As RPCs serão atualizadas com `CREATE OR REPLACE FUNCTION` adicionando os novos parâmetros com default NULL
-- Cada novo parâmetro adiciona uma cláusula `AND` condicional no WHERE
-- O dialog receberá as opções de filtro e filtros ativos como props opcionais
-- O resumo da exportação mostrará todos os filtros aplicados
+---
 
-### Arquivos Afetados
-- **Migration SQL**: novas versões de `count_leads_for_export` e `export_leads_batch`
-- `src/hooks/useClientSideExport.ts` — expandir `ExportFilters` e chamadas RPC
-- `src/components/leads/ClientSideExportDialog.tsx` — adicionar UI de filtros avançados
-- `src/pages/Leads.tsx` — passar filtros ativos como props ao dialog
+### Resumo de arquivos afetados
+- `src/components/leads/ClientSideExportDialog.tsx` — auto-aplicar filtros ao abrir
+- `src/hooks/useLeadStatsOptimized.ts` — usar RPC cached
+- `src/pages/Leads.tsx` — expandir statsFilters (se aprovar item 3)
+- Migration SQL — adicionar filtros à `get_lead_stats` (se aprovar item 3)
 
