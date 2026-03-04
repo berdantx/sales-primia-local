@@ -94,20 +94,35 @@ export function ClientSideExportDialog({ trigger, activeFilters, filterOptions }
     if (open) {
       reset();
       setSelectedFields([...ALL_FIELD_KEYS]);
-      // Reset advanced filters
-      setSource('all');
-      setUtmSource('all');
-      setUtmMedium('all');
-      setUtmCampaign('all');
-      setUtmContent('all');
-      setUtmTerm('all');
-      setTrafficType('all');
-      setCountry('all');
-      setPageUrl('all');
-      setSearchTerm('');
-      setShowAdvanced(false);
+      // Auto-apply page filters if any are active
+      const hasFilters = activeFilters && Object.values(activeFilters).some(v => v && v !== 'all');
+      if (hasFilters) {
+        setSource(activeFilters.source || 'all');
+        setUtmSource(activeFilters.utmSource || 'all');
+        setUtmMedium(activeFilters.utmMedium || 'all');
+        setUtmCampaign(activeFilters.utmCampaign || 'all');
+        setUtmContent(activeFilters.utmContent || 'all');
+        setUtmTerm(activeFilters.utmTerm || 'all');
+        setTrafficType(activeFilters.trafficType || 'all');
+        setCountry(activeFilters.country || 'all');
+        setPageUrl(activeFilters.pageUrl || 'all');
+        setSearchTerm(activeFilters.search || '');
+        setShowAdvanced(true);
+      } else {
+        setSource('all');
+        setUtmSource('all');
+        setUtmMedium('all');
+        setUtmCampaign('all');
+        setUtmContent('all');
+        setUtmTerm('all');
+        setTrafficType('all');
+        setCountry('all');
+        setPageUrl('all');
+        setSearchTerm('');
+        setShowAdvanced(false);
+      }
     }
-  }, [open, reset]);
+  }, [open, reset, activeFilters]);
 
   const applyPageFilters = () => {
     if (!activeFilters) return;

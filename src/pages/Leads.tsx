@@ -164,7 +164,12 @@ function Leads() {
     startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
     endDate: dateRange?.to ? endOfDay(dateRange.to) : undefined,
     clientId,
-  }), [clientId, dateRange]);
+    trafficType: trafficTypeFilter !== 'all' ? trafficTypeFilter : undefined,
+    source: sourceFilter !== 'all' ? sourceFilter : undefined,
+    utmSource: utmSourceFilter !== 'all' ? utmSourceFilter : undefined,
+    utmMedium: utmMediumFilter !== 'all' ? utmMediumFilter : undefined,
+    utmCampaign: utmCampaignFilter !== 'all' ? utmCampaignFilter : undefined,
+  }), [clientId, dateRange, trafficTypeFilter, sourceFilter, utmSourceFilter, utmMediumFilter, utmCampaignFilter]);
 
   const paginatedFilters = useMemo(() => ({
     startDate: dateRange?.from ? startOfDay(dateRange.from) : undefined,
