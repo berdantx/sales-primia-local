@@ -42,7 +42,7 @@ type PeriodFilter = '7d' | '30d' | '90d' | '365d' | 'all' | 'custom';
 function ComparativeDashboard() {
   const [period, setPeriod] = useState<PeriodFilter>('all');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
-  const [currencyView, setCurrencyView] = useState<CurrencyView>('combined');
+  const [currencyView, setCurrencyView] = useState<CurrencyView>('brl-only');
   const { clientId } = useFilter();
   const { canViewFinancials, isLoading: isLoadingFinancialAccess } = useFinancialAccess(clientId);
   const dateRange = useMemo(() => {
