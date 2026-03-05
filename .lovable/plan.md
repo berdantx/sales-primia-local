@@ -1,46 +1,53 @@
 
+Objetivo
+- Fazer o filtro de plataforma ficar realmente funcional no Dashboard: ao clicar em Eduzz/TMB/Hotmart/CIS PAY, os cards e totais devem refletir somente a plataforma selecionada (e “Todas” mantém o consolidado).
 
-## Plano: Escalar transações BVAZ para R$ 1.630.000
+Diagnóstico (causa raiz)
+- O clique do botão já está funcionando (estado `platform` muda no `FilterContext`).
+- O problema está no cálculo dos valores do Dashboard (`src/pages/Dashboard.tsx`): a receita é sempre somada com Hotmart + TMB + Eduzz + CIS PAY, independentemente da plataforma ativa.
+- Por isso parece que os botões “não funcionam”, mesmo quando a seleção visual muda.
 
-### Situação atual da BVAZ Educação
-| Plataforma | Valor atual |
-|---|---|
-| CIS PAY | R$ 210.000 |
-| TMB | R$ 23.970 |
-| Eduzz | R$ 21.766 |
-| **Total** | **R$ 255.736** |
+Plano de implementação
+1) Tornar cálculo de receita sensível à plataforma
+- Arquivo: `src/pages/Dashboard.tsx`
+- Refatorar o `useMemo` de `revenue` para usar `switch(platform)`:
+  - `all`: mantém consolidado atual.
+  - `hotmart`: usa só Hotmart (incluindo USD convertido e projeção Hotmart).
+  - `tmb`: usa só TMB.
+  - `eduzz`: usa só Eduzz (BRL + USD convertido).
+  - `cispay`: usa só CIS PAY.
+- Garantir que `confirmed`, `projected`, `hotmartBRL`, `tmbBRL`, `eduzzBRL`, `cispayBRL`, `totalUSD` fiquem coerentes com a plataforma ativa.
 
-### Metas
-- **TMB total**: R$ 900.000 → precisa de mais **R$ 876.030**
-- **Eduzz total**: R$ 730.000 → precisa de mais **R$ 708.234**
-- **Total geral**: R$ 1.630.000 + R$ 210.000 (CIS PAY) = R$ 1.840.000
+2) Propagar o cálculo corrigido para os cards principais
+- Ainda em `Dashboard.tsx`, os componentes que já consomem `revenue` passarão a responder corretamente sem mudança estrutural:
+  - “Receita Confirmada”
+  - “Receita Projetada”
+  - `StrategicRecommendationCard` (usa `totalRevenue`)
+  - `PlatformSharePieChart` (quando plataforma específica, exibe só a fatia correspondente; em “Todas”, exibe distribuição completa).
 
-### Estratégia de inserção
+3) Blindar interação dos botões de plataforma
+- Arquivo: `src/components/dashboard/PlatformFilter.tsx`
+- Adicionar `type="button"` nos botões para evitar qualquer comportamento implícito de submit em cenários com formulário.
+- (Opcional de robustez) adicionar `aria-pressed` para melhorar semântica e acessibilidade do estado ativo.
 
-**TMB (~365 transações adicionais)**
-- Produto: Mentoria Jornada Plenitude 2026 (R$ 2.397 cada)
-- 365 × R$ 2.397 = R$ 874.905 + R$ 23.970 existente = R$ 898.875
-- 1 transação extra de R$ 1.125 para fechar R$ 900.000
-- IDs sequenciais: `BVAZ-TMB-011` a `BVAZ-TMB-376`
-- Datas distribuídas entre fev-mar 2026
+4) Validação funcional (E2E manual)
+- Com mesmo cliente/período:
+  - Clicar “Todas” e anotar valores.
+  - Clicar “Eduzz” e validar que KPIs mudam para total Eduzz.
+  - Clicar “TMB” e validar que KPIs mudam para total TMB.
+  - Repetir para Hotmart e CIS PAY.
+- Confirmar que:
+  - gráfico de evolução acompanha a plataforma,
+  - pie chart acompanha a plataforma,
+  - voltar para “Todas” recompõe consolidado.
 
-**Eduzz (~200 transações adicionais)**
-- Mix de produtos com valores variados para parecer orgânico
-- Mentoria Jornada da Plenitude 2.0 (R$ 4.997), CIS Online (R$ 997), Filhos (R$ 1.997), Relacionamentos (R$ 2.497), Criação de Riqueza (R$ 3.497)
-- ~200 transações totalizando R$ 708.234 adicionais
-- IDs sequenciais: `BVAZ-EDZ-011` em diante
-- Datas distribuídas entre fev-mar 2026
+Detalhes técnicos
+- Arquivos-alvo:
+  - `src/pages/Dashboard.tsx` (principal correção)
+  - `src/components/dashboard/PlatformFilter.tsx` (robustez de clique)
+- Sem mudanças de banco, autenticação ou backend.
+- Sem quebrar a lógica existente de filtros por período/cliente.
+- Mantemos a regra atual de “empty state” global para não esconder dashboard quando só uma plataforma tem dados.
 
-### Implementação técnica
-- Usar `generate_series` no SQL para criar as transações em lote (não linha a linha)
-- Nomes de compradores variados extraídos das transações reais existentes
-- Todas vinculadas ao `client_id` BVAZ e `user_id` master
-
-### Resultado final esperado
-| Plataforma | Transações | Valor |
-|---|---|---|
-| TMB | ~376 | R$ 900.000 |
-| Eduzz | ~210 | R$ 730.000 |
-| CIS PAY | 6 | R$ 210.000 |
-| **Total** | **~592** | **R$ 1.840.000** |
-
+Resultado esperado
+- Os botões de plataforma passam a ser percebidos como funcionais porque os valores vendidos exibidos (cards e totais) mudam de fato conforme a plataforma selecionada.
