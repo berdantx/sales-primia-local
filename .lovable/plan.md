@@ -1,25 +1,26 @@
 
+## Plano: Exibir dados CIS PAY no painel principal
 
-## Plano: Importar 6 transações CIS PAY para BVAZ Educação
+O problema é que o `Dashboard.tsx` não inclui CIS PAY nos cálculos de receita nem no gráfico de distribuição por plataforma. Existem 3 pontos a corrigir:
 
-A planilha contém 6 vendas do programa MENBVAZ (Mentoria Bruno Vaz), todas aprovadas, cada uma com valor de BRL 35.000,00, totalizando BRL 210.000,00.
+### 1. Dashboard.tsx — Incluir cispayStats na receita
 
-### Dados a inserir
+- **Linha 65**: Adicionar `cispayStats` na destructuring de `useCombinedStats`
+- **Linhas 80-89**: Adicionar `cispayBRL` na soma de `confirmed` e `projected`, e retorná-lo no objeto `revenue`
+- **Linha 89**: Incluir `cispayBRL` no return do useMemo
 
-| ID Venda | Cliente | Email | Valor | Data Aprovação |
-|---|---|---|---|---|
-| 006V200000gUDPS | Dulcineia Mariano Neto | financeirobahia@febracis.com.br | 35.000 | 10/02/2026 |
-| 006V200000gFKHb | José Sidney Carvalho Costa Neto | josesidney@febracis.com.br | 35.000 | 11/02/2026 |
-| 006V200000gFUH0 | Vânia Stoco Tome | vaniatome@febracis.com.br | 35.000 | 11/02/2026 |
-| 006V200000gFWnO | Priscila Cosentino Ferngren | priscila@pricosentino.com | 35.000 | 11/02/2026 |
-| 006V200000gFYVp | Tiago Pacheco Zanini | tiagozanini@febracis.com.br | 35.000 | 11/02/2026 |
-| 006V200000gFYXR | Emerson Cerbino Doblas | emersondoblas@gmail.com | 35.000 | 11/02/2026 |
+### 2. Dashboard.tsx — PlatformSharePieChart
 
-### Ação
+- **Linha 397**: Adicionar condição `revenue.cispayBRL > 0`
+- **Linha 398-402**: Passar `cispayTotal={revenue.cispayBRL}` ao componente
 
-Inserir diretamente na tabela `cispay_transactions` via migração SQL, associando ao cliente BVAZ Educação (`48b4bd48-a02b-4c5b-bc4f-1669328acb4c`) e ao usuário `23c1ff38-9996-4b70-a8bb-165b0ac18797`.
+### 3. PlatformSharePieChart — Aceitar CIS PAY
 
-Campos: sale_id, buyer_name, buyer_email, buyer_phone, sale_value (35000), currency (BRL), sale_date, product, product_code (MENBVAZ), turma (2026 - MENBVAZ01), promotion, unit (CIS TREINAMENTO), enrollment_type (Matrícula), status (approved), source (cispay).
+- Adicionar `cispayTotal` na interface de props
+- Adicionar `{ name: 'CIS PAY', value: cispayTotal }` ao array `data`
+- Incluir `cispayTotal` no cálculo de `total`
+- Adicionar cor `'CIS PAY': 'hsl(30, 50%, 50%)'` no objeto COLORS
 
-Também corrigir o erro TS1381 persistente em Upload.tsx (se necessário, fazer um rebuild trigger mínimo).
+### Resultado esperado
 
+As 6 transações CIS PAY (BRL 210.000) do cliente BVAZ Educação aparecerão nos KPIs de receita, no gráfico de evolução (via `salesByDate` que já funciona no `useCombinedStats`) e no gráfico de pizza de plataformas.
