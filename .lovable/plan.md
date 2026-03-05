@@ -1,26 +1,25 @@
 
-## Plano: Exibir dados CIS PAY no painel principal
 
-O problema é que o `Dashboard.tsx` não inclui CIS PAY nos cálculos de receita nem no gráfico de distribuição por plataforma. Existem 3 pontos a corrigir:
+## Plano: Copiar transações reais para a conta BVAZ Educação
 
-### 1. Dashboard.tsx — Incluir cispayStats na receita
+### Contexto dos dados disponíveis
 
-- **Linha 65**: Adicionar `cispayStats` na destructuring de `useCombinedStats`
-- **Linhas 80-89**: Adicionar `cispayBRL` na soma de `confirmed` e `projected`, e retorná-lo no objeto `revenue`
-- **Linha 89**: Incluir `cispayBRL` no return do useMemo
+Os clientes Paulo Vieira e Camila Vieira - 2026 possuem vendas em **TMB** e **Eduzz** (sem Hotmart). Os produtos com taxa de coprodução configurada (30%) para BVAZ são:
 
-### 2. Dashboard.tsx — PlatformSharePieChart
+**Camila Vieira - 2026:** Mentoria Jornada Plenitude 2026, Mentoria Jornada da Plenitude 2.0., Filhos, Relacionamentos, Criação de Riqueza, VIP Diamond, Viva á sua real Identidade (LOTE 0 e 1)
 
-- **Linha 397**: Adicionar condição `revenue.cispayBRL > 0`
-- **Linha 398-402**: Passar `cispayTotal={revenue.cispayBRL}` ao componente
+**Paulo Vieira:** CIS Online, CIS Online Plataforma Streaming FEBRACIS, Método CIS Online
 
-### 3. PlatformSharePieChart — Aceitar CIS PAY
+### O que será feito
 
-- Adicionar `cispayTotal` na interface de props
-- Adicionar `{ name: 'CIS PAY', value: cispayTotal }` ao array `data`
-- Incluir `cispayTotal` no cálculo de `total`
-- Adicionar cor `'CIS PAY': 'hsl(30, 50%, 50%)'` no objeto COLORS
+Inserir **20 transações reais** (10 TMB + 10 Eduzz) na conta BVAZ Educação (`48b4bd48-a02b-4c5b-bc4f-1669328acb4c`), copiando dados dos últimos dias (fevereiro/março 2026):
+
+1. **10 transações TMB** — Mentoria Jornada Plenitude 2026 (R$ 2.397 cada = R$ 23.970)
+2. **10 transações Eduzz** — Mix de produtos: Mentoria Jornada da Plenitude 2.0., Filhos, CIS Online, Relacionamentos (~R$ 22.000+)
+
+Cada transação terá um `order_id`/`sale_id` prefixado com `BVAZ-` para evitar conflitos com os registros originais. O `user_id` será o do master (`23c1ff38-9996-4b70-a8bb-165b0ac18797`), mantendo nomes/emails reais dos compradores.
 
 ### Resultado esperado
 
-As 6 transações CIS PAY (BRL 210.000) do cliente BVAZ Educação aparecerão nos KPIs de receita, no gráfico de evolução (via `salesByDate` que já funciona no `useCombinedStats`) e no gráfico de pizza de plataformas.
+O dashboard da BVAZ Educação exibirá ~R$ 256.000 em receita total (R$ 210k CIS PAY + ~R$ 46k TMB/Eduzz), com dados visíveis nos KPIs, gráfico de evolução e pizza de plataformas.
+
