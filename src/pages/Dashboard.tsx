@@ -203,7 +203,7 @@ export default function Dashboard() {
     );
   }
 
-  const hasData = stats && stats.totalTransactions > 0;
+  const hasData = ((hotmartStats?.totalTransactions || 0) + (tmbStats?.totalTransactions || 0) + (eduzzStats?.totalTransactions || 0) + (cispayStats?.totalTransactions || 0)) > 0;
 
   return (
     <MainLayout>

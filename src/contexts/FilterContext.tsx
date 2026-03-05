@@ -32,7 +32,7 @@ function setStoredClientId(clientId: string | null): void {
 function getStoredPlatform(): PlatformType {
   try {
     const stored = localStorage.getItem(PLATFORM_STORAGE_KEY);
-    if (stored === 'hotmart' || stored === 'tmb' || stored === 'eduzz' || stored === 'all') {
+    if (stored === 'hotmart' || stored === 'tmb' || stored === 'eduzz' || stored === 'cispay' || stored === 'all') {
       return stored;
     }
     return 'all';
