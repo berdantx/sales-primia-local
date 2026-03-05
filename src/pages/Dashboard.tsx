@@ -62,7 +62,7 @@ export default function Dashboard() {
     clientId,
   }), [dateRange, billingType, paymentMethod, sckCode, product, clientId]);
 
-  const { stats, salesByDate, isLoading, hotmartStats, tmbStats, eduzzStats } = useCombinedStats(filters, platform);
+  const { stats, salesByDate, isLoading, hotmartStats, tmbStats, eduzzStats, cispayStats } = useCombinedStats(filters, platform);
   const { canViewFinancials, isLoading: isLoadingAccess } = useFinancialAccess(clientId);
   const { data: dollarRate } = useDollarRate();
   const { data: leadCount } = useLeadCount({ startDate: dateRange.startDate, endDate: dateRange.endDate, clientId });
@@ -80,14 +80,15 @@ export default function Dashboard() {
     const tmbBRL = tmbStats?.totalBRL || 0;
     const eduzzBRL = eduzzStats?.totalBRL || 0;
     const eduzzUSD = eduzzStats?.totalUSD || 0;
+    const cispayBRL = cispayStats?.totalBRL || 0;
     const totalUSD = hotmartUSD + eduzzUSD;
     const usdConverted = dollarRate ? totalUSD * dollarRate.rate : 0;
 
-    const confirmed = hotmartRealBRL + tmbBRL + eduzzBRL + usdConverted;
-    const projected = hotmartProjectedBRL + tmbBRL + eduzzBRL + usdConverted;
+    const confirmed = hotmartRealBRL + tmbBRL + eduzzBRL + cispayBRL + usdConverted;
+    const projected = hotmartProjectedBRL + tmbBRL + eduzzBRL + cispayBRL + usdConverted;
 
-    return { confirmed, projected, hotmartBRL: hotmartRealBRL + (dollarRate ? hotmartUSD * dollarRate.rate : 0), tmbBRL, eduzzBRL: eduzzBRL + (dollarRate ? eduzzUSD * dollarRate.rate : 0), totalUSD };
-  }, [projectionStats, hotmartStats, tmbStats, eduzzStats, dollarRate]);
+    return { confirmed, projected, hotmartBRL: hotmartRealBRL + (dollarRate ? hotmartUSD * dollarRate.rate : 0), tmbBRL, eduzzBRL: eduzzBRL + (dollarRate ? eduzzUSD * dollarRate.rate : 0), cispayBRL, totalUSD };
+  }, [projectionStats, hotmartStats, tmbStats, eduzzStats, cispayStats, dollarRate]);
 
   // Goal progress
   const goalProgressPercent = useMemo(() => {
@@ -394,11 +395,12 @@ export default function Dashboard() {
                   />
                 </div>
                 <div className="lg:col-span-1">
-                  {(revenue.hotmartBRL > 0 || revenue.tmbBRL > 0 || revenue.eduzzBRL > 0) && (
+                  {(revenue.hotmartBRL > 0 || revenue.tmbBRL > 0 || revenue.eduzzBRL > 0 || revenue.cispayBRL > 0) && (
                     <PlatformSharePieChart
                       hotmartTotal={revenue.hotmartBRL}
                       tmbTotal={revenue.tmbBRL}
                       eduzzTotal={revenue.eduzzBRL}
+                      cispayTotal={revenue.cispayBRL}
                     />
                   )}
                 </div>
