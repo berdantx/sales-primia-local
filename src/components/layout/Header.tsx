@@ -11,7 +11,7 @@ export function Header() {
   const { data: dollarRate, isLoading: isLoadingRate, isError: isRateError } = useDollarRate();
   const { platform } = useFilter();
 
-  const platformLabel = platform === 'all' ? 'Todas' : platform === 'hotmart' ? 'Hotmart' : platform === 'tmb' ? 'TMB' : 'Eduzz';
+  const platformLabel = platform === 'all' ? 'Todas' : platform === 'hotmart' ? 'Hotmart' : platform === 'tmb' ? 'TMB' : platform === 'cispay' ? 'CIS PAY' : 'Eduzz';
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

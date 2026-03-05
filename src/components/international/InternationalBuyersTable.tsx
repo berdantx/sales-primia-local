@@ -23,7 +23,7 @@ interface Buyer {
   value: number;
   currency: string;
   date: string | null;
-  platform: 'hotmart' | 'tmb' | 'eduzz';
+  platform: 'hotmart' | 'tmb' | 'eduzz' | 'cispay';
 }
 
 const PAGE_SIZE = 15;

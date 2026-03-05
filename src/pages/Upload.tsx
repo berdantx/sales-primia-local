@@ -643,8 +643,7 @@ export default function UploadPage() {
                   </div>
                 </div>
               )}
-
-
+              {step === 'importing' && (
                 <ImportProgress
                   current={importProgress.current}
                   total={importProgress.total}
