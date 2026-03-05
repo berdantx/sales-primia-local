@@ -221,3 +221,18 @@ export const EDUZZ_FIELD_DEFINITIONS = [
   { key: 'paymentMethod', label: 'Forma de Pagamento', required: false },
   { key: 'paymentForm', label: 'Método de Pagamento', required: false },
 ];
+
+export const CISPAY_FIELD_DEFINITIONS = [
+  { key: 'saleId', label: 'ID da Venda', required: true },
+  { key: 'product', label: 'Nome da Venda (Produto)', required: false },
+  { key: 'productCode', label: 'Código do Curso', required: false },
+  { key: 'buyerName', label: 'Nome do Cliente', required: false },
+  { key: 'buyerEmail', label: 'E-mail do Cliente', required: false },
+  { key: 'buyerPhone', label: 'Celular', required: false },
+  { key: 'saleValue', label: 'Valor', required: true },
+  { key: 'saleDate', label: 'Data de Aprovação', required: false },
+  { key: 'turma', label: 'Turma', required: false },
+  { key: 'promotion', label: 'Promoção', required: false },
+  { key: 'unit', label: 'Unidade', required: false },
+  { key: 'enrollmentType', label: 'Tipo de Matrícula', required: false },
+];

@@ -39,6 +39,7 @@ const CorsDiagnostics = lazy(() => import("./pages/CorsDiagnostics"));
 const Coproduction = lazy(() => import("./pages/Coproduction"));
 const InternationalSales = lazy(() => import("./pages/InternationalSales"));
 const IGPLExplainer = lazy(() => import("./pages/IGPLExplainer"));
+const CispayTransactions = lazy(() => import("./pages/CispayTransactions"));
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
                 <Route path="/tmb-cancellations" element={<TmbCancellations />} />
                 <Route path="/eduzz-cancellations" element={<EduzzCancellations />} />
                 <Route path="/eduzz-transactions" element={<EduzzTransactions />} />
+                <Route path="/cispay-transactions" element={<CispayTransactions />} />
                 <Route path="/comparative" element={
                   <ProtectedRoute allowedRoles={['master', 'admin']}>
                     <ComparativeDashboard />

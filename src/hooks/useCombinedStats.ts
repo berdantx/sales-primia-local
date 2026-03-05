@@ -15,7 +15,7 @@ import {
   useEduzzSalesByDateOptimized 
 } from '@/hooks/useEduzzTransactionStatsOptimized';
 
-export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz';
+export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz' | 'cispay';
 
 export interface CombinedFilters {
   startDate?: Date;

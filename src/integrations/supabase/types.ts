@@ -116,6 +116,90 @@ export type Database = {
         }
         Relationships: []
       }
+      cispay_transactions: {
+        Row: {
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_phone: string | null
+          client_id: string | null
+          created_at: string | null
+          currency: string | null
+          enrollment_type: string | null
+          id: string
+          import_id: string | null
+          product: string | null
+          product_code: string | null
+          promotion: string | null
+          sale_date: string | null
+          sale_id: string
+          sale_value: number
+          source: string | null
+          status: string
+          turma: string | null
+          unit: string | null
+          user_id: string
+        }
+        Insert: {
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          enrollment_type?: string | null
+          id?: string
+          import_id?: string | null
+          product?: string | null
+          product_code?: string | null
+          promotion?: string | null
+          sale_date?: string | null
+          sale_id: string
+          sale_value?: number
+          source?: string | null
+          status?: string
+          turma?: string | null
+          unit?: string | null
+          user_id: string
+        }
+        Update: {
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          enrollment_type?: string | null
+          id?: string
+          import_id?: string | null
+          product?: string | null
+          product_code?: string | null
+          promotion?: string | null
+          sale_date?: string | null
+          sale_id?: string
+          sale_value?: number
+          source?: string | null
+          status?: string
+          turma?: string | null
+          unit?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cispay_transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cispay_transactions_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "imports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_coproducers: {
         Row: {
           client_id: string
@@ -1950,6 +2034,40 @@ export type Database = {
           p_mode?: string
           p_start_date?: string
           p_top_item_names?: string[]
+        }
+        Returns: Json
+      }
+      get_cispay_filter_options: {
+        Args: { p_client_id?: string }
+        Returns: Json
+      }
+      get_cispay_sales_by_date: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
+      get_cispay_top_customers: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_limit?: number
+          p_start_date?: string
+        }
+        Returns: {
+          email: string
+          name: string
+          total_purchases: number
+          total_value: number
+        }[]
+      }
+      get_cispay_transaction_stats: {
+        Args: {
+          p_client_id?: string
+          p_end_date?: string
+          p_start_date?: string
         }
         Returns: Json
       }
