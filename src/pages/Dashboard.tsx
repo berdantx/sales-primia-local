@@ -81,14 +81,35 @@ export default function Dashboard() {
     const eduzzBRL = eduzzStats?.totalBRL || 0;
     const eduzzUSD = eduzzStats?.totalUSD || 0;
     const cispayBRL = cispayStats?.totalBRL || 0;
-    const totalUSD = hotmartUSD + eduzzUSD;
-    const usdConverted = dollarRate ? totalUSD * dollarRate.rate : 0;
+    const rate = dollarRate?.rate || 0;
 
-    const confirmed = hotmartRealBRL + tmbBRL + eduzzBRL + cispayBRL + usdConverted;
-    const projected = hotmartProjectedBRL + tmbBRL + eduzzBRL + cispayBRL + usdConverted;
-
-    return { confirmed, projected, hotmartBRL: hotmartRealBRL + (dollarRate ? hotmartUSD * dollarRate.rate : 0), tmbBRL, eduzzBRL: eduzzBRL + (dollarRate ? eduzzUSD * dollarRate.rate : 0), cispayBRL, totalUSD };
-  }, [projectionStats, hotmartStats, tmbStats, eduzzStats, cispayStats, dollarRate]);
+    switch (platform) {
+      case 'hotmart': {
+        const usd = hotmartUSD;
+        const usdConv = rate ? usd * rate : 0;
+        const confirmed = hotmartRealBRL + usdConv;
+        const projected = hotmartProjectedBRL + usdConv;
+        return { confirmed, projected, hotmartBRL: confirmed, tmbBRL: 0, eduzzBRL: 0, cispayBRL: 0, totalUSD: usd };
+      }
+      case 'tmb':
+        return { confirmed: tmbBRL, projected: tmbBRL, hotmartBRL: 0, tmbBRL, eduzzBRL: 0, cispayBRL: 0, totalUSD: 0 };
+      case 'eduzz': {
+        const usd = eduzzUSD;
+        const usdConv = rate ? usd * rate : 0;
+        const confirmed = eduzzBRL + usdConv;
+        return { confirmed, projected: confirmed, hotmartBRL: 0, tmbBRL: 0, eduzzBRL: confirmed, cispayBRL: 0, totalUSD: usd };
+      }
+      case 'cispay':
+        return { confirmed: cispayBRL, projected: cispayBRL, hotmartBRL: 0, tmbBRL: 0, eduzzBRL: 0, cispayBRL, totalUSD: 0 };
+      default: {
+        const totalUSD = hotmartUSD + eduzzUSD;
+        const usdConverted = rate ? totalUSD * rate : 0;
+        const confirmed = hotmartRealBRL + tmbBRL + eduzzBRL + cispayBRL + usdConverted;
+        const projected = hotmartProjectedBRL + tmbBRL + eduzzBRL + cispayBRL + usdConverted;
+        return { confirmed, projected, hotmartBRL: hotmartRealBRL + (rate ? hotmartUSD * rate : 0), tmbBRL, eduzzBRL: eduzzBRL + (rate ? eduzzUSD * rate : 0), cispayBRL, totalUSD };
+      }
+    }
+  }, [projectionStats, hotmartStats, tmbStats, eduzzStats, cispayStats, dollarRate, platform]);
 
   // Goal progress
   const goalProgressPercent = useMemo(() => {
