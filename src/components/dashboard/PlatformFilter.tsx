@@ -24,8 +24,10 @@ export function PlatformFilter({ value, onChange }: PlatformFilterProps) {
         
         return (
           <button
+            type="button"
             key={platform.value}
             onClick={() => onChange(platform.value)}
+            aria-pressed={isActive}
             className={cn(
               'flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap',
               isActive
