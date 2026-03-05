@@ -71,7 +71,7 @@ export function DuplicateReviewDialog({
   const mergeableDuplicates = duplicates.filter(d => d.emptyFieldsInExisting.length > 0);
   const totalFieldsToFill = mergeableDuplicates.reduce((sum, d) => sum + d.emptyFieldsInExisting.length, 0);
 
-  const platformLabel = platform === 'hotmart' ? 'Hotmart' : platform === 'tmb' ? 'TMB' : 'Eduzz';
+  const platformLabel = platform === 'hotmart' ? 'Hotmart' : platform === 'tmb' ? 'TMB' : platform === 'cispay' ? 'CIS PAY' : 'Eduzz';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

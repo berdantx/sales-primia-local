@@ -14,6 +14,11 @@ import {
   useEduzzTopCustomersOptimized, 
   useEduzzSalesByDateOptimized 
 } from '@/hooks/useEduzzTransactionStatsOptimized';
+import { 
+  useCispayTransactionStatsOptimized, 
+  useCispayTopCustomersOptimized, 
+  useCispaySalesByDateOptimized 
+} from '@/hooks/useCispayTransactionStatsOptimized';
 
 export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz' | 'cispay';
 
@@ -59,9 +64,20 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
     platform !== 'hotmart' && platform !== 'tmb' ? eduzzFilters : { startDate: undefined, endDate: undefined }
   );
 
+  // CIS PAY stats
+  const cispayFilters = { startDate: filters.startDate, endDate: filters.endDate, clientId: filters.clientId };
+  const { data: cispayStats, isLoading: cispayLoading } = useCispayTransactionStatsOptimized(cispayFilters);
+  const { data: cispayTopCustomers, isLoading: cispayCustomersLoading } = useCispayTopCustomersOptimized(
+    platform === 'all' || platform === 'cispay' ? cispayFilters : { startDate: undefined, endDate: undefined }
+  );
+  const { data: cispaySalesByDate, isLoading: cispaySalesLoading } = useCispaySalesByDateOptimized(
+    platform === 'all' || platform === 'cispay' ? cispayFilters : { startDate: undefined, endDate: undefined }
+  );
+
   const isLoading = hotmartLoading || hotmartCustomersLoading || hotmartSalesLoading ||
                     tmbLoading || tmbCustomersLoading || tmbSalesLoading ||
-                    eduzzLoading || eduzzCustomersLoading || eduzzSalesLoading;
+                    eduzzLoading || eduzzCustomersLoading || eduzzSalesLoading ||
+                    cispayLoading || cispayCustomersLoading || cispaySalesLoading;
 
   // Combined stats based on platform
   const stats = useMemo(() => {
@@ -92,38 +108,51 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
       };
     }
 
+    if (platform === 'cispay') {
+      return {
+        totalByCurrency: { BRL: cispayStats?.totalBRL || 0 },
+        totalByCountry: {},
+        totalByCountryCurrency: {},
+        totalTransactions: cispayStats?.totalTransactions || 0,
+        transactionsWithoutDate: cispayStats?.transactionsWithoutDate || 0,
+      };
+    }
+
     // Combined 'all'
     const hotmartBRL = hotmartStats?.totalByCurrency?.['BRL'] || 0;
     const hotmartUSD = hotmartStats?.totalByCurrency?.['USD'] || 0;
     const tmbBRL = tmbStats?.totalBRL || 0;
     const eduzzBRL = eduzzStats?.totalBRL || 0;
     const eduzzUSD = eduzzStats?.totalUSD || 0;
+    const cispayBRL = cispayStats?.totalBRL || 0;
 
     const combinedUSD = hotmartUSD + eduzzUSD;
 
     return {
       totalByCurrency: {
-        BRL: hotmartBRL + tmbBRL + eduzzBRL,
+        BRL: hotmartBRL + tmbBRL + eduzzBRL + cispayBRL,
         ...(combinedUSD > 0 ? { USD: combinedUSD } : {}),
       },
       totalByCountry: hotmartStats?.totalByCountry || {},
       totalByCountryCurrency: hotmartStats?.totalByCountryCurrency || {},
-      totalTransactions: (hotmartStats?.totalTransactions || 0) + (tmbStats?.totalTransactions || 0) + (eduzzStats?.totalTransactions || 0),
-      transactionsWithoutDate: (hotmartStats?.transactionsWithoutDate || 0) + (tmbStats?.transactionsWithoutDate || 0) + (eduzzStats?.transactionsWithoutDate || 0),
+      totalTransactions: (hotmartStats?.totalTransactions || 0) + (tmbStats?.totalTransactions || 0) + (eduzzStats?.totalTransactions || 0) + (cispayStats?.totalTransactions || 0),
+      transactionsWithoutDate: (hotmartStats?.transactionsWithoutDate || 0) + (tmbStats?.transactionsWithoutDate || 0) + (eduzzStats?.transactionsWithoutDate || 0) + (cispayStats?.transactionsWithoutDate || 0),
     };
-  }, [platform, hotmartStats, tmbStats, eduzzStats]);
+  }, [platform, hotmartStats, tmbStats, eduzzStats, cispayStats]);
 
   // Combined top customers
   const topCustomers = useMemo(() => {
     if (platform === 'hotmart') return hotmartTopCustomers || [];
     if (platform === 'tmb') return tmbTopCustomers || [];
     if (platform === 'eduzz') return eduzzTopCustomers || [];
+    if (platform === 'cispay') return cispayTopCustomers || [];
 
     // Merge and sort by totalValue
     const allCustomers = [
       ...(hotmartTopCustomers || []),
       ...(tmbTopCustomers || []),
       ...(eduzzTopCustomers || []),
+      ...(cispayTopCustomers || []),
     ];
 
     // Group by email and sum values
@@ -144,13 +173,14 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
     return Array.from(customerMap.values())
       .sort((a, b) => b.totalValue - a.totalValue)
       .slice(0, 10);
-  }, [platform, hotmartTopCustomers, tmbTopCustomers, eduzzTopCustomers]);
+  }, [platform, hotmartTopCustomers, tmbTopCustomers, eduzzTopCustomers, cispayTopCustomers]);
 
   // Combined sales by date
   const salesByDate = useMemo(() => {
     if (platform === 'hotmart') return hotmartSalesByDate || {};
     if (platform === 'tmb') return tmbSalesByDate || {};
     if (platform === 'eduzz') return eduzzSalesByDate || {};
+    if (platform === 'cispay') return cispaySalesByDate || {};
 
     // Merge dates
     const combined: Record<string, Record<string, number>> = {};
@@ -162,25 +192,27 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
 
     // Add TMB data (BRL only)
     Object.entries(tmbSalesByDate || {}).forEach(([date, currencies]) => {
-      if (!combined[date]) {
-        combined[date] = {};
-      }
+      if (!combined[date]) combined[date] = {};
       combined[date].BRL = (combined[date].BRL || 0) + (currencies.BRL || 0);
     });
 
     // Add Eduzz data (BRL and USD)
     Object.entries(eduzzSalesByDate || {}).forEach(([date, currencies]) => {
-      if (!combined[date]) {
-        combined[date] = {};
-      }
+      if (!combined[date]) combined[date] = {};
       combined[date].BRL = (combined[date].BRL || 0) + (currencies.BRL || 0);
       if (currencies.USD) {
         combined[date].USD = (combined[date].USD || 0) + currencies.USD;
       }
     });
 
+    // Add CIS PAY data (BRL only)
+    Object.entries(cispaySalesByDate || {}).forEach(([date, currencies]) => {
+      if (!combined[date]) combined[date] = {};
+      combined[date].BRL = (combined[date].BRL || 0) + (currencies.BRL || 0);
+    });
+
     return combined;
-  }, [platform, hotmartSalesByDate, tmbSalesByDate, eduzzSalesByDate]);
+  }, [platform, hotmartSalesByDate, tmbSalesByDate, eduzzSalesByDate, cispaySalesByDate]);
 
   const currencies = useMemo(() => {
     if (!stats?.totalByCurrency) return [];
@@ -197,5 +229,6 @@ export function useCombinedStats(filters: CombinedFilters, platform: PlatformTyp
     hotmartStats,
     tmbStats,
     eduzzStats,
+    cispayStats,
   };
 }

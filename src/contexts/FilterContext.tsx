@@ -3,7 +3,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import { useClients } from '@/hooks/useClients';
 import { useUserRole } from '@/hooks/useUserRole';
 
-export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz';
+export type PlatformType = 'all' | 'hotmart' | 'tmb' | 'eduzz' | 'cispay';
 
 // localStorage persistence for client and platform selection
 const CLIENT_ID_STORAGE_KEY = 'selected_client_id';

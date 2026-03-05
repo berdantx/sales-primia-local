@@ -39,7 +39,7 @@ interface CustomerDetailDialogProps {
 interface UnifiedTransaction {
   id: string;
   orderId: string | null;
-  platform: 'hotmart' | 'tmb' | 'eduzz';
+  platform: 'hotmart' | 'tmb' | 'eduzz' | 'cispay';
   product: string | null;
   value: number;
   currency: string;

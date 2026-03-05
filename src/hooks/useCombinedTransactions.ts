@@ -2,11 +2,12 @@ import { useMemo } from 'react';
 import { useTransactions, Transaction } from './useTransactions';
 import { useTmbTransactions, TmbTransaction } from './useTmbTransactions';
 import { useEduzzTransactions, EduzzTransaction } from './useEduzzTransactions';
+import { useCispayTransactions, CispayTransaction } from './useCispayTransactions';
 import { PlatformType } from './useCombinedStats';
 
 export interface UnifiedTransaction {
   id: string;
-  platform: 'hotmart' | 'tmb' | 'eduzz';
+  platform: 'hotmart' | 'tmb' | 'eduzz' | 'cispay';
   product: string | null;
   buyer_name: string | null;
   buyer_email: string | null;
@@ -28,34 +29,45 @@ export interface CombinedTransactionFilters {
 export function useCombinedTransactions(filters?: CombinedTransactionFilters) {
   const platform = filters?.platform || 'all';
   
+  const shouldFetch = (p: PlatformType) => platform === 'all' || platform === p;
+
   // Fetch Hotmart transactions
   const { data: hotmartData, isLoading: hotmartLoading } = useTransactions(
-    platform === 'tmb' || platform === 'eduzz' ? undefined : {
+    shouldFetch('hotmart') ? {
       startDate: filters?.startDate,
       endDate: filters?.endDate,
       clientId: filters?.clientId,
-    }
+    } : undefined
   );
 
   // Fetch TMB transactions
   const { data: tmbData, isLoading: tmbLoading } = useTmbTransactions(
-    platform === 'hotmart' || platform === 'eduzz' ? undefined : {
+    shouldFetch('tmb') ? {
       startDate: filters?.startDate,
       endDate: filters?.endDate,
       clientId: filters?.clientId,
-    }
+    } : undefined
   );
 
   // Fetch Eduzz transactions
   const { data: eduzzData, isLoading: eduzzLoading } = useEduzzTransactions(
-    platform === 'hotmart' || platform === 'tmb' ? undefined : {
+    shouldFetch('eduzz') ? {
       startDate: filters?.startDate,
       endDate: filters?.endDate,
       clientId: filters?.clientId,
-    }
+    } : undefined
   );
 
-  const isLoading = hotmartLoading || tmbLoading || eduzzLoading;
+  // Fetch CIS PAY transactions
+  const { data: cispayData, isLoading: cispayLoading } = useCispayTransactions(
+    shouldFetch('cispay') ? {
+      startDate: filters?.startDate,
+      endDate: filters?.endDate,
+      clientId: filters?.clientId,
+    } : undefined
+  );
+
+  const isLoading = hotmartLoading || tmbLoading || eduzzLoading || cispayLoading;
 
   // Unify transactions into a common format
   const transactions = useMemo(() => {
@@ -118,6 +130,25 @@ export function useCombinedTransactions(filters?: CombinedTransactionFilters) {
       });
     }
 
+    // Add CIS PAY transactions
+    if (platform === 'all' || platform === 'cispay') {
+      (cispayData || []).forEach((t: CispayTransaction) => {
+        unified.push({
+          id: t.id,
+          platform: 'cispay' as const,
+          product: t.product,
+          buyer_name: t.buyer_name,
+          buyer_email: t.buyer_email,
+          value: t.sale_value,
+          currency: t.currency || 'BRL',
+          date: t.sale_date,
+          utm_campaign: null,
+          sck_code: null,
+          country: null,
+        });
+      });
+    }
+
     // Sort by date descending
     return unified.sort((a, b) => {
       if (!a.date && !b.date) return 0;
@@ -125,7 +156,7 @@ export function useCombinedTransactions(filters?: CombinedTransactionFilters) {
       if (!b.date) return -1;
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
-  }, [hotmartData, tmbData, eduzzData, platform]);
+  }, [hotmartData, tmbData, eduzzData, cispayData, platform]);
 
   // Calculate sales by day
   const salesByDay = useMemo(() => {
@@ -151,5 +182,6 @@ export function useCombinedTransactions(filters?: CombinedTransactionFilters) {
     hotmartCount: hotmartData?.length || 0,
     tmbCount: tmbData?.length || 0,
     eduzzCount: eduzzData?.length || 0,
+    cispayCount: cispayData?.length || 0,
   };
 }
