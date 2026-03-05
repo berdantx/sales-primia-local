@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { HotmartTransaction } from '@/lib/parsers/hotmartParser';
 import { TmbTransaction } from '@/lib/parsers/tmbParser';
 import { EduzzTransaction } from '@/lib/parsers/eduzzParser';
+import { CispayTransaction } from '@/lib/parsers/cispayParser';
 import { DuplicateMatch } from '@/components/upload/DuplicateReviewDialog';
 
 const BATCH_SIZE = 20;
@@ -67,6 +68,11 @@ const MERGEABLE_EDUZZ_FIELDS = [
   'utm_source', 'utm_medium', 'utm_campaign', 'utm_content',
 ];
 
+const MERGEABLE_CISPAY_FIELDS = [
+  'buyer_name', 'buyer_email', 'buyer_phone', 'product', 'product_code',
+  'turma', 'promotion', 'unit', 'enrollment_type',
+];
+
 async function fetchExistingHotmartRecords(
   userId: string,
   clientId: string | null
@@ -112,6 +118,23 @@ async function fetchExistingEduzzRecords(
   const { data } = await query;
   const map = new Map<string, Record<string, unknown>>();
   data?.forEach(r => map.set(r.sale_id, r as unknown as Record<string, unknown>));
+  return map;
+}
+
+async function fetchExistingCispayRecords(
+  userId: string,
+  clientId: string | null
+): Promise<Map<string, Record<string, unknown>>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (supabase.from as any)('cispay_transactions').select('sale_id, buyer_name, buyer_email, buyer_phone, product, product_code, turma, promotion, unit, enrollment_type');
+  if (clientId) {
+    query = query.eq('client_id', clientId);
+  } else {
+    query = query.eq('user_id', userId);
+  }
+  const { data } = await query;
+  const map = new Map<string, Record<string, unknown>>();
+  data?.forEach((r: Record<string, unknown>) => map.set(r.sale_id as string, r));
   return map;
 }
 
@@ -399,13 +422,94 @@ export function useImportTransactions() {
     return { importedCount, duplicateCount: duplicateMatches?.length ?? 0, errorCount, mergedCount };
   };
 
+  // ─── CIS PAY scan duplicates ───
+  const scanCispayDuplicates = async (
+    transactions: CispayTransaction[],
+    userId: string,
+    clientId: string | null
+  ): Promise<DuplicateScanResult> => {
+    const existing = await fetchExistingCispayRecords(userId, clientId);
+    const newTx: CispayTransaction[] = [];
+    const duplicateMatches: DuplicateMatch[] = [];
+
+    for (const t of transactions) {
+      const ex = existing.get(t.sale_id);
+      if (ex) {
+        duplicateMatches.push({
+          id: t.sale_id,
+          csvData: t as unknown as Record<string, unknown>,
+          existingData: ex,
+          emptyFieldsInExisting: getEmptyFields(ex, MERGEABLE_CISPAY_FIELDS),
+        });
+      } else {
+        newTx.push(t);
+      }
+    }
+    return { newTransactions: newTx, duplicateMatches };
+  };
+
+  // ─── CIS PAY import ───
+  const importCispay = async (
+    transactions: CispayTransaction[],
+    userId: string,
+    importId: string,
+    clientId: string | null,
+    duplicateMatches?: DuplicateMatch[],
+    mergeAction?: 'skip' | 'merge'
+  ): Promise<ImportResult> => {
+    setProgress({ current: 0, total: transactions.length });
+    let importedCount = 0;
+    let errorCount = 0;
+    let mergedCount = 0;
+
+    for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
+      const batch = transactions.slice(i, i + BATCH_SIZE);
+      const records = batch.map(t => ({
+        user_id: userId,
+        import_id: importId,
+        sale_id: t.sale_id,
+        product: t.product || null,
+        product_code: t.product_code || null,
+        buyer_name: t.buyer_name || null,
+        buyer_email: t.buyer_email || null,
+        buyer_phone: t.buyer_phone || null,
+        sale_value: t.sale_value || 0,
+        currency: 'BRL',
+        sale_date: t.sale_date?.toISOString() || null,
+        turma: t.turma || null,
+        promotion: t.promotion || null,
+        unit: t.unit || null,
+        enrollment_type: t.enrollment_type || null,
+        source: 'cispay',
+        client_id: clientId,
+      }));
+
+      const result = await insertBatchWithRetry('cispay_transactions' as never, records);
+      importedCount += result.success;
+      errorCount += result.errors;
+      setProgress({ current: Math.min(i + BATCH_SIZE, transactions.length), total: transactions.length });
+    }
+
+    if (mergeAction === 'merge' && duplicateMatches && duplicateMatches.length > 0) {
+      mergedCount = await mergeRecords(
+        'cispay_transactions', 'sale_id', duplicateMatches, MERGEABLE_CISPAY_FIELDS, clientId
+      );
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['cispay-transactions'] });
+    queryClient.invalidateQueries({ queryKey: ['cispay-transaction-stats'] });
+    return { importedCount, duplicateCount: duplicateMatches?.length ?? 0, errorCount, mergedCount };
+  };
+
   return {
     progress,
     importHotmart,
     importTmb,
     importEduzz,
+    importCispay,
     scanHotmartDuplicates,
     scanTmbDuplicates,
     scanEduzzDuplicates,
+    scanCispayDuplicates,
   };
 }

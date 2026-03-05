@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Layers, ShoppingBag, Wallet, CreditCard } from 'lucide-react';
+import { Layers, ShoppingBag, Wallet, CreditCard, GraduationCap } from 'lucide-react';
 import { PlatformType } from '@/hooks/useCombinedStats';
 
 interface PlatformFilterProps {
@@ -12,6 +12,7 @@ const platforms = [
   { value: 'hotmart' as const, label: 'Hotmart', icon: ShoppingBag },
   { value: 'tmb' as const, label: 'TMB', icon: Wallet },
   { value: 'eduzz' as const, label: 'Eduzz', icon: CreditCard },
+  { value: 'cispay' as const, label: 'CIS PAY', icon: GraduationCap },
 ];
 
 export function PlatformFilter({ value, onChange }: PlatformFilterProps) {

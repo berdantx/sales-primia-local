@@ -91,6 +91,7 @@ const menuGroups: MenuGroup[] = [
           { title: 'Hotmart', url: '/transactions', icon: TrendingUp, roles: ['master', 'admin'] },
           { title: 'TMB', url: '/tmb-transactions', icon: Wallet, roles: ['master', 'admin'] },
           { title: 'Eduzz', url: '/eduzz-transactions', icon: Activity, roles: ['master', 'admin'] },
+          { title: 'CIS PAY', url: '/cispay-transactions', icon: Target, roles: ['master', 'admin'] },
           { title: 'Internacional', url: '/international-sales', icon: Globe, roles: ['master', 'admin'] },
           { title: 'Comparativo', url: '/comparative', icon: GitCompare, roles: ['master', 'admin'] },
         ],

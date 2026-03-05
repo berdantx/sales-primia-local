@@ -35,7 +35,7 @@ interface DuplicateReviewDialogProps {
   onOpenChange: (open: boolean) => void;
   duplicates: DuplicateMatch[];
   newCount: number;
-  platform: 'hotmart' | 'tmb' | 'eduzz';
+  platform: 'hotmart' | 'tmb' | 'eduzz' | 'cispay';
   onConfirm: (action: DuplicateAction) => void;
   isProcessing?: boolean;
 }

@@ -7,6 +7,7 @@ import { DropZone } from '@/components/upload/DropZone';
 import { ImportPreview } from '@/components/upload/ImportPreview';
 import { TmbImportPreview } from '@/components/upload/TmbImportPreview';
 import { EduzzImportPreview } from '@/components/upload/EduzzImportPreview';
+import { CispayImportPreview } from '@/components/upload/CispayImportPreview';
 import { ImportProgress } from '@/components/upload/ImportProgress';
 import { PlatformSelector, UploadPlatform } from '@/components/upload/PlatformSelector';
 import { DuplicateReviewDialog, DuplicateMatch, DuplicateAction } from '@/components/upload/DuplicateReviewDialog';
@@ -22,12 +23,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { parseFile, parseCSV, parseXLSX, parseHotmartData, autoDetectHotmartColumns, HotmartTransaction, ParseError } from '@/lib/parsers/hotmartParser';
 import { parseTmbFile, parseTmbCSV, parseTmbData, autoDetectTmbColumns, TmbTransaction, TmbParseError } from '@/lib/parsers/tmbParser';
 import { parseEduzzFile, parseEduzzCSV, parseEduzzXLSX, parseEduzzData, autoDetectEduzzColumns, EduzzTransaction, EduzzParseError } from '@/lib/parsers/eduzzParser';
-import { ArrowLeft, ArrowRight, FileSpreadsheet, Store, CheckCircle2, CreditCard, Loader2 } from 'lucide-react';
+import { parseCispayXLSX, parseCispayData, autoDetectCispayColumns, CispayTransaction, CispayParseError } from '@/lib/parsers/cispayParser';
+import { ArrowLeft, ArrowRight, FileSpreadsheet, Store, CheckCircle2, CreditCard, GraduationCap, Loader2 } from 'lucide-react';
 import { ActiveClientBlock } from '@/components/layout/ActiveClientBlock';
 import { DataManagement } from '@/components/upload/DataManagement';
 import { 
   ColumnMappingStep, ColumnMappingResult,
-  HOTMART_FIELD_DEFINITIONS, TMB_FIELD_DEFINITIONS, EDUZZ_FIELD_DEFINITIONS 
+  HOTMART_FIELD_DEFINITIONS, TMB_FIELD_DEFINITIONS, EDUZZ_FIELD_DEFINITIONS, CISPAY_FIELD_DEFINITIONS 
 } from '@/components/upload/ColumnMappingStep';
 
 type UploadStep = 'platform' | 'upload' | 'mapping' | 'preview' | 'scanning' | 'importing' | 'complete';
@@ -40,8 +42,8 @@ export default function UploadPage() {
   const { isMaster } = useUserRole();
   const {
     progress: importProgress,
-    importHotmart, importTmb, importEduzz,
-    scanHotmartDuplicates, scanTmbDuplicates, scanEduzzDuplicates,
+    importHotmart, importTmb, importEduzz, importCispay,
+    scanHotmartDuplicates, scanTmbDuplicates, scanEduzzDuplicates, scanCispayDuplicates,
   } = useImportTransactions();
 
   const [step, setStep] = useState<UploadStep>('platform');
@@ -59,6 +61,10 @@ export default function UploadPage() {
   // Eduzz state
   const [eduzzTransactions, setEduzzTransactions] = useState<EduzzTransaction[]>([]);
   const [eduzzErrors, setEduzzErrors] = useState<EduzzParseError[]>([]);
+  
+  // CIS PAY state
+  const [cispayTransactions, setCispayTransactions] = useState<CispayTransaction[]>([]);
+  const [cispayErrors, setCispayErrors] = useState<CispayParseError[]>([]);
   
   // Shared state
   const [duplicates, setDuplicates] = useState<string[]>([]);
@@ -112,6 +118,10 @@ export default function UploadPage() {
           data = r.data; headers = r.headers;
         }
         setAutoDetectedMap(autoDetectEduzzColumns(headers));
+      } else if (platform === 'cispay') {
+        const r = await parseCispayXLSX(acceptedFile);
+        data = r.data; headers = r.headers;
+        setAutoDetectedMap(autoDetectCispayColumns(headers));
       } else {
         return;
       }
@@ -148,6 +158,12 @@ export default function UploadPage() {
         setEduzzErrors(result.errors);
         setDuplicates(result.duplicates);
         setTotalRows(result.totalRows);
+      } else if (platform === 'cispay') {
+        const result = parseCispayData(rawData, fileHeaders, mapping);
+        setCispayTransactions(result.transactions);
+        setCispayErrors(result.errors);
+        setDuplicates(result.duplicates);
+        setTotalRows(result.totalRows);
       }
       setStep('preview');
     } catch (error) {
@@ -161,14 +177,11 @@ export default function UploadPage() {
 
   const handleClear = () => {
     setFile(null);
-    setHotmartTransactions([]);
-    setHotmartErrors([]);
-    setTmbTransactions([]);
-    setTmbErrors([]);
-    setEduzzTransactions([]);
-    setEduzzErrors([]);
-    setDuplicates([]);
-    setTotalRows(0);
+    setHotmartTransactions([]); setHotmartErrors([]);
+    setTmbTransactions([]); setTmbErrors([]);
+    setEduzzTransactions([]); setEduzzErrors([]);
+    setCispayTransactions([]); setCispayErrors([]);
+    setDuplicates([]); setTotalRows(0);
     setDuplicateScanResult(null);
     setStep('upload');
   };
@@ -193,6 +206,8 @@ export default function UploadPage() {
         scanResult = await scanTmbDuplicates(tmbTransactions, user.id, clientId);
       } else if (platform === 'eduzz') {
         scanResult = await scanEduzzDuplicates(eduzzTransactions, user.id, clientId);
+      } else if (platform === 'cispay') {
+        scanResult = await scanCispayDuplicates(cispayTransactions, user.id, clientId);
       }
 
       if (scanResult && scanResult.duplicateMatches.length > 0) {
@@ -294,14 +309,25 @@ export default function UploadPage() {
         );
         if (eduzzErrors.length > 0) {
           const errorRecords = eduzzErrors.slice(0, 100).map(e => ({
-            import_id: importRecord.id,
-            row_number: e.row,
-            error_type: e.type,
-            error_message: e.message,
-            raw_data: e.rawData ? JSON.parse(JSON.stringify(e.rawData)) : null,
+            import_id: importRecord.id, row_number: e.row, error_type: e.type,
+            error_message: e.message, raw_data: e.rawData ? JSON.parse(JSON.stringify(e.rawData)) : null,
           }));
           await supabase.from('import_errors').insert(errorRecords);
           result.errorCount += eduzzErrors.length;
+        }
+      } else if (platform === 'cispay') {
+        result = await importCispay(
+          newTransactions as CispayTransaction[],
+          user.id, importRecord.id, clientId,
+          duplicateMatches, mergeAction
+        );
+        if (cispayErrors.length > 0) {
+          const errorRecords = cispayErrors.slice(0, 100).map(e => ({
+            import_id: importRecord.id, row_number: e.row, error_type: e.type,
+            error_message: e.message, raw_data: e.rawData ? JSON.parse(JSON.stringify(e.rawData)) : null,
+          }));
+          await supabase.from('import_errors').insert(errorRecords);
+          result.errorCount += cispayErrors.length;
         }
       }
 
@@ -339,6 +365,7 @@ export default function UploadPage() {
     if (platform === 'hotmart') return <FileSpreadsheet className="h-4 w-4" />;
     if (platform === 'tmb') return <Store className="h-4 w-4" />;
     if (platform === 'eduzz') return <CreditCard className="h-4 w-4" />;
+    if (platform === 'cispay') return <GraduationCap className="h-4 w-4" />;
     return null;
   };
 
@@ -346,6 +373,7 @@ export default function UploadPage() {
     if (platform === 'hotmart') return 'Vendas Hotmart';
     if (platform === 'tmb') return 'Vendas TMB';
     if (platform === 'eduzz') return 'Vendas Eduzz';
+    if (platform === 'cispay') return 'Vendas CIS PAY';
     return '';
   };
 
@@ -353,6 +381,7 @@ export default function UploadPage() {
     if (platform === 'hotmart') return 'Arraste sua planilha CSV ou XLSX para a área abaixo';
     if (platform === 'tmb') return 'Arraste sua planilha CSV (delimitador ;) para a área abaixo';
     if (platform === 'eduzz') return 'Arraste sua planilha CSV ou XLSX da Eduzz para a área abaixo';
+    if (platform === 'cispay') return 'Arraste sua planilha XLSX da CIS PAY para a área abaixo';
     return '';
   };
 
@@ -360,6 +389,7 @@ export default function UploadPage() {
     if (platform === 'hotmart') return hotmartTransactions.length;
     if (platform === 'tmb') return tmbTransactions.length;
     if (platform === 'eduzz') return eduzzTransactions.length;
+    if (platform === 'cispay') return cispayTransactions.length;
     return 0;
   };
 
@@ -474,6 +504,7 @@ export default function UploadPage() {
                   fieldDefinitions={
                     platform === 'hotmart' ? HOTMART_FIELD_DEFINITIONS :
                     platform === 'tmb' ? TMB_FIELD_DEFINITIONS :
+                    platform === 'cispay' ? CISPAY_FIELD_DEFINITIONS :
                     EDUZZ_FIELD_DEFINITIONS
                   }
                   onConfirm={handleMappingConfirm}
@@ -580,7 +611,40 @@ export default function UploadPage() {
                 </div>
               )}
 
-              {step === 'importing' && (
+              {step === 'preview' && platform === 'cispay' && (
+                <div className="space-y-6">
+                  <CispayImportPreview
+                    transactions={cispayTransactions}
+                    errors={cispayErrors}
+                    duplicates={duplicates}
+                    totalRows={totalRows}
+                  />
+                  <div className="flex justify-between">
+                    <Button variant="outline" onClick={handleClear}>
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Voltar
+                    </Button>
+                    <Button 
+                      onClick={handlePreImportScan}
+                      disabled={cispayTransactions.length === 0 || isScanning}
+                    >
+                      {isScanning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Verificando...
+                        </>
+                      ) : (
+                        <>
+                          Confirmar Importação
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+
                 <ImportProgress
                   current={importProgress.current}
                   total={importProgress.total}

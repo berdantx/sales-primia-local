@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileSpreadsheet, Store, CreditCard } from 'lucide-react';
+import { FileSpreadsheet, Store, CreditCard, GraduationCap } from 'lucide-react';
 
-export type UploadPlatform = 'hotmart' | 'tmb' | 'eduzz' | null;
+export type UploadPlatform = 'hotmart' | 'tmb' | 'eduzz' | 'cispay' | null;
 
 interface PlatformSelectorProps {
   onSelect: (platform: UploadPlatform) => void;
@@ -36,6 +36,15 @@ export function PlatformSelector({ onSelect }: PlatformSelectorProps) {
       color: 'hsl(25 95% 53%)',
       bgColor: 'hsl(25 95% 53% / 0.1)',
       formats: 'CSV, XLSX',
+    },
+    {
+      id: 'cispay' as const,
+      name: 'CIS PAY',
+      description: 'Planilha de vendas da plataforma CIS PAY',
+      icon: GraduationCap,
+      color: 'hsl(240 60% 55%)',
+      bgColor: 'hsl(240 60% 55% / 0.1)',
+      formats: 'XLSX',
     },
   ];
 
