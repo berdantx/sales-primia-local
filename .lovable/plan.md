@@ -1,22 +1,23 @@
 
 
-## Plano: Carregar UTMs existentes nos filtros de exportação
+## Plano: Criar conta de demonstração "BVAZ Educação"
 
-### O que muda
-Substituir os inputs de texto livre dos filtros UTM por **selects com as UTMs já cadastradas**, unificando os valores das 3 plataformas (Hotmart/TMB/Eduzz).
+O usuário `bvazeua@gmail.com` já existe no sistema com role `master`. O cliente "BVAZ Educação" ainda não existe.
 
-### Como
-**Arquivo: `src/components/export/ExportReportDialog.tsx`**
+### Ações necessárias (todas via inserção de dados, sem migração)
 
-1. Importar os 3 hooks existentes: `useFilterOptions` (Hotmart — campo `sckCodes`), `useTmbFilterOptions`, `useEduzzFilterOptions`
-2. Criar um `useMemo` que unifica os valores de UTM das 3 plataformas em listas únicas deduplicated:
-   - **Source**: Hotmart `sckCodes` + TMB `utm_sources` + Eduzz `utm_sources`
-   - **Medium**: TMB `utm_mediums` + Eduzz `utm_mediums`
-   - **Campaign**: TMB `utm_campaigns` + Eduzz `utm_campaigns`
-   - **Content**: Eduzz `utm_contents`
-3. Substituir os 4 `<Input>` por `<Select>` com as opções carregadas, mantendo uma opção "Todos" como valor padrão
-4. Manter a lógica de filtragem existente (match exato ao invés de `.includes()` já que o valor vem de um select)
+1. **Criar o cliente** na tabela `clients`:
+   - name: "BVAZ Educação"
+   - slug: "bvaz-educacao"
 
-### Nenhuma mudança no backend
-Os hooks e RPCs já existem e retornam os dados necessários.
+2. **Associar o usuário ao cliente** na tabela `client_users`:
+   - user_id: `23c1ff38-9996-4b70-a8bb-165b0ac18797`
+   - is_owner: true
+   - can_view_financials: true
+
+3. **Criar registro de coprodução** na tabela `client_coproducers`:
+   - user_id: `23c1ff38-9996-4b70-a8bb-165b0ac18797`
+   - client_id: (o novo cliente)
+
+Nenhuma alteração de código é necessária -- apenas inserção de dados nas tabelas existentes.
 
