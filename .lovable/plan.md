@@ -1,76 +1,25 @@
 
 
-## Plano: Adicionar canal de vendas CIS PAY
+## Plano: Importar 6 transações CIS PAY para BVAZ Educação
 
-### Análise da planilha
+A planilha contém 6 vendas do programa MENBVAZ (Mentoria Bruno Vaz), todas aprovadas, cada uma com valor de BRL 35.000,00, totalizando BRL 210.000,00.
 
-A planilha CIS PAY tem a seguinte estrutura (campos relevantes):
+### Dados a inserir
 
-| Campo planilha | Campo normalizado |
-|---|---|
-| ID da venda | `sale_id` (ex: 006V200000gUDPS) |
-| Nome do cliente | `buyer_name` |
-| Cliente pessoal: Email | `buyer_email` |
-| Cliente pessoal: Celular | `buyer_phone` |
-| Valor | `sale_value` (ex: BRL 35,000.00) |
-| Data de Aprovação | `sale_date` |
-| Código do Curso | `product_code` |
-| Nome da venda | `product` (nome completo) |
-| Turma | `turma` |
-| Promoção | `promotion` |
-| Fase | `status` (Aprovada) |
-| Unidade Realizadora do Curso | `unit` |
-| Tipo de Matrícula | `enrollment_type` |
+| ID Venda | Cliente | Email | Valor | Data Aprovação |
+|---|---|---|---|---|
+| 006V200000gUDPS | Dulcineia Mariano Neto | financeirobahia@febracis.com.br | 35.000 | 10/02/2026 |
+| 006V200000gFKHb | José Sidney Carvalho Costa Neto | josesidney@febracis.com.br | 35.000 | 11/02/2026 |
+| 006V200000gFUH0 | Vânia Stoco Tome | vaniatome@febracis.com.br | 35.000 | 11/02/2026 |
+| 006V200000gFWnO | Priscila Cosentino Ferngren | priscila@pricosentino.com | 35.000 | 11/02/2026 |
+| 006V200000gFYVp | Tiago Pacheco Zanini | tiagozanini@febracis.com.br | 35.000 | 11/02/2026 |
+| 006V200000gFYXR | Emerson Cerbino Doblas | emersondoblas@gmail.com | 35.000 | 11/02/2026 |
 
-### Escopo das alterações
+### Ação
 
-**1. Banco de dados** — Nova tabela `cispay_transactions`
-- Estrutura similar a `eduzz_transactions`, com campos específicos: `product_code`, `turma`, `promotion`, `unit`, `enrollment_type`
-- RLS usando `user_has_client_access(client_id)`
+Inserir diretamente na tabela `cispay_transactions` via migração SQL, associando ao cliente BVAZ Educação (`48b4bd48-a02b-4c5b-bc4f-1669328acb4c`) e ao usuário `23c1ff38-9996-4b70-a8bb-165b0ac18797`.
 
-**2. Parser** — `src/lib/parsers/cispayParser.ts`
-- Detectar automaticamente colunas da planilha CIS (headers em português longo)
-- Parsear valor no formato "BRL 35,000.00"
-- Parsear data no formato DD/MM/YYYY
+Campos: sale_id, buyer_name, buyer_email, buyer_phone, sale_value (35000), currency (BRL), sale_date, product, product_code (MENBVAZ), turma (2026 - MENBVAZ01), promotion, unit (CIS TREINAMENTO), enrollment_type (Matrícula), status (approved), source (cispay).
 
-**3. Hooks básicos**
-- `useCispayTransactions.ts` — fetch + filtros (mesmo padrão do Eduzz)
-- `useCispayTransactionStatsOptimized.ts` — RPC de stats
-- `useCispayFilterOptions.ts` — RPC de opções de filtro
-
-**4. Integração no sistema existente**
-- `PlatformType` passa de `'all' | 'hotmart' | 'tmb' | 'eduzz'` para incluir `'cispay'`
-- `PlatformFilter` — novo botão CIS PAY
-- `PlatformSelector` (upload) — nova opção CIS PAY
-- `useCombinedStats` — incluir CIS PAY nos totais combinados
-- `useCombinedTransactions` — incluir CIS PAY nas transações unificadas
-- `useImportTransactions` — novo `importCispay` + `scanCispayDuplicates`
-- Upload page — novo fluxo para CIS PAY
-- Export dialog — incluir CIS PAY
-
-**5. UI**
-- `CispayImportPreview.tsx` — preview antes da importação
-- `CispayTransactionCard.tsx` — card de transação
-- Página `CispayTransactions.tsx` — listagem
-- Sidebar — novo link
-
-**6. RPCs no banco**
-- `get_cispay_transaction_stats` — stats otimizadas
-- `get_cispay_filter_options` — filtros
-- `get_cispay_top_customers` — top clientes
-- `get_cispay_sales_by_date` — vendas por dia
-
-### Ordem de implementação
-
-Pela complexidade (20+ arquivos), vou implementar em etapas:
-1. Tabela + RLS + RPCs (migração)
-2. Parser + Hook de importação
-3. Integração no upload flow
-4. Hooks de consulta + stats
-5. Integração nos combinados (dashboard, filtros, exportação)
-6. Página de listagem + sidebar
-
-### Dados da planilha para importação
-
-Após criar a infraestrutura, os 6 registros da planilha serão importados para o cliente **BVAZ Educação** (client_id: `48b4bd48-a02b-4c5b-bc4f-1669328acb4c`).
+Também corrigir o erro TS1381 persistente em Upload.tsx (se necessário, fazer um rebuild trigger mínimo).
 
