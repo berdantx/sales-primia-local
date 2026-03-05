@@ -189,58 +189,45 @@ export function DashboardControlBar({
           </div>
         </div>
 
-        {/* Row 2: Filter groups + Export */}
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
-          {/* PERÍODO */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium hidden sm:block">Período</span>
-            <div className="flex items-center gap-2">
-              <Select value={period} onValueChange={(v) => onPeriodChange(v as PeriodFilter)}>
-                <SelectTrigger className="w-full sm:w-[130px] h-8 text-xs bg-background border-border/60 rounded-lg">
-                  <SelectValue placeholder="Período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1d">Último dia</SelectItem>
-                  <SelectItem value="7d">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30d">Últimos 30 dias</SelectItem>
-                  <SelectItem value="90d">Últimos 90 dias</SelectItem>
-                  <SelectItem value="365d">Último ano</SelectItem>
-                  <SelectItem value="all">Tudo</SelectItem>
-                  <SelectItem value="custom">Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
-              {period === 'custom' && (
-                <DateRangePicker
-                  dateRange={customDateRange}
-                  onDateRangeChange={onCustomDateRangeChange}
-                  className="w-[220px]"
-                />
-              )}
-            </div>
-          </div>
+        {/* Row 2: Filters — compact on mobile */}
+        <div className="space-y-3">
+          {/* Line 1: Period + Currency (inline on mobile) */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Select value={period} onValueChange={(v) => onPeriodChange(v as PeriodFilter)}>
+              <SelectTrigger className="w-[130px] sm:w-[140px] h-9 text-xs bg-background border-border/60 rounded-lg">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1d">Último dia</SelectItem>
+                <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="90d">Últimos 90 dias</SelectItem>
+                <SelectItem value="365d">Último ano</SelectItem>
+                <SelectItem value="all">Tudo</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <div className="hidden sm:block h-8 w-px bg-border/40" />
+            {period === 'custom' && (
+              <DateRangePicker
+                dateRange={customDateRange}
+                onDateRangeChange={onCustomDateRangeChange}
+                className="w-[200px] sm:w-[220px]"
+              />
+            )}
 
-          {/* PLATAFORMAS */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium hidden sm:block">Plataforma</span>
-            <PlatformFilter value={platform} onChange={setPlatform} />
-          </div>
-
-          {canViewFinancials && (
-            <>
-              <div className="hidden sm:block h-8 w-px bg-border/40" />
-
-              {/* MOEDA */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium hidden sm:block">Moeda</span>
+            {canViewFinancials && (
+              <>
+                <div className="h-6 w-px bg-border/40" />
                 <CurrencyViewToggle value={currencyView} onChange={onCurrencyViewChange} />
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
 
-          {/* Spacer + Export */}
-          <div className="hidden sm:flex sm:flex-1" />
+          {/* Line 2: Platform filter */}
+          <PlatformFilter value={platform} onChange={setPlatform} />
+
+          {/* Line 3: Export button */}
           <ExportReportDialog defaultClientId={clientId} />
         </div>
       </div>
