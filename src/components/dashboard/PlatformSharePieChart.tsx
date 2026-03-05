@@ -7,22 +7,25 @@ interface PlatformSharePieChartProps {
   hotmartTotal: number;
   tmbTotal: number;
   eduzzTotal: number;
+  cispayTotal?: number;
 }
 
 const COLORS = {
   Hotmart: 'hsl(217, 55%, 55%)',
   TMB: 'hsl(160, 40%, 45%)',
   Eduzz: 'hsl(270, 35%, 55%)',
+  'CIS PAY': 'hsl(30, 50%, 50%)',
 };
 
-export function PlatformSharePieChart({ hotmartTotal, tmbTotal, eduzzTotal }: PlatformSharePieChartProps) {
+export function PlatformSharePieChart({ hotmartTotal, tmbTotal, eduzzTotal, cispayTotal = 0 }: PlatformSharePieChartProps) {
   const data = [
     { name: 'Hotmart', value: hotmartTotal },
     { name: 'TMB', value: tmbTotal },
     { name: 'Eduzz', value: eduzzTotal },
+    { name: 'CIS PAY', value: cispayTotal },
   ].filter(d => d.value > 0);
 
-  const total = hotmartTotal + tmbTotal + eduzzTotal;
+  const total = hotmartTotal + tmbTotal + eduzzTotal + cispayTotal;
 
   const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: {
     cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number;
