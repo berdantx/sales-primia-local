@@ -35,7 +35,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [period, setPeriod] = useState<PeriodFilter>('all');
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>();
-  const [currencyView, setCurrencyView] = useState<CurrencyView>('combined');
+  const [currencyView, setCurrencyView] = useState<CurrencyView>('brl-only');
 
   const { billingType, paymentMethod, sckCode, product, clientId, platform } = useFilter();
 

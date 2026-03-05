@@ -2,7 +2,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { DollarSign, Layers, CircleDollarSign } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-export type CurrencyView = 'combined' | 'brl-only' | 'usd-only';
+export type CurrencyView = 'brl-only' | 'usd-only';
 
 interface CurrencyViewToggleProps {
   value: CurrencyView;
@@ -19,17 +19,6 @@ export function CurrencyViewToggle({ value, onChange, className }: CurrencyViewT
         onValueChange={(v) => v && onChange(v as CurrencyView)}
         className={className}
       >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <ToggleGroupItem value="combined" aria-label="Valores combinados" className="h-8 px-2 sm:px-3">
-              <Layers className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1.5 text-xs">Combinado</span>
-            </ToggleGroupItem>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>BRL + USD convertido</p>
-          </TooltipContent>
-        </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
