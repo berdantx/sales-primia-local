@@ -132,6 +132,40 @@ export default function CorsDiagnostics() {
     }
   };
 
+  const testExternalPg = async () => {
+    setPgResult({ status: 'testing' });
+    try {
+      const { data, error } = await supabase.functions.invoke('test-external-pg', {
+        body: {},
+      });
+
+      if (error) {
+        setPgResult({ status: 'error', error: error.message });
+        toast.error('Erro ao testar conexão PostgreSQL');
+        return;
+      }
+
+      if (data.success) {
+        setPgResult({
+          status: 'success',
+          responseTime: data.responseTime,
+          pgVersion: data.pgVersion,
+        });
+        toast.success(`PostgreSQL externo conectado em ${data.responseTime}ms`);
+      } else {
+        setPgResult({
+          status: 'error',
+          responseTime: data.responseTime,
+          error: data.error,
+        });
+        toast.error('Falha na conexão com PostgreSQL externo');
+      }
+    } catch (err: any) {
+      setPgResult({ status: 'error', error: err.message || 'Erro desconhecido' });
+      toast.error('Erro ao chamar edge function');
+    }
+  };
+
   const successCount = results.filter(r => r.status === 'success').length;
   const errorCount = results.filter(r => r.status !== 'success' && r.status !== 'pending').length;
 
