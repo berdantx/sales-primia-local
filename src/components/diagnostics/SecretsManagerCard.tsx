@@ -136,7 +136,7 @@ export function SecretsManagerCard() {
 
   const isSensitive = (key: string) => {
     const known = KNOWN_SECRETS.find(k => k.key === key);
-    return known?.sensitive ?? key.toLowerCase().includes('password') || key.toLowerCase().includes('secret') || key.toLowerCase().includes('api_key');
+    return known?.sensitive ?? (key.toLowerCase().includes('password') || key.toLowerCase().includes('secret') || key.toLowerCase().includes('api_key'));
   };
 
   const getLabel = (key: string) => {
