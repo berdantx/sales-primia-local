@@ -431,6 +431,23 @@ export function BackupCard() {
                 </Label>
               </div>
 
+              {/* Format Selector */}
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <FileJson className="h-4 w-4 text-muted-foreground" />
+                  Formato:
+                </Label>
+                <Select value={backupFormat} onValueChange={(v) => setBackupFormat(v as 'json' | 'sql')}>
+                  <SelectTrigger className="w-[160px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="json">JSON</SelectItem>
+                    <SelectItem value="sql">SQL (INSERT INTO)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Progress */}
               {(isExporting || status !== 'idle') && (
                 <div className="space-y-2">
