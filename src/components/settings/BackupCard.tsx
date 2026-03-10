@@ -91,6 +91,7 @@ export function BackupCard() {
     AVAILABLE_TABLES.filter(t => t.priority <= 2).map(t => t.id)
   );
   const [includeSchema, setIncludeSchema] = useState(false);
+  const [backupFormat, setBackupFormat] = useState<'json' | 'sql'>('json');
   const [status, setStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [lastBackup, setLastBackup] = useState<{ date: string; records: number } | null>(null);
 
