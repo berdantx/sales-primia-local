@@ -275,6 +275,67 @@ export default function CorsDiagnostics() {
             </CardContent>
           </Card>
         )}
+
+        {/* External PostgreSQL Test */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Conexão PostgreSQL Externo
+            </CardTitle>
+            <CardDescription>
+              Testa conectividade TCP com o PostgreSQL em 187.77.225.140:5433
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              onClick={testExternalPg}
+              disabled={pgResult.status === 'testing'}
+              variant="outline"
+            >
+              {pgResult.status === 'testing' ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4 mr-2" />
+              )}
+              Testar Conexão
+            </Button>
+
+            {pgResult.status !== 'idle' && pgResult.status !== 'testing' && (
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Status:</span>
+                  {pgResult.status === 'success' ? (
+                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />Conectado
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive">
+                      <AlertCircle className="h-3 w-3 mr-1" />Erro
+                    </Badge>
+                  )}
+                </div>
+                {pgResult.responseTime && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>Tempo de resposta: <strong>{pgResult.responseTime}ms</strong></span>
+                  </div>
+                )}
+                {pgResult.pgVersion && (
+                  <div className="text-sm">
+                    <span className="font-medium">Versão: </span>
+                    <span className="text-muted-foreground">{pgResult.pgVersion}</span>
+                  </div>
+                )}
+                {pgResult.error && (
+                  <div className="text-sm text-destructive">
+                    <span className="font-medium">Erro: </span>{pgResult.error}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );
