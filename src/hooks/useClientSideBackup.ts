@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { generateSqlBackup } from '@/lib/export/generateSqlBackup';
 
 const BATCH_SIZE = 1000;
 
