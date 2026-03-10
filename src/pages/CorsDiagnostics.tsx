@@ -14,8 +14,10 @@ import {
   AlertCircle,
   Loader2,
   Clock,
+  Database,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const EDGE_FUNCTIONS = [
   'export-backup',
