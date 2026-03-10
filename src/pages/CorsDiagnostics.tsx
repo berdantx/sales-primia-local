@@ -43,6 +43,14 @@ interface TestResult {
   error?: string;
 }
 
+  // External PG test state
+  const [pgResult, setPgResult] = useState<{
+    status: 'idle' | 'testing' | 'success' | 'error';
+    responseTime?: number;
+    pgVersion?: string;
+    error?: string;
+  }>({ status: 'idle' });
+
 export default function CorsDiagnostics() {
   const [results, setResults] = useState<TestResult[]>([]);
   const [isTesting, setIsTesting] = useState(false);
