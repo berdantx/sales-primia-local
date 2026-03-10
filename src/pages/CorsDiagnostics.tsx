@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { SecretsManagerCard } from '@/components/diagnostics/SecretsManagerCard';
 
 const EDGE_FUNCTIONS = [
   'export-backup',
@@ -336,6 +337,9 @@ export default function CorsDiagnostics() {
             )}
           </CardContent>
         </Card>
+
+        {/* Secrets Manager */}
+        <SecretsManagerCard />
       </div>
     </MainLayout>
   );
