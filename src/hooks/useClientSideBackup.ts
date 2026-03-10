@@ -65,7 +65,7 @@ export function useClientSideBackup() {
     setProgress(prev => ({ ...prev, status: 'cancelled' }));
   }, []);
 
-  const startBackup = useCallback(async (selectedTables?: string[], includeSchema?: boolean) => {
+  const startBackup = useCallback(async (selectedTables?: string[], includeSchema?: boolean, backupFormat: 'json' | 'sql' = 'json') => {
     cancelledRef.current = false;
     const startTime = Date.now();
     const tables = selectedTables ?? [...BACKUP_TABLES];
