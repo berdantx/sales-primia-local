@@ -14,8 +14,10 @@ import {
   AlertCircle,
   Loader2,
   Clock,
+  Database,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const EDGE_FUNCTIONS = [
   'export-backup',
@@ -45,6 +47,12 @@ export default function CorsDiagnostics() {
   const [results, setResults] = useState<TestResult[]>([]);
   const [isTesting, setIsTesting] = useState(false);
   const [customFunction, setCustomFunction] = useState('');
+  const [pgResult, setPgResult] = useState<{
+    status: 'idle' | 'testing' | 'success' | 'error';
+    responseTime?: number;
+    pgVersion?: string;
+    error?: string;
+  }>({ status: 'idle' });
 
   const projectUrl = import.meta.env.VITE_SUPABASE_URL as string;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -121,6 +129,40 @@ export default function CorsDiagnostics() {
       toast.success('Todas as funções passaram no teste!');
     } else {
       toast.warning(`${errors.length} função(ões) com problemas`);
+    }
+  };
+
+  const testExternalPg = async () => {
+    setPgResult({ status: 'testing' });
+    try {
+      const { data, error } = await supabase.functions.invoke('test-external-pg', {
+        body: {},
+      });
+
+      if (error) {
+        setPgResult({ status: 'error', error: error.message });
+        toast.error('Erro ao testar conexão PostgreSQL');
+        return;
+      }
+
+      if (data.success) {
+        setPgResult({
+          status: 'success',
+          responseTime: data.responseTime,
+          pgVersion: data.pgVersion,
+        });
+        toast.success(`PostgreSQL externo conectado em ${data.responseTime}ms`);
+      } else {
+        setPgResult({
+          status: 'error',
+          responseTime: data.responseTime,
+          error: data.error,
+        });
+        toast.error('Falha na conexão com PostgreSQL externo');
+      }
+    } catch (err: any) {
+      setPgResult({ status: 'error', error: err.message || 'Erro desconhecido' });
+      toast.error('Erro ao chamar edge function');
     }
   };
 
@@ -233,6 +275,67 @@ export default function CorsDiagnostics() {
             </CardContent>
           </Card>
         )}
+
+        {/* External PostgreSQL Test */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Conexão PostgreSQL Externo
+            </CardTitle>
+            <CardDescription>
+              Testa conectividade TCP com o PostgreSQL em 187.77.225.140:5433
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button
+              onClick={testExternalPg}
+              disabled={pgResult.status === 'testing'}
+              variant="outline"
+            >
+              {pgResult.status === 'testing' ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4 mr-2" />
+              )}
+              Testar Conexão
+            </Button>
+
+            {pgResult.status !== 'idle' && pgResult.status !== 'testing' && (
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Status:</span>
+                  {pgResult.status === 'success' ? (
+                    <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />Conectado
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive">
+                      <AlertCircle className="h-3 w-3 mr-1" />Erro
+                    </Badge>
+                  )}
+                </div>
+                {pgResult.responseTime && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span>Tempo de resposta: <strong>{pgResult.responseTime}ms</strong></span>
+                  </div>
+                )}
+                {pgResult.pgVersion && (
+                  <div className="text-sm">
+                    <span className="font-medium">Versão: </span>
+                    <span className="text-muted-foreground">{pgResult.pgVersion}</span>
+                  </div>
+                )}
+                {pgResult.error && (
+                  <div className="text-sm text-destructive">
+                    <span className="font-medium">Erro: </span>{pgResult.error}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );

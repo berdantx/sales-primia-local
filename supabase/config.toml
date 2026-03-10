@@ -1,1 +1,4 @@
 project_id = "gkahchwximeafzavsbng"
+
+[functions.test-external-pg]
+verify_jwt = false
