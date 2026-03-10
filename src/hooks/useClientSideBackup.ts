@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { generateSqlBackup } from '@/lib/export/generateSqlBackup';
 
 const BATCH_SIZE = 1000;
 
@@ -65,7 +66,7 @@ export function useClientSideBackup() {
     setProgress(prev => ({ ...prev, status: 'cancelled' }));
   }, []);
 
-  const startBackup = useCallback(async (selectedTables?: string[], includeSchema?: boolean) => {
+  const startBackup = useCallback(async (selectedTables?: string[], includeSchema?: boolean, backupFormat: 'json' | 'sql' = 'json') => {
     cancelledRef.current = false;
     const startTime = Date.now();
     const tables = selectedTables ?? [...BACKUP_TABLES];
@@ -162,32 +163,48 @@ export function useClientSideBackup() {
 
       const { data: { user } } = await supabase.auth.getUser();
 
-      const response: Record<string, any> = {
-        backup_info: {
-          created_at: new Date().toISOString(),
-          created_by: user?.email || 'unknown',
-          project: 'AnalyzeFlow',
-          tables_included: Object.keys(backupData),
-          table_stats: tableStats,
-          total_records: totalRecords,
-          version: '2.0-client',
-          includes_schema: !!schemaData,
-        },
-        ...(schemaData ? { schema: schemaData } : {}),
-        data: backupData,
-      };
+      const isSql = backupFormat === 'sql';
 
-      const jsonString = JSON.stringify(response, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
+      let blob: Blob;
+
+      if (isSql) {
+        const sqlContent = generateSqlBackup(backupData, {
+          createdAt: new Date().toISOString(),
+          createdBy: user?.email || 'unknown',
+          totalRecords,
+          includesSchema: !!schemaData,
+          schemaData,
+        });
+        blob = new Blob([sqlContent], { type: 'text/sql; charset=utf-8' });
+      } else {
+        const response: Record<string, any> = {
+          backup_info: {
+            created_at: new Date().toISOString(),
+            created_by: user?.email || 'unknown',
+            project: 'AnalyzeFlow',
+            tables_included: Object.keys(backupData),
+            table_stats: tableStats,
+            total_records: totalRecords,
+            version: '2.0-client',
+            includes_schema: !!schemaData,
+          },
+          ...(schemaData ? { schema: schemaData } : {}),
+          data: backupData,
+        };
+        const jsonString = JSON.stringify(response, null, 2);
+        blob = new Blob([jsonString], { type: 'application/json' });
+      }
+
       const fileSizeBytes = blob.size;
       const durationMs = Date.now() - startTime;
 
       // Download
       const url = URL.createObjectURL(blob);
       const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+      const ext = isSql ? 'sql' : 'json';
       const link = document.createElement('a');
       link.href = url;
-      link.download = `backup_${timestamp}.json`;
+      link.download = `backup_${timestamp}.${ext}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

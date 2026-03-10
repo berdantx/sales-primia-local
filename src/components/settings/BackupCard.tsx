@@ -91,6 +91,7 @@ export function BackupCard() {
     AVAILABLE_TABLES.filter(t => t.priority <= 2).map(t => t.id)
   );
   const [includeSchema, setIncludeSchema] = useState(false);
+  const [backupFormat, setBackupFormat] = useState<'json' | 'sql'>('json');
   const [status, setStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [lastBackup, setLastBackup] = useState<{ date: string; records: number } | null>(null);
 
@@ -141,7 +142,8 @@ export function BackupCard() {
     try {
       const result = await startBackup(
         selectedTables.length > 0 ? selectedTables : [],
-        includeSchema
+        includeSchema,
+        backupFormat
       );
 
       if (result) {
@@ -173,7 +175,7 @@ export function BackupCard() {
   const handleSchemaOnly = async () => {
     setStatus('generating');
     try {
-      const result = await startBackup([], true);
+      const result = await startBackup([], true, backupFormat);
       if (result) {
         setStatus('success');
         toast.success('Schema exportado com sucesso!');
@@ -427,6 +429,23 @@ export function BackupCard() {
                   <FileCode2 className="h-4 w-4 text-muted-foreground" />
                   Incluir estrutura do banco (tabelas, índices, RLS, funções)
                 </Label>
+              </div>
+
+              {/* Format Selector */}
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <FileJson className="h-4 w-4 text-muted-foreground" />
+                  Formato:
+                </Label>
+                <Select value={backupFormat} onValueChange={(v) => setBackupFormat(v as 'json' | 'sql')}>
+                  <SelectTrigger className="w-[160px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="json">JSON</SelectItem>
+                    <SelectItem value="sql">SQL (INSERT INTO)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Progress */}
