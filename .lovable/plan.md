@@ -1,53 +1,27 @@
 
-Objetivo
-- Fazer o filtro de plataforma ficar realmente funcional no Dashboard: ao clicar em Eduzz/TMB/Hotmart/CIS PAY, os cards e totais devem refletir somente a plataforma selecionada (e “Todas” mantém o consolidado).
 
-Diagnóstico (causa raiz)
-- O clique do botão já está funcionando (estado `platform` muda no `FilterContext`).
-- O problema está no cálculo dos valores do Dashboard (`src/pages/Dashboard.tsx`): a receita é sempre somada com Hotmart + TMB + Eduzz + CIS PAY, independentemente da plataforma ativa.
-- Por isso parece que os botões “não funcionam”, mesmo quando a seleção visual muda.
+## Plano: Teste de Conexão PostgreSQL Externo
 
-Plano de implementação
-1) Tornar cálculo de receita sensível à plataforma
-- Arquivo: `src/pages/Dashboard.tsx`
-- Refatorar o `useMemo` de `revenue` para usar `switch(platform)`:
-  - `all`: mantém consolidado atual.
-  - `hotmart`: usa só Hotmart (incluindo USD convertido e projeção Hotmart).
-  - `tmb`: usa só TMB.
-  - `eduzz`: usa só Eduzz (BRL + USD convertido).
-  - `cispay`: usa só CIS PAY.
-- Garantir que `confirmed`, `projected`, `hotmartBRL`, `tmbBRL`, `eduzzBRL`, `cispayBRL`, `totalUSD` fiquem coerentes com a plataforma ativa.
+### O que será feito
 
-2) Propagar o cálculo corrigido para os cards principais
-- Ainda em `Dashboard.tsx`, os componentes que já consomem `revenue` passarão a responder corretamente sem mudança estrutural:
-  - “Receita Confirmada”
-  - “Receita Projetada”
-  - `StrategicRecommendationCard` (usa `totalRevenue`)
-  - `PlatformSharePieChart` (quando plataforma específica, exibe só a fatia correspondente; em “Todas”, exibe distribuição completa).
+1. **Armazenar credenciais como secrets** — Adicionar 5 secrets (`EXTERNAL_PG_HOST`, `EXTERNAL_PG_PORT`, `EXTERNAL_PG_DATABASE`, `EXTERNAL_PG_USER`, `EXTERNAL_PG_PASSWORD`) para não expor as credenciais no código.
 
-3) Blindar interação dos botões de plataforma
-- Arquivo: `src/components/dashboard/PlatformFilter.tsx`
-- Adicionar `type="button"` nos botões para evitar qualquer comportamento implícito de submit em cenários com formulário.
-- (Opcional de robustez) adicionar `aria-pressed` para melhorar semântica e acessibilidade do estado ativo.
+2. **Criar edge function `test-external-pg`** — Função simples que usa `deno-postgres` para tentar abrir uma conexão TCP com o PostgreSQL externo, executar `SELECT 1` e retornar sucesso/erro com tempo de resposta.
 
-4) Validação funcional (E2E manual)
-- Com mesmo cliente/período:
-  - Clicar “Todas” e anotar valores.
-  - Clicar “Eduzz” e validar que KPIs mudam para total Eduzz.
-  - Clicar “TMB” e validar que KPIs mudam para total TMB.
-  - Repetir para Hotmart e CIS PAY.
-- Confirmar que:
-  - gráfico de evolução acompanha a plataforma,
-  - pie chart acompanha a plataforma,
-  - voltar para “Todas” recompõe consolidado.
+3. **Adicionar seção na página de Diagnóstico CORS** — Um novo card "Conexão PostgreSQL Externo" com botão "Testar Conexão" que chama a edge function e exibe:
+   - Status (conectado / erro / timeout)
+   - Tempo de resposta
+   - Versão do PostgreSQL (se conectar)
+   - Mensagem de erro (se falhar)
 
-Detalhes técnicos
-- Arquivos-alvo:
-  - `src/pages/Dashboard.tsx` (principal correção)
-  - `src/components/dashboard/PlatformFilter.tsx` (robustez de clique)
-- Sem mudanças de banco, autenticação ou backend.
-- Sem quebrar a lógica existente de filtros por período/cliente.
-- Mantemos a regra atual de “empty state” global para não esconder dashboard quando só uma plataforma tem dados.
+### Fluxo
 
-Resultado esperado
-- Os botões de plataforma passam a ser percebidos como funcionais porque os valores vendidos exibidos (cards e totais) mudam de fato conforme a plataforma selecionada.
+```text
+CorsDiagnostics.tsx  →  edge function test-external-pg  →  PostgreSQL 187.77.225.140:5433
+     (botão)              (deno-postgres driver)              (SELECT 1 + SELECT version())
+```
+
+### Considerações
+- Se a conexão TCP for bloqueada por firewall, o teste retornará timeout — isso já será informativo para saber se precisa liberar acesso.
+- As credenciais ficam seguras como secrets, acessíveis apenas pela edge function.
+
