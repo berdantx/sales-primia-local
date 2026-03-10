@@ -36,11 +36,13 @@ import {
   FileJson,
   AlertTriangle,
   RotateCcw,
-  Info
+  Info,
+  FileCode2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useClientSideBackup } from '@/hooks/useClientSideBackup';
 
 const AVAILABLE_TABLES = [
   { id: 'transactions', name: 'Transações Hotmart', priority: 1 },
