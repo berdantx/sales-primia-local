@@ -126,6 +126,7 @@ const menuGroups: MenuGroup[] = [
       { title: 'Integrações', url: '/webhook-config', icon: Link2, roles: ['master', 'admin'] },
       { title: 'Logs Webhook', url: '/webhook-logs', icon: FileText, roles: ['master', 'admin'] },
       { title: 'Auditoria', url: '/duplicate-audit', icon: ShieldCheck, roles: ['master', 'admin'] },
+      { title: 'Diagnóstico', url: '/cors-diagnostics', icon: Globe, roles: ['master'] },
     ],
   },
 ];
