@@ -175,7 +175,7 @@ export function BackupCard() {
   const handleSchemaOnly = async () => {
     setStatus('generating');
     try {
-      const result = await startBackup([], true);
+      const result = await startBackup([], true, backupFormat);
       if (result) {
         setStatus('success');
         toast.success('Schema exportado com sucesso!');
