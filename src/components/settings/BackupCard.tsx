@@ -416,30 +416,47 @@ export function BackupCard() {
                 </div>
               </div>
 
+              {/* Schema Option */}
+              <div className="flex items-center space-x-2 p-3 rounded-lg border border-border bg-muted/30">
+                <Checkbox
+                  id="include-schema"
+                  checked={includeSchema}
+                  onCheckedChange={(checked) => setIncludeSchema(!!checked)}
+                />
+                <Label htmlFor="include-schema" className="text-sm cursor-pointer flex items-center gap-2">
+                  <FileCode2 className="h-4 w-4 text-muted-foreground" />
+                  Incluir estrutura do banco (tabelas, índices, RLS, funções)
+                </Label>
+              </div>
+
               {/* Progress */}
-              {status !== 'idle' && (
+              {(isExporting || status !== 'idle') && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    {status === 'generating' && (
+                    {(isExporting || status === 'generating') && (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        <span className="text-sm">Gerando backup...</span>
+                        <span className="text-sm">
+                          {backupProgress.currentTable
+                            ? `Exportando ${backupProgress.currentTable} (${backupProgress.currentTableIndex}/${backupProgress.totalTables})...`
+                            : 'Gerando backup...'}
+                        </span>
                       </>
                     )}
-                    {status === 'success' && (
+                    {status === 'success' && !isExporting && (
                       <>
                         <CheckCircle2 className="h-4 w-4 text-green-500" />
                         <span className="text-sm text-green-600">Backup gerado com sucesso!</span>
                       </>
                     )}
-                    {status === 'error' && (
+                    {status === 'error' && !isExporting && (
                       <>
                         <AlertCircle className="h-4 w-4 text-destructive" />
                         <span className="text-sm text-destructive">Erro ao gerar backup</span>
                       </>
                     )}
                   </div>
-                  <Progress value={progress} className="h-2" />
+                  <Progress value={backupProgress.percentage} className="h-2" />
                 </div>
               )}
 
@@ -454,24 +471,36 @@ export function BackupCard() {
                 </div>
               )}
 
-              {/* Generate Button */}
-              <Button 
-                onClick={handleGenerateBackup}
-                disabled={isGenerating || selectedTables.length === 0}
-                className="w-full"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Gerando Backup...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Gerar e Baixar Backup ({selectedTables.length} tabelas)
-                  </>
-                )}
-              </Button>
+              {/* Buttons */}
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={handleGenerateBackup}
+                  disabled={isExporting || (selectedTables.length === 0 && !includeSchema)}
+                  className="w-full"
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando Backup...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Gerar e Baixar Backup ({selectedTables.length} tabelas{includeSchema ? ' + Schema' : ''})
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleSchemaOnly}
+                  disabled={isExporting}
+                  className="w-full"
+                >
+                  <FileCode2 className="h-4 w-4 mr-2" />
+                  Exportar Apenas Schema
+                </Button>
+              </div>
 
               <p className="text-xs text-muted-foreground">
                 O arquivo JSON será baixado automaticamente. Guarde-o em local seguro.
