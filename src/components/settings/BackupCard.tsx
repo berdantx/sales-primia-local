@@ -84,12 +84,13 @@ interface BackupData {
 }
 
 export function BackupCard() {
+  const { progress: backupProgress, startBackup, cancelBackup, reset: resetBackup, isExporting } = useClientSideBackup();
+
   // Export state
   const [selectedTables, setSelectedTables] = useState<string[]>(
     AVAILABLE_TABLES.filter(t => t.priority <= 2).map(t => t.id)
   );
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [includeSchema, setIncludeSchema] = useState(false);
   const [status, setStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [lastBackup, setLastBackup] = useState<{ date: string; records: number } | null>(null);
 
