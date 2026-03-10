@@ -337,6 +337,9 @@ export default function CorsDiagnostics() {
             )}
           </CardContent>
         </Card>
+
+        {/* Secrets Manager */}
+        <SecretsManagerCard />
       </div>
     </MainLayout>
   );
