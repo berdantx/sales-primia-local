@@ -36,11 +36,13 @@ import {
   FileJson,
   AlertTriangle,
   RotateCcw,
-  Info
+  Info,
+  FileCode2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useClientSideBackup } from '@/hooks/useClientSideBackup';
 
 const AVAILABLE_TABLES = [
   { id: 'transactions', name: 'Transações Hotmart', priority: 1 },
@@ -82,12 +84,13 @@ interface BackupData {
 }
 
 export function BackupCard() {
+  const { progress: backupProgress, startBackup, cancelBackup, reset: resetBackup, isExporting } = useClientSideBackup();
+
   // Export state
   const [selectedTables, setSelectedTables] = useState<string[]>(
     AVAILABLE_TABLES.filter(t => t.priority <= 2).map(t => t.id)
   );
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [includeSchema, setIncludeSchema] = useState(false);
   const [status, setStatus] = useState<'idle' | 'generating' | 'success' | 'error'>('idle');
   const [lastBackup, setLastBackup] = useState<{ date: string; records: number } | null>(null);
 
@@ -128,72 +131,62 @@ export function BackupCard() {
   };
 
   const handleGenerateBackup = async () => {
-    if (selectedTables.length === 0) {
-      toast.error('Selecione pelo menos uma tabela');
+    if (selectedTables.length === 0 && !includeSchema) {
+      toast.error('Selecione pelo menos uma tabela ou inclua o schema');
       return;
     }
 
-    setIsGenerating(true);
     setStatus('generating');
-    setProgress(10);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Você precisa estar logado');
-        setStatus('error');
-        return;
+      const result = await startBackup(
+        selectedTables.length > 0 ? selectedTables : [],
+        includeSchema
+      );
+
+      if (result) {
+        setStatus('success');
+        setLastBackup({
+          date: new Date().toISOString(),
+          records: result.totalRecords
+        });
+        toast.success(`Backup gerado com sucesso! ${result.totalRecords.toLocaleString('pt-BR')} registros exportados.`);
+      } else {
+        if (backupProgress.status === 'cancelled') {
+          setStatus('idle');
+        } else {
+          setStatus('error');
+        }
       }
-
-      setProgress(30);
-
-      const { data, error } = await supabase.functions.invoke('export-backup', {
-        body: { tables: selectedTables, includeMetadata: true }
-      });
-
-      if (error) {
-        console.error('Backup error:', error);
-        toast.error('Erro ao gerar backup: ' + error.message);
-        setStatus('error');
-        return;
-      }
-
-      setProgress(80);
-
-      // Create and download the file
-      const jsonString = JSON.stringify(data, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-      const filename = `analyzeflow_backup_${timestamp}.json`;
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      setProgress(100);
-      setStatus('success');
-      setLastBackup({
-        date: new Date().toISOString(),
-        records: data.backup_info?.total_records || 0
-      });
-
-      toast.success(`Backup gerado com sucesso! ${data.backup_info?.total_records || 0} registros exportados.`);
-
     } catch (err) {
       console.error('Backup error:', err);
       toast.error('Erro ao gerar backup');
       setStatus('error');
     } finally {
-      setIsGenerating(false);
       setTimeout(() => {
-        setProgress(0);
         setStatus('idle');
+        resetBackup();
+      }, 3000);
+    }
+  };
+
+  const handleSchemaOnly = async () => {
+    setStatus('generating');
+    try {
+      const result = await startBackup([], true);
+      if (result) {
+        setStatus('success');
+        toast.success('Schema exportado com sucesso!');
+      } else {
+        setStatus('error');
+      }
+    } catch {
+      toast.error('Erro ao exportar schema');
+      setStatus('error');
+    } finally {
+      setTimeout(() => {
+        setStatus('idle');
+        resetBackup();
       }, 3000);
     }
   };
@@ -423,30 +416,47 @@ export function BackupCard() {
                 </div>
               </div>
 
+              {/* Schema Option */}
+              <div className="flex items-center space-x-2 p-3 rounded-lg border border-border bg-muted/30">
+                <Checkbox
+                  id="include-schema"
+                  checked={includeSchema}
+                  onCheckedChange={(checked) => setIncludeSchema(!!checked)}
+                />
+                <Label htmlFor="include-schema" className="text-sm cursor-pointer flex items-center gap-2">
+                  <FileCode2 className="h-4 w-4 text-muted-foreground" />
+                  Incluir estrutura do banco (tabelas, índices, RLS, funções)
+                </Label>
+              </div>
+
               {/* Progress */}
-              {status !== 'idle' && (
+              {(isExporting || status !== 'idle') && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    {status === 'generating' && (
+                    {(isExporting || status === 'generating') && (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        <span className="text-sm">Gerando backup...</span>
+                        <span className="text-sm">
+                          {backupProgress.currentTable
+                            ? `Exportando ${backupProgress.currentTable} (${backupProgress.currentTableIndex}/${backupProgress.totalTables})...`
+                            : 'Gerando backup...'}
+                        </span>
                       </>
                     )}
-                    {status === 'success' && (
+                    {status === 'success' && !isExporting && (
                       <>
                         <CheckCircle2 className="h-4 w-4 text-green-500" />
                         <span className="text-sm text-green-600">Backup gerado com sucesso!</span>
                       </>
                     )}
-                    {status === 'error' && (
+                    {status === 'error' && !isExporting && (
                       <>
                         <AlertCircle className="h-4 w-4 text-destructive" />
                         <span className="text-sm text-destructive">Erro ao gerar backup</span>
                       </>
                     )}
                   </div>
-                  <Progress value={progress} className="h-2" />
+                  <Progress value={backupProgress.percentage} className="h-2" />
                 </div>
               )}
 
@@ -461,24 +471,36 @@ export function BackupCard() {
                 </div>
               )}
 
-              {/* Generate Button */}
-              <Button 
-                onClick={handleGenerateBackup}
-                disabled={isGenerating || selectedTables.length === 0}
-                className="w-full"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Gerando Backup...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Gerar e Baixar Backup ({selectedTables.length} tabelas)
-                  </>
-                )}
-              </Button>
+              {/* Buttons */}
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={handleGenerateBackup}
+                  disabled={isExporting || (selectedTables.length === 0 && !includeSchema)}
+                  className="w-full"
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Gerando Backup...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Gerar e Baixar Backup ({selectedTables.length} tabelas{includeSchema ? ' + Schema' : ''})
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleSchemaOnly}
+                  disabled={isExporting}
+                  className="w-full"
+                >
+                  <FileCode2 className="h-4 w-4 mr-2" />
+                  Exportar Apenas Schema
+                </Button>
+              </div>
 
               <p className="text-xs text-muted-foreground">
                 O arquivo JSON será baixado automaticamente. Guarde-o em local seguro.
