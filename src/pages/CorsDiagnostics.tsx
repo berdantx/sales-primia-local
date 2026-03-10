@@ -43,18 +43,16 @@ interface TestResult {
   error?: string;
 }
 
-  // External PG test state
+export default function CorsDiagnostics() {
+  const [results, setResults] = useState<TestResult[]>([]);
+  const [isTesting, setIsTesting] = useState(false);
+  const [customFunction, setCustomFunction] = useState('');
   const [pgResult, setPgResult] = useState<{
     status: 'idle' | 'testing' | 'success' | 'error';
     responseTime?: number;
     pgVersion?: string;
     error?: string;
   }>({ status: 'idle' });
-
-export default function CorsDiagnostics() {
-  const [results, setResults] = useState<TestResult[]>([]);
-  const [isTesting, setIsTesting] = useState(false);
-  const [customFunction, setCustomFunction] = useState('');
 
   const projectUrl = import.meta.env.VITE_SUPABASE_URL as string;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
