@@ -142,7 +142,8 @@ export function BackupCard() {
     try {
       const result = await startBackup(
         selectedTables.length > 0 ? selectedTables : [],
-        includeSchema
+        includeSchema,
+        backupFormat
       );
 
       if (result) {
