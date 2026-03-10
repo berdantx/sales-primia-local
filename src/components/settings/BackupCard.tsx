@@ -131,72 +131,62 @@ export function BackupCard() {
   };
 
   const handleGenerateBackup = async () => {
-    if (selectedTables.length === 0) {
-      toast.error('Selecione pelo menos uma tabela');
+    if (selectedTables.length === 0 && !includeSchema) {
+      toast.error('Selecione pelo menos uma tabela ou inclua o schema');
       return;
     }
 
-    setIsGenerating(true);
     setStatus('generating');
-    setProgress(10);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Você precisa estar logado');
-        setStatus('error');
-        return;
+      const result = await startBackup(
+        selectedTables.length > 0 ? selectedTables : [],
+        includeSchema
+      );
+
+      if (result) {
+        setStatus('success');
+        setLastBackup({
+          date: new Date().toISOString(),
+          records: result.totalRecords
+        });
+        toast.success(`Backup gerado com sucesso! ${result.totalRecords.toLocaleString('pt-BR')} registros exportados.`);
+      } else {
+        if (backupProgress.status === 'cancelled') {
+          setStatus('idle');
+        } else {
+          setStatus('error');
+        }
       }
-
-      setProgress(30);
-
-      const { data, error } = await supabase.functions.invoke('export-backup', {
-        body: { tables: selectedTables, includeMetadata: true }
-      });
-
-      if (error) {
-        console.error('Backup error:', error);
-        toast.error('Erro ao gerar backup: ' + error.message);
-        setStatus('error');
-        return;
-      }
-
-      setProgress(80);
-
-      // Create and download the file
-      const jsonString = JSON.stringify(data, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      
-      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-      const filename = `analyzeflow_backup_${timestamp}.json`;
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      setProgress(100);
-      setStatus('success');
-      setLastBackup({
-        date: new Date().toISOString(),
-        records: data.backup_info?.total_records || 0
-      });
-
-      toast.success(`Backup gerado com sucesso! ${data.backup_info?.total_records || 0} registros exportados.`);
-
     } catch (err) {
       console.error('Backup error:', err);
       toast.error('Erro ao gerar backup');
       setStatus('error');
     } finally {
-      setIsGenerating(false);
       setTimeout(() => {
-        setProgress(0);
         setStatus('idle');
+        resetBackup();
+      }, 3000);
+    }
+  };
+
+  const handleSchemaOnly = async () => {
+    setStatus('generating');
+    try {
+      const result = await startBackup([], true);
+      if (result) {
+        setStatus('success');
+        toast.success('Schema exportado com sucesso!');
+      } else {
+        setStatus('error');
+      }
+    } catch {
+      toast.error('Erro ao exportar schema');
+      setStatus('error');
+    } finally {
+      setTimeout(() => {
+        setStatus('idle');
+        resetBackup();
       }, 3000);
     }
   };
