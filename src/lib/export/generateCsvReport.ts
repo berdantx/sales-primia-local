@@ -7,6 +7,7 @@ interface HotmartTransaction {
   product: string | null;
   buyer_name: string | null;
   buyer_email: string | null;
+  buyer_phone: string | null;
   currency: string;
   country: string | null;
   computed_value: number;
