@@ -166,12 +166,13 @@ export function TmbImportPreview({ transactions, errors, duplicates, totalRows }
           <ScrollArea className="h-[400px]">
             <Table>
               <TableHeader>
-                <TableRow>
+                 <TableRow>
                   <TableHead>ID Pedido</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Telefone</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                 </TableRow>
               </TableHeader>
