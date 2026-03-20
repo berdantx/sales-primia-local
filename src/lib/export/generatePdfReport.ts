@@ -35,6 +35,7 @@ interface EduzzTransaction {
   product: string | null;
   buyer_name: string | null;
   buyer_email: string | null;
+  buyer_phone: string | null;
   sale_value: number;
   sale_date: string | null;
   status: string;
