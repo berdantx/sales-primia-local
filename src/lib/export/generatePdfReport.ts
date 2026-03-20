@@ -8,6 +8,7 @@ interface HotmartTransaction {
   product: string | null;
   buyer_name: string | null;
   buyer_email: string | null;
+  buyer_phone: string | null;
   currency: string;
   country: string | null;
   computed_value: number;
@@ -21,6 +22,7 @@ interface TmbTransaction {
   product: string | null;
   buyer_name: string | null;
   buyer_email: string | null;
+  buyer_phone: string | null;
   ticket_value: number;
   effective_date: string | null;
   utm_source: string | null;
@@ -33,6 +35,7 @@ interface EduzzTransaction {
   product: string | null;
   buyer_name: string | null;
   buyer_email: string | null;
+  buyer_phone: string | null;
   sale_value: number;
   sale_date: string | null;
   status: string;
@@ -186,13 +189,13 @@ export function generatePdfReport(data: PdfExportData, options: PdfExportOptions
     doc.text(`Transações Hotmart (${data.hotmartTransactions.length})`, margin, y);
     y += 7;
 
-    const colWidths = [32, 45, 35, 50, 22, 30, 30, 30];
-    drawTableRow(['Código', 'Produto', 'Cliente', 'Email', 'Moeda', 'Valor', 'Data', 'Tipo'], colWidths, true);
+    const colWidths = [28, 38, 30, 42, 28, 18, 26, 26, 26];
+    drawTableRow(['Código', 'Produto', 'Cliente', 'Email', 'Telefone', 'Moeda', 'Valor', 'Data', 'Tipo'], colWidths, true);
 
     data.hotmartTransactions.forEach((t) => {
       drawTableRow([
         t.transaction_code || '', t.product || '', t.buyer_name || '', t.buyer_email || '',
-        t.currency || '', formatCurrencyBR(t.computed_value),
+        t.buyer_phone || '', t.currency || '', formatCurrencyBR(t.computed_value),
         t.purchase_date ? formatDateTimeBR(t.purchase_date, 'dd/MM/yy') : '',
         t.billing_type || '',
       ], colWidths, false);
@@ -208,13 +211,13 @@ export function generatePdfReport(data: PdfExportData, options: PdfExportOptions
     doc.text(`Transações TMB (${data.tmbTransactions.length})`, margin, y);
     y += 7;
 
-    const colWidths = [35, 55, 40, 55, 35, 35, 25];
-    drawTableRow(['Pedido', 'Produto', 'Cliente', 'Email', 'Valor', 'Data', 'UTM'], colWidths, true);
+    const colWidths = [30, 45, 35, 45, 28, 30, 30, 25];
+    drawTableRow(['Pedido', 'Produto', 'Cliente', 'Email', 'Telefone', 'Valor', 'Data', 'UTM'], colWidths, true);
 
     data.tmbTransactions.forEach((t) => {
       drawTableRow([
         t.order_id || '', t.product || '', t.buyer_name || '', t.buyer_email || '',
-        formatCurrencyBR(t.ticket_value),
+        t.buyer_phone || '', formatCurrencyBR(t.ticket_value),
         t.effective_date ? formatDateTimeBR(t.effective_date, 'dd/MM/yy') : '',
         t.utm_source || '',
       ], colWidths, false);
@@ -230,13 +233,13 @@ export function generatePdfReport(data: PdfExportData, options: PdfExportOptions
     doc.text(`Transações Eduzz (${data.eduzzTransactions.length})`, margin, y);
     y += 7;
 
-    const colWidths = [26, 43, 34, 47, 26, 26, 26, 37];
-    drawTableRow(['ID Venda', 'Produto', 'Cliente', 'Email', 'Valor', 'Data', 'Status', 'UTM Source'], colWidths, true);
+    const colWidths = [22, 36, 28, 40, 28, 24, 24, 22, 32];
+    drawTableRow(['ID Venda', 'Produto', 'Cliente', 'Email', 'Telefone', 'Valor', 'Data', 'Status', 'UTM Source'], colWidths, true);
 
     data.eduzzTransactions.forEach((t) => {
       drawTableRow([
         t.sale_id || '', t.product || '', t.buyer_name || '', t.buyer_email || '',
-        formatCurrencyBR(t.sale_value),
+        t.buyer_phone || '', formatCurrencyBR(t.sale_value),
         t.sale_date ? formatDateTimeBR(t.sale_date, 'dd/MM/yy') : '',
         t.status || '', t.utm_source || '',
       ], colWidths, false);

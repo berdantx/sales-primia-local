@@ -8,6 +8,7 @@ export interface TmbTransaction {
   product: string | null;
   buyer_name: string | null;
   buyer_email: string | null;
+  buyer_phone: string | null;
   ticket_value: number;
   currency: string;
   effective_date: string | null;
