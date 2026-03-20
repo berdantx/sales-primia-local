@@ -22,6 +22,7 @@ interface TmbTransaction {
   product: string | null;
   buyer_name: string | null;
   buyer_email: string | null;
+  buyer_phone: string | null;
   ticket_value: number;
   effective_date: string | null;
   utm_source: string | null;
