@@ -198,6 +198,9 @@ export function TmbImportPreview({ transactions, errors, duplicates, totalRows }
                     <TableCell className="max-w-[150px] truncate text-muted-foreground">
                       {transaction.buyer_email}
                     </TableCell>
+                    <TableCell className="max-w-[120px] truncate text-muted-foreground">
+                      {transaction.buyer_phone || <span className="text-muted-foreground/50">-</span>}
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(transaction.ticket_value, 'BRL')}
                     </TableCell>

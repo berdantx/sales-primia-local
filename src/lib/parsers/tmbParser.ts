@@ -243,6 +243,7 @@ export function parseTmbData(data: Record<string, unknown>[], headers: string[],
         product: columnMap.product ? String(row[columnMap.product] || '').trim() : '',
         buyer_name: columnMap.buyerName ? String(row[columnMap.buyerName] || '').trim() : '',
         buyer_email: columnMap.buyerEmail ? String(row[columnMap.buyerEmail] || '').trim() : '',
+        buyer_phone: columnMap.buyerPhone ? String(row[columnMap.buyerPhone] || '').trim() : '',
         ticket_value: parseNumber(
           columnMap.ticketValue ? row[columnMap.ticketValue] as string : undefined
         ),

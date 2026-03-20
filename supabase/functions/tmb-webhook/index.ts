@@ -319,7 +319,7 @@ Deno.serve(async (req) => {
       product: body.lancamento || null,
       buyer_name: body.cliente || null,
       buyer_email: body.email || null,
-      buyer_phone: body.telefone || body.phone || body.celular || null,
+      buyer_phone: extractPhone(body),
       ticket_value: body.valor_total || 0,
       currency: "BRL",
       effective_date: body.data_efetivado || body.criado_em || null,
