@@ -35,6 +35,7 @@ const TMB_COLUMNS = {
   product: ['produto', 'product', 'nome do produto'],
   buyerName: ['cliente nome', 'cliente', 'nome', 'buyer_name', 'nome do cliente'],
   buyerEmail: ['cliente email', 'email', 'e-mail', 'buyer_email', 'email do cliente'],
+  buyerPhone: ['telefone', 'celular', 'phone', 'telefones', 'telefone_ativo', 'buyer_phone', 'tel', 'whatsapp'],
   ticketValue: ['ticket (r$)', 'ticket', 'valor', 'ticket_value', 'valor do ticket'],
   effectiveDate: ['data efetivado', 'data efetivação', 'data', 'effective_date', 'data da compra'],
   utmSource: ['utm source', 'utm_source', 'source'],
