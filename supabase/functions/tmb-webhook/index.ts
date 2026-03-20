@@ -14,8 +14,11 @@ interface TmbWebhookPayload {
   cliente?: string;
   email?: string;
   telefone?: string;
+  telefone_ativo?: string;
+  telefones?: string;
   phone?: string;
   celular?: string;
+  whatsapp?: string;
   valor_total?: number;
   data_efetivado?: string;
   criado_em?: string;
@@ -23,6 +26,14 @@ interface TmbWebhookPayload {
   utm_medium?: string;
   utm_campaign?: string;
   utm_content?: string;
+  [key: string]: unknown;
+}
+
+function extractPhone(body: TmbWebhookPayload): string | null {
+  const raw = body.telefone_ativo || body.telefones || body.telefone || body.phone || body.celular || body.whatsapp;
+  if (!raw) return null;
+  const trimmed = String(raw).trim();
+  return trimmed.length > 0 ? trimmed.substring(0, 50) : null;
 }
 
 Deno.serve(async (req) => {
