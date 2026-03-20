@@ -211,13 +211,13 @@ export function generatePdfReport(data: PdfExportData, options: PdfExportOptions
     doc.text(`Transações TMB (${data.tmbTransactions.length})`, margin, y);
     y += 7;
 
-    const colWidths = [35, 55, 40, 55, 35, 35, 25];
-    drawTableRow(['Pedido', 'Produto', 'Cliente', 'Email', 'Valor', 'Data', 'UTM'], colWidths, true);
+    const colWidths = [30, 45, 35, 45, 28, 30, 30, 25];
+    drawTableRow(['Pedido', 'Produto', 'Cliente', 'Email', 'Telefone', 'Valor', 'Data', 'UTM'], colWidths, true);
 
     data.tmbTransactions.forEach((t) => {
       drawTableRow([
         t.order_id || '', t.product || '', t.buyer_name || '', t.buyer_email || '',
-        formatCurrencyBR(t.ticket_value),
+        t.buyer_phone || '', formatCurrencyBR(t.ticket_value),
         t.effective_date ? formatDateTimeBR(t.effective_date, 'dd/MM/yy') : '',
         t.utm_source || '',
       ], colWidths, false);
