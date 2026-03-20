@@ -5,6 +5,7 @@ export interface TmbTransaction {
   product: string;
   buyer_name: string;
   buyer_email: string;
+  buyer_phone: string;
   ticket_value: number;
   currency: string;
   effective_date: Date | null;
