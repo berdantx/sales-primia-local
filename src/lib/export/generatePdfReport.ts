@@ -233,13 +233,13 @@ export function generatePdfReport(data: PdfExportData, options: PdfExportOptions
     doc.text(`Transações Eduzz (${data.eduzzTransactions.length})`, margin, y);
     y += 7;
 
-    const colWidths = [26, 43, 34, 47, 26, 26, 26, 37];
-    drawTableRow(['ID Venda', 'Produto', 'Cliente', 'Email', 'Valor', 'Data', 'Status', 'UTM Source'], colWidths, true);
+    const colWidths = [22, 36, 28, 40, 28, 24, 24, 22, 32];
+    drawTableRow(['ID Venda', 'Produto', 'Cliente', 'Email', 'Telefone', 'Valor', 'Data', 'Status', 'UTM Source'], colWidths, true);
 
     data.eduzzTransactions.forEach((t) => {
       drawTableRow([
         t.sale_id || '', t.product || '', t.buyer_name || '', t.buyer_email || '',
-        formatCurrencyBR(t.sale_value),
+        t.buyer_phone || '', formatCurrencyBR(t.sale_value),
         t.sale_date ? formatDateTimeBR(t.sale_date, 'dd/MM/yy') : '',
         t.status || '', t.utm_source || '',
       ], colWidths, false);

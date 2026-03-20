@@ -119,21 +119,21 @@ function generateCombinedCSV(
   tmbTransactions: TmbTransaction[],
   eduzzTransactions: EduzzTransaction[]
 ): string {
-  const headers = ['Plataforma', 'ID/Código', 'Produto', 'Cliente', 'Email', 'Valor', 'Moeda', 'Data'];
+  const headers = ['Plataforma', 'ID/Código', 'Produto', 'Cliente', 'Email', 'Telefone', 'Valor', 'Moeda', 'Data'];
 
   const hotmartRows = hotmartTransactions.map((t) => ({
     platform: 'Hotmart', id: t.transaction_code, product: t.product,
-    client: t.buyer_name, email: t.buyer_email, value: t.computed_value,
+    client: t.buyer_name, email: t.buyer_email, phone: t.buyer_phone, value: t.computed_value,
     currency: t.currency, date: t.purchase_date,
   }));
   const tmbRows = tmbTransactions.map((t) => ({
     platform: 'TMB', id: t.order_id, product: t.product,
-    client: t.buyer_name, email: t.buyer_email, value: t.ticket_value,
+    client: t.buyer_name, email: t.buyer_email, phone: t.buyer_phone, value: t.ticket_value,
     currency: 'BRL', date: t.effective_date,
   }));
   const eduzzRows = eduzzTransactions.map((t) => ({
     platform: 'Eduzz', id: t.sale_id, product: t.product,
-    client: t.buyer_name, email: t.buyer_email, value: t.sale_value,
+    client: t.buyer_name, email: t.buyer_email, phone: t.buyer_phone, value: t.sale_value,
     currency: t.currency || 'BRL', date: t.sale_date,
   }));
 
@@ -145,7 +145,7 @@ function generateCombinedCSV(
 
   const csvRows = allRows.map((r) => [
     escapeCSV(r.platform), escapeCSV(r.id), escapeCSV(r.product),
-    escapeCSV(r.client), escapeCSV(r.email), escapeCSV(r.value),
+    escapeCSV(r.client), escapeCSV(r.email), escapeCSV(r.phone), escapeCSV(r.value),
     escapeCSV(r.currency), escapeCSV(formatDateForExport(r.date)),
   ]);
 

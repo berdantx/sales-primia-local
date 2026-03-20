@@ -187,31 +187,31 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
 
   // Combined Sheet
   if (options.includeCombined) {
-    const combinedHeaders = ['Plataforma', 'ID/Código', 'Produto', 'Cliente', 'Email', 'Valor', 'Moeda', 'Data'];
+    const combinedHeaders = ['Plataforma', 'ID/Código', 'Produto', 'Cliente', 'Email', 'Telefone', 'Valor', 'Moeda', 'Data'];
 
     const hotmartCombined = data.hotmartTransactions.map((t) => [
       'Hotmart', t.transaction_code, t.product || '', t.buyer_name || '',
-      t.buyer_email || '', t.computed_value, t.currency, t.purchase_date || '',
+      t.buyer_email || '', t.buyer_phone || '', t.computed_value, t.currency, t.purchase_date || '',
     ]);
     const tmbCombined = data.tmbTransactions.map((t) => [
       'TMB', t.order_id, t.product || '', t.buyer_name || '',
-      t.buyer_email || '', t.ticket_value, 'BRL', t.effective_date || '',
+      t.buyer_email || '', t.buyer_phone || '', t.ticket_value, 'BRL', t.effective_date || '',
     ]);
     const eduzzCombined = data.eduzzTransactions.map((t) => [
       'Eduzz', t.sale_id, t.product || '', t.buyer_name || '',
-      t.buyer_email || '', t.sale_value, t.currency || 'BRL', t.sale_date || '',
+      t.buyer_email || '', t.buyer_phone || '', t.sale_value, t.currency || 'BRL', t.sale_date || '',
     ]);
 
     const allCombined = [...hotmartCombined, ...tmbCombined, ...eduzzCombined]
       .sort((a, b) => {
-        const dateA = a[7] as string;
-        const dateB = b[7] as string;
+        const dateA = a[8] as string;
+        const dateB = b[8] as string;
         return dateB.localeCompare(dateA);
       })
       .map((row) => {
-        const dateVal = row[7] as string;
+        const dateVal = row[8] as string;
         return [
-          ...row.slice(0, 7),
+          ...row.slice(0, 8),
           dateVal ? formatDateTimeBR(dateVal, 'dd/MM/yyyy HH:mm') : '',
         ];
       });
@@ -219,7 +219,7 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
     const combinedSheet = XLSX.utils.aoa_to_sheet([combinedHeaders, ...allCombined]);
     combinedSheet['!cols'] = [
       { wch: 12 }, { wch: 20 }, { wch: 30 }, { wch: 25 },
-      { wch: 30 }, { wch: 15 }, { wch: 8 }, { wch: 18 },
+      { wch: 30 }, { wch: 18 }, { wch: 15 }, { wch: 8 }, { wch: 18 },
     ];
     XLSX.utils.book_append_sheet(workbook, combinedSheet, 'Consolidado');
   }
