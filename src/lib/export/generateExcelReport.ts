@@ -131,18 +131,18 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
   // Hotmart Sheet
   if (options.includeHotmart && data.hotmartTransactions.length > 0) {
     const hotmartHeaders = [
-      'Código Transação', 'Produto', 'Cliente', 'Email', 'Moeda', 'País', 'Valor', 'Data Compra', 'Tipo Cobrança', 'Método Pagamento',
+      'Código Transação', 'Produto', 'Cliente', 'Email', 'Telefone', 'Moeda', 'País', 'Valor', 'Data Compra', 'Tipo Cobrança', 'Método Pagamento',
     ];
     const hotmartRows = data.hotmartTransactions.map((t) => [
       t.transaction_code, t.product || '', t.buyer_name || '', t.buyer_email || '',
-      t.currency, t.country || '', t.computed_value,
+      t.buyer_phone || '', t.currency, t.country || '', t.computed_value,
       t.purchase_date ? formatDateTimeBR(t.purchase_date, 'dd/MM/yyyy HH:mm') : '',
       t.billing_type || '', t.payment_method || '',
     ]);
     const hotmartSheet = XLSX.utils.aoa_to_sheet([hotmartHeaders, ...hotmartRows]);
     hotmartSheet['!cols'] = [
-      { wch: 20 }, { wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 8 },
-      { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 20 }, { wch: 15 },
+      { wch: 20 }, { wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 18 },
+      { wch: 8 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 20 }, { wch: 15 },
     ];
     XLSX.utils.book_append_sheet(workbook, hotmartSheet, 'Hotmart');
   }
