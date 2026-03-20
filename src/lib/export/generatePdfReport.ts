@@ -189,13 +189,13 @@ export function generatePdfReport(data: PdfExportData, options: PdfExportOptions
     doc.text(`Transações Hotmart (${data.hotmartTransactions.length})`, margin, y);
     y += 7;
 
-    const colWidths = [32, 45, 35, 50, 22, 30, 30, 30];
-    drawTableRow(['Código', 'Produto', 'Cliente', 'Email', 'Moeda', 'Valor', 'Data', 'Tipo'], colWidths, true);
+    const colWidths = [28, 38, 30, 42, 28, 18, 26, 26, 26];
+    drawTableRow(['Código', 'Produto', 'Cliente', 'Email', 'Telefone', 'Moeda', 'Valor', 'Data', 'Tipo'], colWidths, true);
 
     data.hotmartTransactions.forEach((t) => {
       drawTableRow([
         t.transaction_code || '', t.product || '', t.buyer_name || '', t.buyer_email || '',
-        t.currency || '', formatCurrencyBR(t.computed_value),
+        t.buyer_phone || '', t.currency || '', formatCurrencyBR(t.computed_value),
         t.purchase_date ? formatDateTimeBR(t.purchase_date, 'dd/MM/yy') : '',
         t.billing_type || '',
       ], colWidths, false);
