@@ -165,6 +165,7 @@ export function autoDetectTmbColumns(headers: string[]): Record<string, string |
     product: findColumn(headers, TMB_COLUMNS.product),
     buyerName: findColumn(headers, TMB_COLUMNS.buyerName),
     buyerEmail: findColumn(headers, TMB_COLUMNS.buyerEmail),
+    buyerPhone: findColumn(headers, TMB_COLUMNS.buyerPhone),
     ticketValue: findColumn(headers, TMB_COLUMNS.ticketValue),
     effectiveDate: findColumn(headers, TMB_COLUMNS.effectiveDate),
     utmSource: findColumn(headers, TMB_COLUMNS.utmSource),
