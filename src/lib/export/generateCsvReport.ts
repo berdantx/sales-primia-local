@@ -88,12 +88,12 @@ function generateHotmartCSV(transactions: HotmartTransaction[]): string {
 
 function generateTmbCSV(transactions: TmbTransaction[]): string {
   const headers = [
-    'ID Pedido', 'Produto', 'Cliente', 'Email', 'Valor', 'Data',
+    'ID Pedido', 'Produto', 'Cliente', 'Email', 'Telefone', 'Valor', 'Data',
     'UTM Source', 'UTM Medium', 'UTM Campaign',
   ];
   const rows = transactions.map((t) => [
     escapeCSV(t.order_id), escapeCSV(t.product), escapeCSV(t.buyer_name),
-    escapeCSV(t.buyer_email), escapeCSV(t.ticket_value),
+    escapeCSV(t.buyer_email), escapeCSV(t.buyer_phone), escapeCSV(t.ticket_value),
     escapeCSV(formatDateForExport(t.effective_date)),
     escapeCSV(t.utm_source), escapeCSV(t.utm_medium), escapeCSV(t.utm_campaign),
   ]);
