@@ -74,12 +74,12 @@ function formatDateForExport(dateStr: string | null): string {
 
 function generateHotmartCSV(transactions: HotmartTransaction[]): string {
   const headers = [
-    'Código Transação', 'Produto', 'Cliente', 'Email', 'Moeda', 'País',
+    'Código Transação', 'Produto', 'Cliente', 'Email', 'Telefone', 'Moeda', 'País',
     'Valor', 'Data Compra', 'Tipo Cobrança', 'Método Pagamento',
   ];
   const rows = transactions.map((t) => [
     escapeCSV(t.transaction_code), escapeCSV(t.product), escapeCSV(t.buyer_name),
-    escapeCSV(t.buyer_email), escapeCSV(t.currency), escapeCSV(t.country),
+    escapeCSV(t.buyer_email), escapeCSV(t.buyer_phone), escapeCSV(t.currency), escapeCSV(t.country),
     escapeCSV(t.computed_value), escapeCSV(formatDateForExport(t.purchase_date)),
     escapeCSV(t.billing_type), escapeCSV(t.payment_method),
   ]);
