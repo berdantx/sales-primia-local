@@ -16,6 +16,7 @@ export interface Transaction {
   computed_value: number;
   buyer_name: string | null;
   buyer_email: string | null;
+  buyer_phone: string | null;
   purchase_date: string | null;
   created_at: string;
   recurrence_number: number | null;
