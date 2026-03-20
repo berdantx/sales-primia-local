@@ -150,18 +150,18 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
   // TMB Sheet
   if (options.includeTmb && data.tmbTransactions.length > 0) {
     const tmbHeaders = [
-      'ID Pedido', 'Produto', 'Cliente', 'Email', 'Valor', 'Data', 'UTM Source', 'UTM Medium', 'UTM Campaign',
+      'ID Pedido', 'Produto', 'Cliente', 'Email', 'Telefone', 'Valor', 'Data', 'UTM Source', 'UTM Medium', 'UTM Campaign',
     ];
     const tmbRows = data.tmbTransactions.map((t) => [
       t.order_id, t.product || '', t.buyer_name || '', t.buyer_email || '',
-      t.ticket_value,
+      t.buyer_phone || '', t.ticket_value,
       t.effective_date ? formatDateTimeBR(t.effective_date, 'dd/MM/yyyy HH:mm') : '',
       t.utm_source || '', t.utm_medium || '', t.utm_campaign || '',
     ]);
     const tmbSheet = XLSX.utils.aoa_to_sheet([tmbHeaders, ...tmbRows]);
     tmbSheet['!cols'] = [
-      { wch: 20 }, { wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 15 },
-      { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 },
+      { wch: 20 }, { wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 18 },
+      { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 },
     ];
     XLSX.utils.book_append_sheet(workbook, tmbSheet, 'TMB');
   }
