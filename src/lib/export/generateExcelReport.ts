@@ -169,18 +169,18 @@ export function generateExcelReport(data: ExportData, options: ExportOptions): v
   // Eduzz Sheet
   if (options.includeEduzz && data.eduzzTransactions.length > 0) {
     const eduzzHeaders = [
-      'ID Venda', 'Produto', 'Cliente', 'Email', 'Valor', 'Moeda', 'Data Venda', 'Status', 'Método Pagamento', 'UTM Source',
+      'ID Venda', 'Produto', 'Cliente', 'Email', 'Telefone', 'Valor', 'Moeda', 'Data Venda', 'Status', 'Método Pagamento', 'UTM Source',
     ];
     const eduzzRows = data.eduzzTransactions.map((t) => [
       t.sale_id, t.product || '', t.buyer_name || '', t.buyer_email || '',
-      t.sale_value, t.currency || 'BRL',
+      t.buyer_phone || '', t.sale_value, t.currency || 'BRL',
       t.sale_date ? formatDateTimeBR(t.sale_date, 'dd/MM/yyyy HH:mm') : '',
       t.status || '', t.payment_method || '', t.utm_source || '',
     ]);
     const eduzzSheet = XLSX.utils.aoa_to_sheet([eduzzHeaders, ...eduzzRows]);
     eduzzSheet['!cols'] = [
-      { wch: 15 }, { wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 15 },
-      { wch: 8 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 },
+      { wch: 15 }, { wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 18 },
+      { wch: 15 }, { wch: 8 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 },
     ];
     XLSX.utils.book_append_sheet(workbook, eduzzSheet, 'Eduzz');
   }
