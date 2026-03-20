@@ -5,6 +5,7 @@ export interface TmbTransaction {
   product: string;
   buyer_name: string;
   buyer_email: string;
+  buyer_phone: string;
   ticket_value: number;
   currency: string;
   effective_date: Date | null;
@@ -34,6 +35,7 @@ const TMB_COLUMNS = {
   product: ['produto', 'product', 'nome do produto'],
   buyerName: ['cliente nome', 'cliente', 'nome', 'buyer_name', 'nome do cliente'],
   buyerEmail: ['cliente email', 'email', 'e-mail', 'buyer_email', 'email do cliente'],
+  buyerPhone: ['telefone', 'celular', 'phone', 'telefones', 'telefone_ativo', 'buyer_phone', 'tel', 'whatsapp'],
   ticketValue: ['ticket (r$)', 'ticket', 'valor', 'ticket_value', 'valor do ticket'],
   effectiveDate: ['data efetivado', 'data efetivação', 'data', 'effective_date', 'data da compra'],
   utmSource: ['utm source', 'utm_source', 'source'],
@@ -163,6 +165,7 @@ export function autoDetectTmbColumns(headers: string[]): Record<string, string |
     product: findColumn(headers, TMB_COLUMNS.product),
     buyerName: findColumn(headers, TMB_COLUMNS.buyerName),
     buyerEmail: findColumn(headers, TMB_COLUMNS.buyerEmail),
+    buyerPhone: findColumn(headers, TMB_COLUMNS.buyerPhone),
     ticketValue: findColumn(headers, TMB_COLUMNS.ticketValue),
     effectiveDate: findColumn(headers, TMB_COLUMNS.effectiveDate),
     utmSource: findColumn(headers, TMB_COLUMNS.utmSource),
@@ -184,6 +187,7 @@ export function parseTmbData(data: Record<string, unknown>[], headers: string[],
     product: customColumnMap.product || null,
     buyerName: customColumnMap.buyerName || null,
     buyerEmail: customColumnMap.buyerEmail || null,
+    buyerPhone: customColumnMap.buyerPhone || null,
     ticketValue: customColumnMap.ticketValue || null,
     effectiveDate: customColumnMap.effectiveDate || null,
     utmSource: customColumnMap.utmSource || null,
@@ -239,6 +243,7 @@ export function parseTmbData(data: Record<string, unknown>[], headers: string[],
         product: columnMap.product ? String(row[columnMap.product] || '').trim() : '',
         buyer_name: columnMap.buyerName ? String(row[columnMap.buyerName] || '').trim() : '',
         buyer_email: columnMap.buyerEmail ? String(row[columnMap.buyerEmail] || '').trim() : '',
+        buyer_phone: columnMap.buyerPhone ? String(row[columnMap.buyerPhone] || '').trim() : '',
         ticket_value: parseNumber(
           columnMap.ticketValue ? row[columnMap.ticketValue] as string : undefined
         ),

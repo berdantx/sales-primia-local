@@ -338,6 +338,7 @@ export function useImportTransactions() {
         product: t.product,
         buyer_name: t.buyer_name,
         buyer_email: t.buyer_email,
+        buyer_phone: t.buyer_phone || null,
         ticket_value: t.ticket_value,
         currency: 'BRL',
         effective_date: t.effective_date?.toISOString() || null,

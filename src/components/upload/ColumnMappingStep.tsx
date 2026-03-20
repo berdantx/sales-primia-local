@@ -195,6 +195,7 @@ export const TMB_FIELD_DEFINITIONS = [
   { key: 'product', label: 'Produto', required: false },
   { key: 'buyerName', label: 'Nome do Cliente', required: false },
   { key: 'buyerEmail', label: 'E-mail do Cliente', required: false },
+  { key: 'buyerPhone', label: 'Telefone', required: false },
   { key: 'ticketValue', label: 'Valor do Ticket', required: true },
   { key: 'effectiveDate', label: 'Data Efetivado', required: false },
   { key: 'utmSource', label: 'UTM Source', required: false },
