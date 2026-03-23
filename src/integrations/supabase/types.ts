@@ -386,6 +386,27 @@ export type Database = {
         }
         Relationships: []
       }
+      dollar_rate_cache: {
+        Row: {
+          fetched_at: string
+          id: string
+          rate: number
+          source: string
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          rate: number
+          source: string
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          rate?: number
+          source?: string
+        }
+        Relationships: []
+      }
       duplicate_deletion_logs: {
         Row: {
           audit_type: string
