@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Header } from './Header';
+import { ChatAssistant } from '@/components/chat/ChatAssistant';
 import { Loader2 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -33,6 +34,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   }
 
   return (
+    <>
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
@@ -44,5 +46,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
       </div>
     </SidebarProvider>
+    <ChatAssistant />
+  </>
   );
 }

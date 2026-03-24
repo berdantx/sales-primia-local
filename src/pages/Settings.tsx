@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Mail, Calendar, Shield, Palette, Settings2, Coins, Plug, Info } from 'lucide-react';
+import { User, Mail, Calendar, Shield, Palette, Settings2, Coins, Plug, Info, Bot } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useSearchParams } from 'react-router-dom';
@@ -21,6 +21,7 @@ import { BackupCard } from '@/components/settings/BackupCard';
 import { TransactionAuditCard } from '@/components/audit/TransactionAuditCard';
 import { CurrencyOverviewCard } from '@/components/settings/CurrencyOverviewCard';
 import { CurrencyAlertsCard } from '@/components/settings/CurrencyAlertsCard';
+import { ChatSettingsCard } from '@/components/settings/ChatSettingsCard';
 
 const roleLabels: Record<string, string> = {
   master: 'Master',
@@ -44,6 +45,7 @@ export default function Settings() {
       { value: 'sistema', label: 'Sistema', icon: Settings2, visible: isMasterOrAdmin },
       { value: 'moedas', label: 'Moedas', icon: Coins, visible: isMasterOrAdmin, badge: totalPending },
       { value: 'integracoes', label: 'Integrações', icon: Plug, visible: isMasterOrAdmin },
+      { value: 'assistente', label: 'Assistente IA', icon: Bot, visible: isMaster },
       { value: 'sobre', label: 'Sobre', icon: Info, visible: true },
     ];
     return all.filter(t => t.visible);
@@ -158,6 +160,13 @@ export default function Settings() {
               {isMasterOrAdmin && (
                 <TabsContent value="integracoes" className="space-y-6 mt-4">
                   <LLMIntegrationsCard />
+                </TabsContent>
+              )}
+
+              {/* Assistente IA */}
+              {isMaster && (
+                <TabsContent value="assistente" className="space-y-6 mt-4">
+                  <ChatSettingsCard />
                 </TabsContent>
               )}
 
